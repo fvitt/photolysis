@@ -51,13 +51,13 @@ program driver
   errflg=0
   errmsg=' '
 
-  call tuv_photolysis_init( errmsg, errflg )
+  call tuv_photolysis_init( r8, errmsg, errflg )
   if (errflg/=0) then
       write(*,*) 'FAILURE: '//trim(errmsg)
      call abort()
   end if
   
-  call tuv_radiation_transfer_init( nlevels, errmsg, errflg )
+  call tuv_radiation_transfer_init( r8, nlevels, errmsg, errflg )
   if (errflg/=0) then
       write(*,*) 'FAILURE: '//trim(errmsg)
      call abort()

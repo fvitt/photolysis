@@ -2,8 +2,6 @@
 
       implicit none
 
-      integer, parameter :: dp = selected_real_kind(14,300)
-
       real, parameter :: m2km = .001                          ! meters to km
       real, parameter :: ppm2vmr = 1.e-6                      ! ppm to vmr
       real, parameter :: o2vmr = .2095                        ! o2 vmr

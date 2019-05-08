@@ -1,6 +1,6 @@
 module tuv_photolysis
 
-  use machine, only: rk => kind_phys
+  use phot_kind_mod, only: rk => kind_phot
   use module_prates_tuv, only: calc_tuv_init, calc_tuv_prates
   use params_mod, only: input_data_root
 
@@ -138,16 +138,26 @@ contains
 
   end subroutine tuv_photolysis_readnl
 
-  subroutine tuv_photolysis_init( errmsg, errflg )
+  subroutine tuv_photolysis_init( realkind, errmsg, errflg )
 
+    integer,          intent(in)  :: realkind
     character(len=*), intent(out) :: errmsg
-    integer,            intent(out) :: errflg
+    integer,          intent(out) :: errflg
 
     character(len=512) :: xsqy_filepath
-    logical, parameter ::  full_tuv = .true.
-    
+    logical, parameter :: full_tuv = .true.
+
+    errmsg = ' '
+    errflg = 0
+
+    if ( realkind/=rk ) then
+       errmsg = 'tuv_photolysis_init: realkind does not match kind_phot'
+       errflg = 1
+       return
+    end if
+
     xsqy_filepath = trim(input_data_root)//'/wrf_tuv_xsqy.nc'
- 
+
     call  calc_tuv_init( xsqy_filepath, full_tuv, tuv_jnames, errmsg, errflg )
 
   end subroutine tuv_photolysis_init

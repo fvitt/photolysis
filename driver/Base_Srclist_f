@@ -1,4 +1,4 @@
-machine.F90
+phot_kind_mod.F90
 numer.F90
 module_params.F90
 params_mod.F90
@@ -11,6 +11,7 @@ tuv_radiation_transfer.F90
 module_rxn.F90
 module_prates_tuv.F90
 tuv_photolysis.F90
+machine.F90
 input_slice.F90
 input_file.F90
 environ_conditions_mod.F90

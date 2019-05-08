@@ -1,5 +1,5 @@
 module tuv_radiation_transfer
-  use machine, only: rk => kind_phys
+  use phot_kind_mod, only: rk => kind_phot
 
   implicit none
 
@@ -13,12 +13,13 @@ contains
   
   !-------------------------------------------------------------------------------------------------
   !-------------------------------------------------------------------------------------------------
-  subroutine tuv_radiation_transfer_init( nlev_in, errmsg, errflg )
+  subroutine tuv_radiation_transfer_init( realkind, nlev_in, errmsg, errflg )
     use params_mod, only: input_data_root
     use rad_abs_xsect, only: rad_abs_xsect_init
     use module_xsections, only: rdxs_init
     use rad_abs_xsect,    only: nwave, wl, wc
 
+    integer,          intent(in)  :: realkind
     integer,          intent(in)  :: nlev_in
     character(len=*), intent(out) :: errmsg
     integer,          intent(out) :: errflg
@@ -27,6 +28,12 @@ contains
     
     errmsg = ''
     errflg = 0
+
+    if ( realkind/=rk ) then
+       errmsg = 'tuv_radiation_transfer_init: realkind does not match kind_phot'
+       errflg = 1
+       return
+    end if
 
     nlev = nlev_in
     nlyr = nlev-1

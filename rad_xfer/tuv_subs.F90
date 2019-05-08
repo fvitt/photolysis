@@ -1,6 +1,6 @@
       MODULE tuv_subs
 
-      use params_mod, only : dp
+      use phot_kind_mod, only : dp
       
       IMPLICIT none
 

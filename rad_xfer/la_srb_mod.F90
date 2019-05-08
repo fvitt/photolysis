@@ -14,7 +14,7 @@
 
       module la_srb_mod
 
-      use params_mod, only : DP
+      use phot_kind_mod, only : DP
 
       implicit none
 
