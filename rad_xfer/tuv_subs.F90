@@ -7,8 +7,6 @@
       private
       public :: tuv_radfld, sundis, calc_zenith
 
-      integer :: nstr = 1        ! stream count
-
       CONTAINS
 
       SUBROUTINE tuv_radfld( nlambda_start, cld_od_opt, cldfrac, nlyr, nwave, &
@@ -83,7 +81,6 @@
 !-----------------------------------------------------------------------------
 !     ... local variables
 !-----------------------------------------------------------------------------
-      integer :: k, n
       integer :: wn
       integer :: n_radlev, n_radlevp1
       integer :: nid(0:nlyr)
@@ -160,12 +157,12 @@
       call sphers( nlyr, z, zenith, dsdh, nid )
 
       call airmas( nlyr, dsdh, nid, aircol, vcol, scol )
-      call la_srb( nlyr, z, tlev, wmin, &
+      call la_srb( nlyr, tlev, wmin, &
                    vcol, scol, o2_xs, dto2, srb_o2_xs )
 
       do wn = nlambda_start,nwave
         call rtlink( &
-           nstr, nlyr+1, nlyr, nwave, &
+           nlyr+1, nlyr, nwave, &
            wn, albedo(wn), zenith, &
            dsdh, nid, &
            dtrl,  &
@@ -655,9 +652,9 @@ wave_loop: &
       real(dp), parameter :: r2d = 1.0_dp/d2r
 
       integer  :: i, j
-      real(dp) :: caz, csz, cw, d, ec, epsi, eqt, eyt, feqt, feqt1, &
+      real(dp) :: csz, cw, d, ec, epsi, eqt, eyt, feqt, feqt1, &
           feqt2, feqt3, feqt4, feqt5, feqt6, feqt7, lbgmt, lzgmt, ml, pepsi, &
-          pi, ra, raz, rdecl, reqt, rlt, rml, rra, ssw, sw, tab, w, wr, &
+          ra,  rdecl, reqt, rlt, rml, rra, ssw, sw, tab, w, wr, &
           yt, zpt, zr
 
       d = real(julday,dp) + gmt/24.0_dp

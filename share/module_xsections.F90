@@ -27,7 +27,7 @@
 
       module module_xsections
 
-      use module_params, only: deltax, kin, kw
+      use module_params, only: deltax, kin
       use params_mod, only: input_data_root
       use  numer_mod, only: addpnt, inter2
       
@@ -158,9 +158,8 @@
 
 ! internal
 
-      INTEGER :: iz, iw
-      REAL    :: factor, factor1
-      REAL    :: tc(nz)
+      INTEGER :: iw
+      REAL    :: factor
 
 !***** option 1:
 ! assign according to wavelength range:
@@ -247,7 +246,7 @@
 
       INTEGER, PARAMETER :: kdata = 70000
 
-      INTEGER n1, n2, n3, n4, iw
+      INTEGER n1, n2, n3, n4
       REAL x1(kdata), x2(kdata), x3(kdata), x4(kdata)
       REAL y1(kdata), y2(kdata), y3(kdata), y4(kdata)
 
@@ -427,7 +426,7 @@
       REAL x1(kdata), x2(kdata)
       REAL y1(kdata), y2(kdata)
 
-      INTEGER i, idum, iw
+      INTEGER i, idum
       REAL a1, a2, dum
       INTEGER ierr
 
@@ -552,7 +551,7 @@
 
       INTEGER, parameter :: kdata = 200
 
-      INTEGER n1, n2, iw
+      INTEGER n1, n2
       REAL x1(kdata), x2(kdata)
       REAL y1(kdata), y2(kdata)
 
@@ -679,7 +678,7 @@
       INTEGER ierr
 
       INTEGER, parameter :: kdata = 335
-      INTEGER n1, n2, n3, iw
+      INTEGER n1, n2, n3
       REAL x1(kdata), x2(kdata), x3(kdata)
       REAL y1(kdata), y2(kdata), y3(kdata)
 
@@ -844,7 +843,7 @@
 
       INTEGER, parameter :: kdata = 2000
 
-      INTEGER i, iw
+      INTEGER i
       INTEGER ierr
 
       INTEGER n1, n2, n3
@@ -1098,8 +1097,7 @@
 
 ! locals:
       INTEGER, parameter :: kdata = 100
-      INTEGER :: iw
-      INTEGER :: i, n1, n2, ierr
+      INTEGER :: i, n1, n2
       REAL    :: dum1, dum2
       REAL    :: x1(kdata), x2(kdata), y1(kdata), y2(kdata)
 
@@ -1202,10 +1200,7 @@
 !! local:
       REAL x1(kdata)
       REAL y1(kdata)
-      REAL yg(kw)
-      REAL dum
-      INTEGER ierr
-      INTEGER i, l, n, idum
+      INTEGER i, n
       CHARACTER(len=40)  :: fil
 
       errmsg = ' '
@@ -1236,10 +1231,6 @@
       CALL addpnt(x1,y1,kdata,n,      1.e+38,0.,errmsg, errflg)
       if (errflg.ne.0) return
       CALL inter2(nw,wl,so2xs,n,x1,y1,errmsg, errflg)
-      IF (errflg .NE. 0) THEN
-         WRITE(errmsg,'(''rdso2xs: interp err = '',i5,'' in file '',a)') ierr, fil
-         return
-      ENDIF
 
       END SUBROUTINE rdso2xs
 

@@ -62,7 +62,7 @@
 
       END SUBROUTINE init_srb
 
-      SUBROUTINE la_srb( nlyr, z, tlev, wmin, &
+      SUBROUTINE la_srb( nlyr, tlev, wmin, &
                          vcol, scol, o2_xs, dto2, srb_o2_xs )
 !-----------------------------------------------------------------------------
 !=  PURPOSE:
@@ -97,7 +97,6 @@
 !-----------------------------------------------------------------------------
       INTEGER, intent(in) :: nlyr
       REAL, intent(in) :: wmin
-      REAL, intent(in) :: z(:)
       REAL, intent(in) :: tlev(:)
 
       REAL, intent(in) :: vcol(:)
@@ -126,8 +125,6 @@
 ! O2 optical depth and equivalent cross section on Koppers' grid
 !-----------------------------------------------------------------------------
       REAL    :: dto2k(nlyr,nsrb), o2xsk(nlyr,nsrb)
-
-      real :: xnan
 
       nlev_srb = size( srb_o2_xs,dim=2 )
 !----------------------------------------------------------------------
@@ -412,7 +409,6 @@
 !-----------------------------------------------------------------------------
 !     ... local variables
 !-----------------------------------------------------------------------------
-      INTEGER :: i
       REAL    :: a(nsrb), b(nsrb) 
 
       call calc_params( x, a, b )

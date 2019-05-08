@@ -17,7 +17,7 @@ contains
     use params_mod, only: input_data_root
     use rad_abs_xsect, only: rad_abs_xsect_init
     use module_xsections, only: rdxs_init
-    use rad_abs_xsect,    only: nwave, wl, wc
+    use rad_abs_xsect,    only: nwave, wl
 
     integer,          intent(in)  :: realkind
     integer,          intent(in)  :: nlev_in

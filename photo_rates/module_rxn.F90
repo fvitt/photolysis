@@ -98,9 +98,7 @@
 ! local
       REAL :: x1(kdata)
       REAL :: y1(kdata)
-
-      INTEGER :: wn
-      REAL    :: yg(kw)
+      REAL :: yg(kw)
 
       errmsg = ' '
       errflg = 0
@@ -120,7 +118,6 @@
 
       SUBROUTINE readit
 
-      INTEGER :: ierr
       integer :: n, fileno
       character(len=132) :: filename
 
@@ -170,7 +167,7 @@
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
 
-      integer :: astat, m, n
+      integer :: astat, m
 
       errmsg = ' '
       errflg = 0
@@ -1293,8 +1290,7 @@
       REAL :: qy(nz)
       REAL :: t(nz)
       REAL :: no2xs(nz,nw-1)
-      INTEGER :: i, iw, n, idum, ierr
-      CHARACTER(len=256) :: msg
+      INTEGER :: iw, n
 
       errmsg = ' '
       errflg = 0
@@ -1391,14 +1387,13 @@
       real, parameter :: tfac1 = 1./(230. - 190.)
       real, parameter :: tfac2 = 1./(298. - 230.)
 
-      REAL :: qy, qy1, qy2, xsect
+      REAL :: xsect
       REAL, save :: yg1(kw)
       real, save :: yg_298(kw,2), yg_230(kw,2), yg_190(kw,2)
       real, save :: delabs(kw,2,2)
       real :: t(nz)
 
-      INTEGER i, iw, iz, n, idum, chnl
-      INTEGER ierr
+      INTEGER iw, n, chnl
       LOGICAL, save :: is_initialized = .false.
 
       errmsg = ' '
@@ -1519,11 +1514,10 @@
 
       REAL x1(kdata), x2(kdata)
       REAL y1(kdata), A(kdata), B(kdata)
-      INTEGER :: n, n1, n2
+      INTEGER :: n1, n2
 
 ! local
       INTEGER :: iw
-      REAL    :: xs
       REAL, save :: yg1(kw), yg2(kw)
       REAL    :: dum(nz)
       REAL    :: t(nz)
@@ -1605,14 +1599,13 @@
       integer, PARAMETER :: kdata=100
 
       INTEGER n1
-      REAL x1(kdata), x2(kdata)
+      REAL x1(kdata)
       REAL y1(kdata), y2(kdata)
 
 ! local
       real :: t(nz)
       REAL, save :: yg1(kw), yg2(kw)
       INTEGER i, iw
-      INTEGER ierr
 
       errmsg = ' '
       errflg = 0
@@ -1702,8 +1695,7 @@
       real, parameter :: B3 = -3.0493E-05
       real, parameter :: B4 = -1.0924E-07
 
-      INTEGER i, iw, n, idum
-      INTEGER ierr
+      INTEGER iw, n
       REAL lambda
       REAL sumA, sumB
       REAL :: t(nz)
@@ -1795,9 +1787,7 @@
       REAL, save :: yg(kw)
       real :: t(nz)
 
-      INTEGER i, iw, n
-      INTEGER ierr
-      INTEGER iz
+      INTEGER iw
 
       errmsg = ' '
       errflg = 0
@@ -1883,18 +1873,14 @@
 ! data arrays
       integer, PARAMETER :: kdata=150
 
-      INTEGER i, n
-      INTEGER n1, n2
-      REAL x1(kdata), x2(kdata)
+      INTEGER n
+      REAL x1(kdata)
       REAL y1(kdata), y2(kdata)
 
 ! local
-      INTEGER :: m, ierr
       INTEGER :: iw
       INTEGER :: chnl
-      REAL    :: qy2, qy3
       REAL    :: sig
-      REAL    :: dum
       REAL    :: qy1_n0, qy1_0, x
       REAL, save :: yg(kw), yg1(kw), yg2(kw), yg3(kw)
       REAL :: qy1(nz)
@@ -2009,16 +1995,13 @@
 
       integer, PARAMETER :: kdata=150
 
-      INTEGER i, n
-      INTEGER n1
+      INTEGER n
       REAL x1(kdata)
       REAL y1(kdata)
 
 ! local
       REAL, save :: yg(kw), yg1(kw)
       REAL :: qy1(nz)
-      REAL sig
-      INTEGER ierr
       INTEGER iw
 
       errmsg = ' '
@@ -2075,11 +2058,6 @@
       CALL addpnt(x1,y1,kdata,n,340.,0.,errmsg, errflg)
       CALL addpnt(x1,y1,kdata,n,           1.e+38,0.,errmsg, errflg)
       CALL inter2(nw,wl,yg1,n,x1,y1,errmsg, errflg)
-      IF (ierr .NE. 0) THEN
-         write(errmsg,'(''readit: Error '',i5,'' in inter2 for '',a)') ierr,trim(xsqy_tab(j)%label)
-         errflg = ierr
-         return
-      ENDIF
 
       END SUBROUTINE readit
 
@@ -2114,13 +2092,12 @@
 ! data arrays
       integer, PARAMETER :: kdata=500
 
-      INTEGER i, n
+      INTEGER n
       REAL x(kdata), x1(kdata)
       REAL y1(kdata), y2(kdata), y3(kdata)
 
 ! local
       REAL, save :: yg(kw), yg1(kw), yg2(kw), yg3(kw)
-      INTEGER :: ierr
       LOGICAL, save :: is_initialized = .false.
 
 !     mabs = 5
@@ -2204,16 +2181,13 @@
 ! data arrays
       integer, PARAMETER :: kdata=500
 
-      INTEGER i, n
-      INTEGER n1, n2
+      INTEGER n
       REAL x1(kdata)
       REAL y1(kdata)
 
 ! local
       REAL, save :: yg(kw)
-      REAL qy
       REAL sig
-      INTEGER ierr
       INTEGER iw
       REAL phi0, kq
 
@@ -2290,17 +2264,15 @@
 
       integer, PARAMETER :: kdata=150
 
-      INTEGER :: i, n
+      INTEGER :: n
       REAL x1(kdata)
       REAL y1(kdata), y2(kdata), y3(kdata), y4(kdata)
 
 ! local
       REAL, save :: yg(kw), yg2(kw), yg3(kw)
-      REAL :: qy(nz)
       REAL :: sig(nz)
       REAL :: T(nz)
       real :: fac(nz)
-      INTEGER ierr
       INTEGER iw
 
       errmsg = ' '
@@ -2371,18 +2343,14 @@
 
       integer, PARAMETER :: kdata = 100
 
-      INTEGER i, n
+      INTEGER n
       INTEGER iw
-      INTEGER n1, n2
       REAL :: x1(kdata)
       REAL :: y1(kdata), y2(kdata)
 
 ! local
       REAL, save :: yg(kw), yg1(kw)
-      REAL :: qy
-      REAL :: sig
       REAL :: T(nz)
-      INTEGER ierr
 
       errmsg = ' '
       errflg = 0
@@ -2461,7 +2429,7 @@
 !     real, parameter :: qyNO3 = .3
       real, parameter :: qyld(2) = (/ .7,.3 /)
 
-      INTEGER :: ierr, chnl
+      INTEGER :: chnl
       REAL, save :: yg(kw), yg2(kw)
       REAL :: sig(nz), T(nz)
       LOGICAL, save :: is_initialized = .false.
@@ -2545,9 +2513,8 @@
       real, parameter :: b4 = 1.5022e-10
 
       REAL, save :: yg(kw)
-      INTEGER i, iw, n, idum
-      INTEGER :: ierr
-      REAL :: tcoeff, sig
+      INTEGER iw, n
+      REAL :: tcoeff
       REAL :: w1
       REAL :: temp(nz)
 
@@ -2622,8 +2589,7 @@
 ! data arrays
       integer, PARAMETER :: kdata=100
 
-      INTEGER n1, n2
-      REAL x1(kdata), x2(kdata)
+      REAL x1(kdata)
       REAL y1(kdata), y2(kdata)
 
 ! local
@@ -2631,12 +2597,9 @@
 
       REAL, save :: yg2(kw), ydel(kw)
       REAL       :: yg1(kw)
-      REAL qy
       REAL :: t(nz)
       REAL :: slope(nz)
-      INTEGER i, iw, n, idum
-      INTEGER iz
-      INTEGER ierr
+      INTEGER iw, n
 
       errmsg = ' '
       errflg = 0
@@ -2708,8 +2671,7 @@
 ! data arrays
       integer, PARAMETER :: kdata=100
 
-      INTEGER n1, n2
-      REAL x1(kdata), x2(kdata)
+      REAL x1(kdata)
       REAL y1(kdata), y2(kdata)
 
 ! local
@@ -2717,12 +2679,9 @@
 
       REAL, save :: yg2(kw), ydel(kw)
       REAL       :: yg1(kw)
-      REAL qy
       REAL :: t(nz)
       REAL :: slope(nz)
-      INTEGER i, iw, n, idum
-      INTEGER ierr
-      INTEGER iz
+      INTEGER iw, n
 
       errmsg = ' '
       errflg = 0
@@ -2920,8 +2879,7 @@
 ! data arrays
       integer, PARAMETER :: kdata=100
 
-      INTEGER n1, n2, n3
-      REAL x1(kdata), x2(kdata), x3(kdata)
+      REAL x1(kdata)
       REAL y1(kdata), y2(kdata), y3(kdata)
 
 ! local
@@ -2930,12 +2888,9 @@
 
       REAL, save :: yg2(kw), yg3(kw), ydel1(kw), ydel2(kw)
       REAL       :: yg1(kw)
-      REAL qy
       REAL :: t(nz)
       REAL :: slope(nz)
-      INTEGER i, iw, n, idum
-      INTEGER ierr
-      INTEGER iz
+      INTEGER iw, n
 
       errmsg = ' '
       errflg = 0
@@ -3019,8 +2974,7 @@
 ! data arrays
       integer, PARAMETER :: kdata=100
 
-      INTEGER n1, n2, n3
-      REAL x1(kdata), x2(kdata), x3(kdata)
+      REAL x1(kdata)
       REAL y1(kdata), y2(kdata), y3(kdata)
 
 ! local
@@ -3030,12 +2984,9 @@
       REAL, save :: yg2(kw), yg3(kw)
       REAL, save :: ydel1(kw), ydel2(kw)
       REAL       :: yg1(kw)
-      REAL qy
       REAL :: t(nz)
       REAL :: slope(nz)
-      INTEGER i, iw, n, idum
-      INTEGER ierr
-      INTEGER iz
+      INTEGER iw, n
 
       errmsg = ' '
       errflg = 0
@@ -3119,8 +3070,7 @@
       real, parameter :: LBar = 206.214
 
       INTEGER i, iw, idum
-      INTEGER iz, k
-      REAL qy
+      INTEGER k
       REAL lambda
       REAL, save :: TBar
       REAL :: t(nz)
@@ -3200,9 +3150,8 @@
 ! local
       real, parameter :: LBar = 206.214
 
-      INTEGER i, iw, n, idum
-      INTEGER iz, k
-      REAL qy
+      INTEGER i, iw, idum
+      INTEGER k
       REAL lambda
       REAL, save :: TBar
       REAL :: t(nz)
@@ -3282,10 +3231,8 @@
 ! local
       real, parameter :: LBar = 206.214
 
-      INTEGER i, iw, n, idum
-      INTEGER ierr
-      INTEGER iz, k
-      REAL qy
+      INTEGER i, iw, idum
+      INTEGER k
       REAL lambda
       REAL, save :: Tbar
       REAL :: t(nz)
@@ -3367,8 +3314,7 @@
 ! data arrays
       integer, PARAMETER :: kdata=100
 
-      INTEGER n1, n2, n3, n4, n5
-      REAL x1(kdata), x2(kdata), x3(kdata), x4(kdata), x5(kdata)
+      REAL x1(kdata)
       REAL y1(kdata), y2(kdata), y3(kdata), y4(kdata), y5(kdata)
 
 ! local
@@ -3377,15 +3323,11 @@
       real, parameter :: tfac3 = 1./(270. - 250.)
       real, parameter :: tfac4 = 1./(295. - 270.)
 
-      REAL qy
       REAL, save :: yg2(kw), yg3(kw), yg4(kw), yg5(kw)
       REAL       :: yg1(kw)
       REAL, save :: ydel1(kw), ydel2(kw), ydel3(kw), ydel4(kw)
       REAL :: t(nz), t1(nz), t2(nz), t3(nz), t4(nz)
-      REAL :: slope(nz)
-      INTEGER i, iw, n, idum
-      INTEGER ierr
-      INTEGER iz
+      INTEGER iw, n
 
       errmsg = ' '
       errflg = 0
@@ -3497,7 +3439,7 @@
 
       REAL :: yg(kw)
       REAL :: qy(nw)
-      INTEGER :: n, idum
+      INTEGER :: n
 
       errmsg = ' '
       errflg = 0
@@ -3629,13 +3571,11 @@
       REAL y1(kdata),y2(kdata),y3(kdata)
 
 ! local
-      REAL qy1, qy2
+      REAL qy1
       REAL :: xs(nz)
       real :: t(nz)
       REAL, save :: yg1(kw), yg2(kw), yg3(kw)
-      INTEGER i, iw, idum, chnl
-      INTEGER ierr
-      INTEGER iz
+      INTEGER iw, chnl
       LOGICAL, save :: is_initialized = .false.
 
       errmsg = ' '
@@ -3788,7 +3728,7 @@
       real :: alpha(nz)
       INTEGER iz, iw
 
-      real :: aa, bb, bb2, sig
+      real :: aa, bb, bb2
 
       errmsg = ' '
       errflg = 0
@@ -3898,15 +3838,13 @@
 ! data arrays
       integer, PARAMETER :: kdata=150
 
-      INTEGER i, n
+      INTEGER n
       REAL x(kdata), y(kdata)
 
 ! local
       REAL, save :: yg(kw)
       REAL :: qy(nz)
-      INTEGER ierr
       INTEGER iw
-      INTEGER mabs
 
       errmsg = ' '
       errflg = 0
@@ -3972,15 +3910,12 @@
 ! data arrays
       integer, PARAMETER :: kdata=100
 
-      INTEGER i, n1, n2
+      INTEGER n1, n2
       REAL x1(kdata), y1(kdata)
       REAL x2(kdata), y2(kdata)
 
 ! local
-      INTEGER ierr
       INTEGER iw
-      REAL dum
-      REAL qy, sig
       REAL, save :: yg1(kw), yg2(kw)
       real :: t(nz)
 
@@ -4036,11 +3971,6 @@
         CALL addpnt(x2,y2,kdata,n2,               0.,y2(1),errmsg, errflg)
         CALL addpnt(x2,y2,kdata,n2,           1.e+38,y2(n2),errmsg, errflg)
         CALL inter2(nw,wl,yg2,n2,x2,y2,errmsg, errflg)
-        IF (ierr .NE. 0) THEN
-          write(errmsg,'(''readit: Error '',i5,'' in inter2 for '',a)') ierr,trim(xsqy_tab(j)%label)
-          errflg = ierr
-          return
-        ENDIF
       else
         yg2(:nw) = 0.
       endif
@@ -4071,15 +4001,12 @@
 ! data arrays
       integer, PARAMETER :: kdata=100
 
-      INTEGER i, n1, n2
+      INTEGER n1, n2
       REAL x1(kdata), y1(kdata)
       REAL x2(kdata), y2(kdata)
 
 ! local
-      INTEGER ierr
       INTEGER iw
-      REAL dum
-      REAL qy, sig
       REAL, save :: yg1(kw), yg2(kw)
       real :: t(nz)
 
@@ -4134,11 +4061,6 @@
         CALL addpnt(x2,y2,kdata,n2,               0.,y2(1),errmsg, errflg)
         CALL addpnt(x2,y2,kdata,n2,           1.e+38,y2(n2),errmsg, errflg)
         CALL inter2(nw,wl,yg2,n2,x2,y2,errmsg, errflg)
-        IF (ierr .NE. 0) THEN
-          write(errmsg,'(''readit: Error '',i5,'' in inter2 for '',a)') ierr,trim(xsqy_tab(j)%label)
-          errflg = ierr
-          return
-        ENDIF
       else
         yg2(:nw) = 0.
       endif
@@ -4347,7 +4269,6 @@
 ! local
       REAL    :: sig(nw)
       REAL    :: xfac1(nw)
-      INTEGER :: iw
 
       errmsg = ' '
       errflg = 0
@@ -4449,8 +4370,8 @@
 ! data arrays
       integer, PARAMETER :: kdata=50
 
-      REAL x1(kdata),x2(kdata)
-      REAL y1(kdata),y2(kdata)     ! y1 = 20'C, y2 = -20'C
+      REAL x1(kdata)
+      REAL y1(kdata)    ! y1 = 20'C, y2 = -20'C
 
 ! local
       REAL, parameter :: qyld(2:3) = (/ 1.1e-3,1. /)
@@ -4459,7 +4380,7 @@
 
       REAL, save :: yg2(kw)
       REAL :: qy1(nz)
-      INTEGER i, iw, n, idum
+      INTEGER iw, n
       integer :: chnl
       LOGICAL, save :: is_initialized = .false.
 
@@ -4531,14 +4452,13 @@
 ! data arrays
       integer, PARAMETER :: kdata=100
 
-      INTEGER i, n
+      INTEGER n
       REAL x(kdata), y(kdata)
 
 ! local
       REAL, save :: yg(kw)
       REAL :: ptorr(nz)
       REAL :: qy(nz)
-      INTEGER ierr
       INTEGER iw
 
       errmsg = ' '
@@ -4607,7 +4527,7 @@
 
       INTEGER :: iw
       INTEGER :: n
-      REAL    :: x1(kdata), x2(kdata)
+      REAL    :: x1(kdata)
       REAL    :: y1(kdata), y2(kdata)
 
 ! local
@@ -4690,16 +4610,13 @@
       integer, PARAMETER :: kdata=100
 
       INTEGER iw
-      INTEGER i, n
-      INTEGER n2
-      REAL x1(kdata), x2(kdata)
-      REAL y1(kdata), y2(kdata)
+      INTEGER n
+      REAL x1(kdata)
+      REAL y1(kdata)
 
 ! local
       REAL, save :: yg(kw)
       real :: qy(nz), qym1(nz)
-      REAL sig
-      INTEGER ierr
 
       errmsg = ' '
       errflg = 0
@@ -4766,10 +4683,9 @@
       integer, PARAMETER :: kdata=500
 
       INTEGER iw
-      INTEGER i, n
+      INTEGER i
       REAL x1(kdata)
       REAL y1(kdata)
-      INTEGER ierr
 
 ! local
       REAL :: yg(kw)
@@ -4943,17 +4859,14 @@
       integer, PARAMETER :: kdata=150
 
       INTEGER iw
-      INTEGER i, n, ii
+      INTEGER n, ii
       REAL x1(kdata), y1(kdata)
       REAL y223(kdata),y243(kdata),y263(kdata),y298(kdata), &
            y323(kdata), y343(kdata)
-      INTEGER ierr
 
 ! local
       REAL, save :: yg223(kw),yg243(kw),yg263(kw), &
                     yg298(kw),yg323(kw), yg343(kw)
-      REAL qy, sig
-
       errmsg = ' '
       errflg = 0
 
@@ -5063,17 +4976,13 @@
       integer, PARAMETER :: kdata=2000
 
       INTEGER iw
-      INTEGER i, n
-      REAL x1(kdata), y1(kdata)
-      integer nn, n204, n296, n378
+      INTEGER i
+      integer n204, n296, n378
       REAL x204(kdata),x296(kdata),x378(kdata)
       REAL y204(kdata),y296(kdata),y378(kdata)
 
-      INTEGER ierr
-
 ! local
       REAL, save :: yg204(kw),yg296(kw),yg378(kw)
-      REAL qy, sig
 
       errmsg = ' '
       errflg = 0
@@ -5167,13 +5076,12 @@
 
 ! data arrays
       INTEGER iw
-      INTEGER n, n1, n2
-      REAL x1(kdata), x2(kdata)
+      INTEGER n
+      REAL x1(kdata)
       REAL y298(kdata), tcoef(kdata)
       REAL qr(kdata), qm(kdata)
 
 ! local
-      INTEGER ierr
       REAL ak300
       real qyr300, qym300
       REAL, save :: yg1(kw), yg2(kw), yg3(kw), yg4(kw)
@@ -5299,7 +5207,6 @@
       REAL, save :: yg(kw)
       REAL    :: tcoeff
       REAL    :: w1
-      REAL    :: sig(nz)
       REAL    :: temp(nz)
 
       errmsg = ' '
@@ -5365,7 +5272,7 @@
       integer, PARAMETER :: kdata = 50
 
       INTEGER :: iw
-      REAL    :: x1(kdata), x2(kdata)
+      REAL    :: x1(kdata)
       REAL    :: y1(kdata), y2(kdata)
 
 ! local
@@ -5490,7 +5397,7 @@
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
 
-      integer :: ierr, m
+      integer :: m
       real    :: xwrk(kdata), ywrk(kdata)
 
       errmsg = ' '
@@ -5505,12 +5412,6 @@
       CALL addpnt(xwrk,ywrk,kdata,m,          1.e+38,yends(2),errmsg, errflg)
 
       CALL inter2(nw,wl,yout,m,xwrk,ywrk,errmsg, errflg)
-
-      IF (ierr /= 0) THEN
-         write(errmsg,'(''add_pnts_inter2: Error '',i5,'' in inter2 for '',a)') ierr,trim(jlabel)
-         errflg = ierr
-         return
-      ENDIF
 
       END SUBROUTINE add_pnts_inter2
 
@@ -5527,7 +5428,7 @@
 
       integer :: i, idum
       integer :: y_to_rd
-      integer :: ios, err_cnt
+      integer :: ios
 
       errmsg = ' '
       errflg = 0

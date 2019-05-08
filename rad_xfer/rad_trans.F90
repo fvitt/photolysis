@@ -16,7 +16,7 @@
       CONTAINS
 
       SUBROUTINE rtlink( &
-           nstr, nlev, nlyr, nwave, &
+           nlev, nlyr, nwave, &
            iw, albedo, zen, &
            dsdh, nid, &
            dtrl,  &
@@ -34,7 +34,6 @@
 !---------------------------------------------------------------------
 !     ... dummy arguments
 !---------------------------------------------------------------------
-      INTEGER, intent(in) :: nstr
       INTEGER, intent(in) :: nlev, nlyr
       INTEGER, intent(in) :: nwave, iw
       REAL, intent(in)    :: albedo
@@ -208,7 +207,7 @@
 !-----------------------------------------------------------------------------
 ! internal coefficients and matrix
 !-----------------------------------------------------------------------------
-      INTEGER :: row, nlyrm1
+      INTEGER :: nlyrm1
       REAL :: lam(nlyr), taun(nlyr), bgam(nlyr)
       REAL :: e1(nlyr), e2(nlyr), e3(nlyr), e4(nlyr)
       REAL :: cup(nlyr), cdn(nlyr), cuptn(nlyr), cdntn(nlyr)

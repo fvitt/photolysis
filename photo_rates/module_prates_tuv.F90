@@ -1,7 +1,6 @@
 module  module_prates_tuv
   use module_rxn, only : xsqy_table => xsqy_tab, the_subs, npht_tab, rxn_init
   use module_rxn, only : get_initialization, set_initialization
-  use params_mod, only : m2s
 
   implicit none
 
