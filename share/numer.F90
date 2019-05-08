@@ -1,5 +1,7 @@
 module numer_mod
 
+  use phot_kind_mod, only: rk => kind_phot
+
 ! This file contains the following subroutines, related to interpolations
 ! of input data, addition of points to arrays, and zeroing of arrays:
 !     inter1
@@ -42,19 +44,19 @@ contains
 
 ! input:
       INTEGER n, ng
-      REAL xg(ng)
-      REAL x(n), y(n)
+      REAL(rk) xg(ng)
+      REAL(rk) x(n), y(n)
 
 ! output:
-      REAL yg(ng)
+      REAL(rk) yg(ng)
 
 ! local:
-      REAL slope
+      REAL(rk) slope
       INTEGER jsave, i, j
 
       jsave = 1
       DO i = 1, ng
-         yg(i) = 0.
+         yg(i) = 0._rk
          j = jsave
    10    CONTINUE
          IF ((x(j) .GT. xg(i)) .OR. (xg(i) .GE. x(j+1))) THEN
@@ -107,17 +109,17 @@ contains
 
 ! input:
       INTEGER, intent(in) :: ng, n
-      REAL, intent(in) :: x(n), y(n), xg(ng)
+      REAL(rk), intent(in) :: x(n), y(n), xg(ng)
 
 ! output:
-      REAL, intent(out) :: yg(ng-1)
+      REAL(rk), intent(out) :: yg(ng-1)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
 
 ! local:
-      REAL area, xgl, xgu
-      REAL darea, slope
-      REAL a1, a2, b1, b2
+      REAL(rk) area, xgl, xgu
+      REAL(rk) darea, slope
+      REAL(rk) a1, a2, b1, b2
       INTEGER ngintv
       INTEGER i, k, jstart
 
@@ -159,7 +161,7 @@ contains
       DO i = 1,ngintv
 
 ! initalize:
-            area = 0.0
+            area = 0.0_rk
             xgl = xg(i)
             xgu = xg(i+1)
 
@@ -190,12 +192,12 @@ contains
                 a2 = MIN(x(k+1),xgu)
 !  if points coincide, contribution is zero
                 IF (x(k+1).EQ.x(k)) THEN
-                  darea = 0.e0
+                  darea = 0.e0_rk
                 ELSE
                   slope = (y(k+1) - y(k))/(x(k+1) - x(k))
                   b1 = y(k) + slope*(a1 - x(k))
                   b2 = y(k) + slope*(a2 - x(k))
-                  darea = (a2 - a1)*(b2 + b1)/2.
+                  darea = (a2 - a1)*(b2 + b1)/2._rk
                 ENDIF
 
 !  find the area under the trapezoid from a1 to a2
@@ -258,18 +260,18 @@ contains
       
 ! input:
       INTEGER, intent(in) :: n, ng
-      REAL,    intent(in) :: xg(ng)
-      REAL,    intent(in) :: x(n), y(n)
+      REAL(rk),    intent(in) :: xg(ng)
+      REAL(rk),    intent(in) :: x(n), y(n)
       INTEGER, intent(in) :: FoldIn
 
 ! output:
-      REAL,             intent(out) ::  yg(ng)
+      REAL(rk),             intent(out) ::  yg(ng)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
 
 ! local:
-      REAL a1, a2, sum
-      REAL tail
+      REAL(rk) a1, a2, sum
+      REAL(rk) tail
       INTEGER jstart, i, j, k
 
       errmsg = ' '
@@ -286,8 +288,8 @@ contains
 
       jstart = 1
       DO i = 1, ng - 1
-         yg(i) = 0.
-         sum = 0.
+         yg(i) = 0._rk
+         sum = 0._rk
          j = jstart
          IF (j .LE. n-1) THEN
    20      CONTINUE
@@ -375,18 +377,18 @@ contains
       
 ! input:
       INTEGER, intent(in) :: n, ng
-      REAL,    intent(in) :: xg(ng)
-      REAL,    intent(in) :: x(n), y(n)
+      REAL(rk),    intent(in) :: xg(ng)
+      REAL(rk),    intent(in) :: x(n), y(n)
       INTEGER, intent(in) :: FoldIn
 
 ! output:
-      REAL,             intent(out) :: yg(ng)
+      REAL(rk),             intent(out) :: yg(ng)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
 
 ! local:
-      REAL a1, a2, sum
-      REAL tail
+      REAL(rk) a1, a2, sum
+      REAL(rk) tail
       INTEGER jstart, i, j, k
 
       errmsg = ' '
@@ -403,8 +405,8 @@ contains
 
       jstart = 1
       DO i = 1, ng - 1
-         yg(i) = 0.
-         sum = 0.
+         yg(i) = 0._rk
+         sum = 0._rk
          j = jstart
          IF (j .LE. n-1) THEN
    20      CONTINUE
@@ -469,8 +471,8 @@ contains
 
       INTEGER, intent(in) :: ld
       INTEGER, intent(inout) :: n
-      REAL, intent(inout)    :: x(ld), y(ld)
-      REAL, intent(in) :: xnew, ynew
+      REAL(rk), intent(inout)    :: x(ld), y(ld)
+      REAL(rk), intent(in) :: xnew, ynew
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
 

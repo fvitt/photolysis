@@ -1,5 +1,7 @@
       module module_params
 
+      use phot_kind_mod, only: rk => kind_phot
+
       implicit none
 
 ! BROADLY USED PARAMETERS:
@@ -26,27 +28,27 @@
 !  wavelength dependent DOM (dissolved organic matter) spectra
       integer, PARAMETER :: kdom=200
 ! delta for adding points at beginning or end of data grids
-      real, PARAMETER :: deltax = 1.E-5
+      real(rk), PARAMETER :: deltax = 1.E-5_rk
 
 ! some constants...
 
 ! pi:
-      real, PARAMETER :: pi=3.1415926535898
+      real(rk), PARAMETER :: pi=3.1415926535898_rk
 
 ! radius of the earth, km:
-      real, PARAMETER :: radius=6.371E+3
+      real(rk), PARAMETER :: radius=6.371E+3_rk
 
 ! Planck constant x speed of light, J m
-      real, PARAMETER :: hc = 6.626068E-34 * 2.99792458E8
+      real(rk), PARAMETER :: hc = 6.626068E-34_rk * 2.99792458E8_rk
 
 ! largest number of the machine:
-      real, PARAMETER :: largest=1.E+36
+      real(rk), PARAMETER :: largest=1.E+36_rk
 
 ! small numbers (positive and negative)
-      real, PARAMETER :: pzero = +10./largest
-      real, PARAMETER :: nzero = -10./largest
+      real(rk), PARAMETER :: pzero = +10._rk/largest
+      real(rk), PARAMETER :: nzero = -10._rk/largest
 
 ! machine precision
-      real, PARAMETER :: precis = 1.e-7
+      real(rk), PARAMETER :: precis = 1.e-7_rk
 
       end module module_params

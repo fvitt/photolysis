@@ -14,7 +14,8 @@
 
       module la_srb_mod
 
-      use phot_kind_mod, only : DP
+      use phot_kind_mod, only: DP
+      use phot_kind_mod, only: rk => kind_phot
 
       implicit none
 
@@ -36,9 +37,9 @@
       REAL(kind=DP), allocatable :: chebev_ac(:,:)
       REAL(kind=DP), allocatable :: chebev_bc(:,:)
 
-      REAL    :: xslod(nsrb)
-      REAL    :: wlsrb(ksrb)
-      REAL    :: wlla(kla)
+      REAL(rk)    :: xslod(nsrb)
+      REAL(rk)    :: wlsrb(ksrb)
+      REAL(rk)    :: wlla(kla)
 
       CONTAINS
 
@@ -48,17 +49,17 @@
       c(:) = (/ 8.22114e-21_DP, 1.77556e-20_DP,  8.22112e-21_DP /)
       d(:) = (/ 6.0073e-21_DP,  4.28569e-21_DP,  1.28059e-20_DP /)
       e(:) = (/ 8.21666e-21_DP, 1.63296e-20_DP,  4.85121e-17_DP /)
-      xslod(:) = (/6.2180730E-21, 5.8473627E-22, 5.6996334E-22, &
-                   4.5627094E-22, 1.7668250E-22, 1.1178808E-22, &
-                   1.2040544E-22, 4.0994668E-23, 1.8450616E-23, &
-                   1.5639540E-23, 8.7961075E-24, 7.6475608E-24, &
-                   7.6260556E-24, 7.5565696E-24, 7.6334338E-24, &
-                   7.4371992E-24, 7.3642966E-24 /)
-      wlla(:)  = (/ 121.4, 121.9/)
-      wlsrb(:) = (/174.4, 177.0, 178.6, 180.2, 181.8, &
-                   183.5, 185.2, 186.9, 188.7, 190.5, &
-                   192.3, 194.2, 196.1, 198.0, 200.0, &
-                   202.0, 204.1, 205.8/)
+      xslod(:) = (/6.2180730E-21_rk, 5.8473627E-22_rk, 5.6996334E-22_rk, &
+                   4.5627094E-22_rk, 1.7668250E-22_rk, 1.1178808E-22_rk, &
+                   1.2040544E-22_rk, 4.0994668E-23_rk, 1.8450616E-23_rk, &
+                   1.5639540E-23_rk, 8.7961075E-24_rk, 7.6475608E-24_rk, &
+                   7.6260556E-24_rk, 7.5565696E-24_rk, 7.6334338E-24_rk, &
+                   7.4371992E-24_rk, 7.3642966E-24_rk /)
+      wlla(:)  = (/ 121.4_rk, 121.9_rk/)
+      wlsrb(:) = (/174.4_rk, 177.0_rk, 178.6_rk, 180.2_rk, 181.8_rk, &
+                   183.5_rk, 185.2_rk, 186.9_rk, 188.7_rk, 190.5_rk, &
+                   192.3_rk, 194.2_rk, 196.1_rk, 198.0_rk, 200.0_rk, &
+                   202.0_rk, 204.1_rk, 205.8_rk/)
 
       END SUBROUTINE init_srb
 
@@ -96,20 +97,20 @@
 !     ... dummy arguments
 !-----------------------------------------------------------------------------
       INTEGER, intent(in) :: nlyr
-      REAL, intent(in) :: wmin
-      REAL, intent(in) :: tlev(:)
+      REAL(rk), intent(in) :: wmin
+      REAL(rk), intent(in) :: tlev(:)
 
-      REAL, intent(in) :: vcol(:)
-      REAL, intent(in) :: scol(:)
-      REAL, intent(in) :: o2_xs(:)
-      REAL, intent(inout) :: dto2(:,:)
-      REAL, intent(inout) :: srb_o2_xs(:,:)
+      REAL(rk), intent(in) :: vcol(:)
+      REAL(rk), intent(in) :: scol(:)
+      REAL(rk), intent(in) :: o2_xs(:)
+      REAL(rk), intent(inout) :: dto2(:,:)
+      REAL(rk), intent(inout) :: srb_o2_xs(:,:)
 
 !-----------------------------------------------------------------------------
 !     ... local variables
 !-----------------------------------------------------------------------------
-      REAL :: secchi(nlyr)
-      REAL :: o2col(nlyr)
+      REAL(rk) :: secchi(nlyr)
+      REAL(rk) :: o2col(nlyr)
 
 !-----------------------------------------------------------------------------
 ! Lyman-alpha variables
@@ -118,13 +119,13 @@
 !     INTEGER :: nlev
       INTEGER :: nlev_srb
       INTEGER :: k, iw, wn
-      REAL    :: dto2la(nlyr,nla), o2xsla(nlyr,nla)
+      REAL(rk)    :: dto2la(nlyr,nla), o2xsla(nlyr,nla)
 
 !-----------------------------------------------------------------------------
 ! grid on which Koppers' parameterization is defined
 ! O2 optical depth and equivalent cross section on Koppers' grid
 !-----------------------------------------------------------------------------
-      REAL    :: dto2k(nlyr,nsrb), o2xsk(nlyr,nsrb)
+      REAL(rk)    :: dto2k(nlyr,nsrb), o2xsk(nlyr,nsrb)
 
       nlev_srb = size( srb_o2_xs,dim=2 )
 !----------------------------------------------------------------------
@@ -144,8 +145,8 @@
 ! Use 2.0 if no direct sun (value for isotropic radiation)
 ! For nz, use value at nz-1
 !----------------------------------------------------------------------
-        WHERE( scol(:nlyr) > .1*largest ) 
-          secchi(:nlyr) = 2.
+        WHERE( scol(:nlyr) > .1_rk*largest ) 
+          secchi(:nlyr) = 2._rk
         ELSEWHERE
           secchi(:nlyr) = scol(:nlyr)/vcol(:nlyr)
         ENDWHERE
@@ -201,14 +202,14 @@
 !     ... dummy arguments
 !-----------------------------------------------------------------------------
       INTEGER, intent(in) :: nlyr
-      REAL,    intent(in) :: o2col(:)
-      REAL,    intent(in) :: secchi(:)
-      REAL, intent(inout) :: dto2la(nlyr,nla), o2xsla(nlyr,nla)
+      REAL(rk),    intent(in) :: o2col(:)
+      REAL(rk),    intent(in) :: secchi(:)
+      REAL(rk), intent(inout) :: dto2la(nlyr,nla), o2xsla(nlyr,nla)
 
 !-----------------------------------------------------------------------------
 !     ... local variables
 !-----------------------------------------------------------------------------
-      REAL, parameter    :: xsmin = 1.e-20
+      REAL(rk), parameter    :: xsmin = 1.e-20_rk
       REAL(kind=DP), parameter :: rmmin = 1.e-100_DP
 
       INTEGER :: k, kp1, wn
@@ -217,8 +218,8 @@
       REAL(kind=DP) :: rm_wrk(3), ro2_wrk(3)
 
       do wn = 1,nla
-        dto2la(:nlyr,wn) = 0.
-        o2xsla(:nlyr,wn) = 0.
+        dto2la(:nlyr,wn) = 0._rk
+        o2xsla(:nlyr,wn) = 0._rk
       end do
 !-----------------------------------------------------------------------------
 ! calculate reduction factors at every layer
@@ -240,7 +241,7 @@
         kp1 = k + 1
         IF (rm(k) > rmmin) THEN
           IF (ro2(k) > rmmin) THEN
-            o2xsla(k,1) = REAL( ro2(k)/rm(k) )
+            o2xsla(k,1) = REAL( ro2(k)/rm(k) ,rk)
           ELSE
             o2xsla(k,1) = xsmin
           ENDIF
@@ -249,10 +250,10 @@
             dto2la(k,1) = LOG( rm(kp1) )/secchi(kp1)  &
                         - LOG( rm(k))   /secchi(k)
           ELSE
-            dto2la(k,1) = 1000.
+            dto2la(k,1) = 1000._rk
           ENDIF
         ELSE
-          dto2la(k,1) = 1000.
+          dto2la(k,1) = 1000._rk
           o2xsla(k,1) = xsmin
         ENDIF
       END DO
@@ -261,7 +262,7 @@
 ! do top layer separately
 !-----------------------------------------------------------------------------
       IF( rm(nlyr) > rmmin ) THEN
-        o2xsla(nlyr,1) = REAL( ro2(nlyr)/rm(nlyr) )
+        o2xsla(nlyr,1) = REAL( ro2(nlyr)/rm(nlyr) ,rk)
       ELSE
         o2xsla(nlyr,1) = xsmin
       ENDIF
@@ -295,19 +296,19 @@
 !     ... dummy arguments
 !-----------------------------------------------------------------------------
       INTEGER, intent(in) :: nlyr
-      REAL,    intent(in) :: o2col(:)
-      REAL,    intent(in) :: tlev(:), secchi(:)
-      REAL, intent(inout) :: dto2(:,:), o2xsk(:,:)
+      REAL(rk),    intent(in) :: o2col(:)
+      REAL(rk),    intent(in) :: tlev(:), secchi(:)
+      REAL(rk), intent(inout) :: dto2(:,:), o2xsk(:,:)
 
 !-----------------------------------------------------------------------------
 !     ... local variables
 !-----------------------------------------------------------------------------
-      REAL, parameter :: o2col_min = exp( 38. )
+      REAL(rk), parameter :: o2col_min = exp( 38._rk )
 
       INTEGER :: wn, k, ktop, ktop1, kbot, nlyrm1
-      REAL    :: x
-      REAL    :: o2col1(nlyr)
-      REAL    :: xs(nsrb)
+      REAL(rk)    :: x
+      REAL(rk)    :: o2col1(nlyr)
+      REAL(rk)    :: xs(nsrb)
 
       nlyrm1 = nlyr - 1
 !-----------------------------------------------------------------------------
@@ -329,10 +330,10 @@
       DO k = 1,nlyr
         o2col1(k) = MAX( o2col(k),o2col_min )
         x  = LOG( o2col1(k) )
-        IF (x < 38.0) THEN
+        IF (x < 38.0_rk) THEN
           ktop1 = k-1
           ktop  = MIN(ktop1,ktop)
-        ELSE IF (x > 56.0) THEN
+        ELSE IF (x > 56.0_rk) THEN
           kbot = k
         ELSE
           CALL effxs( x, tlev(k), xs )
@@ -363,23 +364,23 @@
 !-----------------------------------------------------------------------------
 !  Calculate incremental optical depths 
 !-----------------------------------------------------------------------------
-      dto2(nlyr,1:nsrb) = 0.0       ! set optical depth to zero at top
+      dto2(nlyr,1:nsrb) = 0.0_rk       ! set optical depth to zero at top
       DO wn = 1,nsrb
 !-----------------------------------------------------------------------------
 !     ... calculate an optical depth weighted by density,
 !         put in mean value estimate, if in shade
 !-----------------------------------------------------------------------------
-        WHERE (ABS(1. - o2col1(2:nlyr)/o2col1(:nlyrm1)) <= 2.*precis)
+        WHERE (ABS(1._rk - o2col1(2:nlyr)/o2col1(:nlyrm1)) <= 2._rk*precis)
           dto2(:nlyrm1,wn) = o2xsk(2:nlyr,wn)*o2col1(2:nlyr)/real(nlyrm1)
         ELSEWHERE
           dto2(:nlyr-1,wn) = ABS( &
             (o2xsk(2:nlyr,wn)*o2col1(2:nlyr) - o2xsk(:nlyrm1,wn)*o2col1(:nlyrm1)) &
-            /(1. + LOG(o2xsk(2:nlyr,wn)/o2xsk(:nlyrm1,wn))  &
+            /(1._rk + LOG(o2xsk(2:nlyr,wn)/o2xsk(:nlyrm1,wn))  &
               / LOG(o2col1(2:nlyr)/o2col1(:nlyrm1))) )
 !-----------------------------------------------------------------------------
 !     ... change to vertical optical depth
 !-----------------------------------------------------------------------------
-          dto2(:nlyrm1,wn) = 2. * dto2(:nlyrm1,wn)/(secchi(:nlyr-1)+secchi(2:nlyr))
+          dto2(:nlyrm1,wn) = 2._rk * dto2(:nlyrm1,wn)/(secchi(:nlyr-1)+secchi(2:nlyr))
         ENDWHERE
       END DO 
 
@@ -403,17 +404,17 @@
 !-----------------------------------------------------------------------------
 !     ... dummy arguments
 !-----------------------------------------------------------------------------
-      REAL, intent(in)  :: t, x
-      REAL, intent(out) :: xs(nsrb)
+      REAL(rk), intent(in)  :: t, x
+      REAL(rk), intent(out) :: xs(nsrb)
 
 !-----------------------------------------------------------------------------
 !     ... local variables
 !-----------------------------------------------------------------------------
-      REAL    :: a(nsrb), b(nsrb) 
+      REAL(rk)    :: a(nsrb), b(nsrb) 
 
       call calc_params( x, a, b )
 
-      xs(:nsrb) = EXP( a(:nsrb)*( t - 220.) + b(:nsrb) )
+      xs(:nsrb) = EXP( a(:nsrb)*( t - 220._rk) + b(:nsrb) )
 
       END SUBROUTINE EFFXS
 
@@ -428,8 +429,8 @@
 !-----------------------------------------------------------------------------
 !     ... dummy arguments
 !-----------------------------------------------------------------------------
-      REAL, intent(in)  :: x
-      REAL, intent(out) :: a(nsrb), b(nsrb)
+      REAL(rk), intent(in)  :: x
+      REAL(rk), intent(out) :: a(nsrb), b(nsrb)
 
 !-----------------------------------------------------------------------------
 !     ... local variables
@@ -442,13 +443,13 @@
 !-----------------------------------------------------------------------------
 
       DO wn = 1,nsrb
-        a(wn) = chebev( 38.0 , 56.0, chebev_ac(:,wn), nchebev_term, x )
-        b(wn) = chebev( 38.0 , 56.0, chebev_bc(:,wn), nchebev_term, x )
+        a(wn) = chebev( 38.0_rk , 56.0_rk, chebev_ac(:,wn), nchebev_term, x )
+        b(wn) = chebev( 38.0_rk , 56.0_rk, chebev_bc(:,wn), nchebev_term, x )
       END DO
 
       END SUBROUTINE CALC_PARAMS
 
-      REAL FUNCTION chebev( a, b, c, m, x )
+      REAL(rk) FUNCTION chebev( a, b, c, m, x )
 !-------------------------------------------------------------
 !     Chebyshev evaluation algorithm
 !     See Numerical recipes p193
@@ -458,28 +459,28 @@
 !       ... dummy arguments
 !-------------------------------------------------------------
       INTEGER, intent(in) :: m
-      REAL,    intent(in) :: a, b, x
+      REAL(rk),    intent(in) :: a, b, x
       REAL(kind=DP), intent(in) :: c(:)
 
 !-------------------------------------------------------------
 !       ... local variables
 !-------------------------------------------------------------
       INTEGER :: j
-      REAL    :: d, dd, sv, y, y2
+      REAL(rk)    :: d, dd, sv, y, y2
 
-      IF( (x - a)*(x - b) > 0.) THEN
-	chebev = 0.0
+      IF( (x - a)*(x - b) > 0._rk) THEN
+	chebev = 0.0_rk
       ELSE
-	d  = 0.
-        dd = 0.
-        y  = (2.*x - a - b)/(b - a)
-        y2 = 2.*y
+	d  = 0._rk
+        dd = 0._rk
+        y  = (2._rk*x - a - b)/(b - a)
+        y2 = 2._rk*y
         DO J = m,2,-1
           sv = d
           d  = y2*d - dd + real( c(J) )
           dd = sv
         END DO
-        chebev = y*d - dd + 0.5*real( c(1) )
+        chebev = y*d - dd + 0.5_rk*real( c(1) )
       ENDIF
 	
       END FUNCTION chebev
@@ -511,8 +512,8 @@
 !     ... dummy arguments
 !-----------------------------------------------------------------------------
       INTEGER, intent(in)    :: nlyr, nwave
-      REAL,    intent(in)    :: xso2(:,:)
-      REAL,    intent(inout) :: xsqy(:,:)
+      REAL(rk),    intent(in)    :: xso2(:,:)
+      REAL(rk),    intent(inout) :: xsqy(:,:)
 
 !-----------------------------------------------------------------------------
 !     ... local variables

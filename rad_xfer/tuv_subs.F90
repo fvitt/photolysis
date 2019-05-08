@@ -1,7 +1,8 @@
       MODULE tuv_subs
 
-      use phot_kind_mod, only : dp
-      
+      use phot_kind_mod, only: dp
+      use phot_kind_mod, only: rk => kind_phot
+
       IMPLICIT none
 
       private
@@ -35,44 +36,44 @@
       integer, intent(in)  :: nlyr
       integer, intent(in)  :: nwave
       integer, intent(in)  :: cld_od_opt
-      real, intent(in)  :: zenith
-      real, intent(in)  :: dobsi
-      real, intent(in)  :: wmin
-      real, intent(in)  :: z(:)
-      real, intent(in)  :: albedo(:)
-      real, intent(in)  :: aircol(:)
-      real, intent(in)  :: o2col(:)
-      real, intent(in)  :: o3col(:)
-      real, intent(in)  :: so2col(:)
-      real, intent(in)  :: no2col(:)
-      real, intent(in)  :: tauaer300(:)
-      real, intent(in)  :: tauaer400(:)
-      real, intent(in)  :: tauaer600(:)
-      real, intent(in)  :: tauaer999(:)
-      real, intent(in)  :: waer300(:)
-      real, intent(in)  :: waer400(:)
-      real, intent(in)  :: waer600(:)
-      real, intent(in)  :: waer999(:)
-      real, intent(in)  :: gaer300(:)
-      real, intent(in)  :: gaer400(:)
-      real, intent(in)  :: gaer600(:)
-      real, intent(in)  :: gaer999(:)
-      real, intent(in)  :: qll(:)
-      real, intent(in)  :: wc(:)
-      real, intent(in)  :: tlev(:)
-      real, intent(in)  :: cldfrac(:)
-      real, intent(in)  :: o2_xs(:)
-      real, intent(in)  :: so2_xs(:)
-      real, intent(in)  :: o3_xs(:,:)
-      real, intent(in)  :: no2_xs(:,:)
-      real, intent(out) :: srb_o2_xs(:,:)
-      real, intent(out) :: radfld(:,:)
-      real, intent(out) :: efld(:,:)
-      real, intent(inout)  :: dir_fld(:,:), dwn_fld(:,:), up_fld(:,:)
-      real, intent(inout)  :: e_dir(:,:), e_dn(:,:), e_up(:,:)
-      real, intent(inout)  :: dt_cld(:)
-      real, intent(inout)  :: dtaer(:,:), omaer(:,:), gaer(:,:)
-      real, intent(inout)  :: dtcld(:,:), omcld(:,:), gcld(:,:)
+      real(rk), intent(in)  :: zenith
+      real(rk), intent(in)  :: dobsi
+      real(rk), intent(in)  :: wmin
+      real(rk), intent(in)  :: z(:)
+      real(rk), intent(in)  :: albedo(:)
+      real(rk), intent(in)  :: aircol(:)
+      real(rk), intent(in)  :: o2col(:)
+      real(rk), intent(in)  :: o3col(:)
+      real(rk), intent(in)  :: so2col(:)
+      real(rk), intent(in)  :: no2col(:)
+      real(rk), intent(in)  :: tauaer300(:)
+      real(rk), intent(in)  :: tauaer400(:)
+      real(rk), intent(in)  :: tauaer600(:)
+      real(rk), intent(in)  :: tauaer999(:)
+      real(rk), intent(in)  :: waer300(:)
+      real(rk), intent(in)  :: waer400(:)
+      real(rk), intent(in)  :: waer600(:)
+      real(rk), intent(in)  :: waer999(:)
+      real(rk), intent(in)  :: gaer300(:)
+      real(rk), intent(in)  :: gaer400(:)
+      real(rk), intent(in)  :: gaer600(:)
+      real(rk), intent(in)  :: gaer999(:)
+      real(rk), intent(in)  :: qll(:)
+      real(rk), intent(in)  :: wc(:)
+      real(rk), intent(in)  :: tlev(:)
+      real(rk), intent(in)  :: cldfrac(:)
+      real(rk), intent(in)  :: o2_xs(:)
+      real(rk), intent(in)  :: so2_xs(:)
+      real(rk), intent(in)  :: o3_xs(:,:)
+      real(rk), intent(in)  :: no2_xs(:,:)
+      real(rk), intent(out) :: srb_o2_xs(:,:)
+      real(rk), intent(out) :: radfld(:,:)
+      real(rk), intent(out) :: efld(:,:)
+      real(rk), intent(inout)  :: dir_fld(:,:), dwn_fld(:,:), up_fld(:,:)
+      real(rk), intent(inout)  :: e_dir(:,:), e_dn(:,:), e_up(:,:)
+      real(rk), intent(inout)  :: dt_cld(:)
+      real(rk), intent(inout)  :: dtaer(:,:), omaer(:,:), gaer(:,:)
+      real(rk), intent(inout)  :: dtcld(:,:), omcld(:,:), gcld(:,:)
       logical, intent(in)  :: has_aer_ra_feedback
 
       character(len=*), intent(out)   :: errmsg
@@ -84,33 +85,33 @@
       integer :: wn
       integer :: n_radlev, n_radlevp1
       integer :: nid(0:nlyr)
-      real :: dtrl(nlyr,nwave)
-      real :: dto2(nlyr,nwave)
-      real :: dto3(nlyr,nwave)
-      real :: dtso2(nlyr,nwave)
-      real :: dtno2(nlyr,nwave)
+      real(rk) :: dtrl(nlyr,nwave)
+      real(rk) :: dto2(nlyr,nwave)
+      real(rk) :: dto3(nlyr,nwave)
+      real(rk) :: dtso2(nlyr,nwave)
+      real(rk) :: dtno2(nlyr,nwave)
 !     real :: dtcld(nlyr,nwave)
 !     real :: dtaer(nlyr,nwave)
-      real :: dtsnw(nlyr,nwave)
+      real(rk) :: dtsnw(nlyr,nwave)
 
 !     real :: omcld(nlyr,nwave)
 !     real :: gcld(nlyr,nwave)
 !     real :: omaer(nlyr,nwave)
 !     real :: gaer(nlyr,nwave)
-      real :: omsnw(nlyr,nwave)
-      real :: gsnw(nlyr,nwave)
+      real(rk) :: omsnw(nlyr,nwave)
+      real(rk) :: gsnw(nlyr,nwave)
 
-      real :: edir(nlyr+1)
-      real :: edn(nlyr+1)
-      real :: eup(nlyr+1)
-      real :: fdir(nlyr+1)
-      real :: fdn(nlyr+1)
-      real :: fup(nlyr+1)
+      real(rk) :: edir(nlyr+1)
+      real(rk) :: edn(nlyr+1)
+      real(rk) :: eup(nlyr+1)
+      real(rk) :: fdir(nlyr+1)
+      real(rk) :: fdn(nlyr+1)
+      real(rk) :: fup(nlyr+1)
 
-      real :: vcol(nlyr)
-      real :: scol(nlyr)
+      real(rk) :: vcol(nlyr)
+      real(rk) :: scol(nlyr)
 
-      real :: dsdh(0:nlyr,nlyr)
+      real(rk) :: dsdh(0:nlyr,nlyr)
 
       errmsg = ' '
       errflg = 0
@@ -119,15 +120,15 @@
       n_radlevp1 = n_radlev + 1
 
       do wn = 1,nwave
-        omcld(:,wn) = 0.
-        omaer(:,wn) = 0.
-        omsnw(:,wn) = 0.
-        gcld(:,wn)  = 0.
-        gaer(:,wn)  = 0.
-        gsnw(:,wn)  = 0.
-        dtcld(:,wn) = 0.
-        dtaer(:,wn) = 0.
-        dtsnw(:,wn) = 0.
+        omcld(:,wn) = 0._rk
+        omaer(:,wn) = 0._rk
+        omsnw(:,wn) = 0._rk
+        gcld(:,wn)  = 0._rk
+        gaer(:,wn)  = 0._rk
+        gsnw(:,wn)  = 0._rk
+        dtcld(:,wn) = 0._rk
+        dtaer(:,wn) = 0._rk
+        dtsnw(:,wn) = 0._rk
       end do
 
       call odrl( wc, aircol, dtrl )
@@ -203,16 +204,16 @@
 !-----------------------------------------------------------------------------*
 !     ...dummy arguments
 !-----------------------------------------------------------------------------*
-      REAL,    intent(in)  :: aircol(:)
-      REAL,    intent(in)  :: wc(:)
-      REAL,    intent(out) :: dtrl(:,:)
+      REAL(rk),    intent(in)  :: aircol(:)
+      REAL(rk),    intent(in)  :: wc(:)
+      REAL(rk),    intent(out) :: dtrl(:,:)
 
 !-----------------------------------------------------------------------------*
 !     ...local variables
 !-----------------------------------------------------------------------------*
       INTEGER :: nwave, nlyr
       INTEGER :: wn
-      REAL    :: srayl, wmicrn, xx 
+      REAL(rk)    :: srayl, wmicrn, xx 
       
       nwave = size( wc )
       nlyr  = size( aircol )
@@ -226,13 +227,13 @@
 ! An empirical formula for its calculation in the homoshpere, Planet.
 ! Space Sci., 32, 1467-1468, 1984.
 !-----------------------------------------------------------------------------*
-        wmicrn =  wc(wn)*1.E-3
-        IF( wmicrn <= 0.55 ) THEN
-          xx = 3.6772 + 0.389*wmicrn + 0.09426/wmicrn
+        wmicrn =  wc(wn)*1.E-3_rk
+        IF( wmicrn <= 0.55_rk ) THEN
+          xx = 3.6772_rk + 0.389_rk*wmicrn + 0.09426_rk/wmicrn
         ELSE
-          xx = 4.04
+          xx = 4.04_rk
         ENDIF
-        srayl = 4.02e-28/(wmicrn)**xx
+        srayl = 4.02e-28_rk/(wmicrn)**xx
 !-----------------------------------------------------------------------------*
 ! alternate (older) expression from
 ! Frohlich and Shaw, Appl.Opt. v.11, p.1773 (1980).
@@ -260,19 +261,19 @@
 !-----------------------------------------------------------------------------
 !     ... dummy arguments
 !-----------------------------------------------------------------------------
-      REAL, intent(in)    :: dobsi
-      REAL, intent(in)    :: o3col(:)
-      REAL, intent(in)    :: o3xs(:,:)
-      REAL, intent(inout) :: dto3(:,:)
+      REAL(rk), intent(in)    :: dobsi
+      REAL(rk), intent(in)    :: o3col(:)
+      REAL(rk), intent(in)    :: o3xs(:,:)
+      REAL(rk), intent(inout) :: dto3(:,:)
 
       INTEGER :: nlyr, nwave
       INTEGER :: wn
-      REAL    :: dob_at_grnd, scale_fac
+      REAL(rk)    :: dob_at_grnd, scale_fac
 
       nwave = size(o3xs,dim=1)
       nlyr  = size(o3col)
 
-      if( dobsi == 0. ) then
+      if( dobsi == 0._rk ) then
 !-----------------------------------------------------------------------------
 !  no scaling
 !-----------------------------------------------------------------------------
@@ -283,7 +284,7 @@
 !-----------------------------------------------------------------------------
 !  scale model o3 column to dobsi
 !-----------------------------------------------------------------------------
-        dob_at_grnd = sum( o3col(:nlyr) )/2.687e16
+        dob_at_grnd = sum( o3col(:nlyr) )/2.687e16_rk
         scale_fac   = dobsi/dob_at_grnd
         DO wn = 1,nwave
           dto3(:nlyr,wn) = scale_fac * o3col(:nlyr) * o3xs(wn,:nlyr)
@@ -307,9 +308,9 @@
 !-----------------------------------------------------------------------------
 !     ... dummy arguments
 !-----------------------------------------------------------------------------
-      REAL, intent(in)  :: o2col(:)
-      REAL, intent(in)  :: o2xs1(:)
-      REAL, intent(out) :: dto2(:,:)
+      REAL(rk), intent(in)  :: o2col(:)
+      REAL(rk), intent(in)  :: o2xs1(:)
+      REAL(rk), intent(out) :: dto2(:,:)
 
 !-----------------------------------------------------------------------------
 !     ... local variables
@@ -348,9 +349,9 @@
 !-----------------------------------------------------------------------------
 !     ... dummy arguments
 !-----------------------------------------------------------------------------
-      REAL,    intent(in)  :: colso2(:)
-      REAL,    intent(in)  :: so2_xs(:)
-      REAL,    intent(out) :: dtso2(:,:)
+      REAL(rk),    intent(in)  :: colso2(:)
+      REAL(rk),    intent(in)  :: so2_xs(:)
+      REAL(rk),    intent(out) :: dtso2(:,:)
 
 !-----------------------------------------------------------------------------
 !     ... local variables
@@ -385,9 +386,9 @@
 !-----------------------------------------------------------------------------
 !     ... dummy arguments
 !-----------------------------------------------------------------------------
-      REAL, intent(in)    :: colno2(:)
-      REAL, intent(in)    :: no2_xs(:,:)
-      REAL, intent(inout) :: dtno2(:,:)
+      REAL(rk), intent(in)    :: colno2(:)
+      REAL(rk), intent(in)    :: no2_xs(:,:)
+      REAL(rk), intent(inout) :: dtno2(:,:)
 
       INTEGER :: nlyr, nwave
       INTEGER :: wn
@@ -426,47 +427,47 @@
 ! Dummy arguments
 !-----------------------------------------------------------------------------
       integer, intent(in) :: nlambda_start
-      real, intent(in)  :: wc(:)
-      real, intent(in)  :: tauaer300(:), tauaer400(:),    &
+      real(rk), intent(in)  :: wc(:)
+      real(rk), intent(in)  :: tauaer300(:), tauaer400(:),    &
                            tauaer600(:), tauaer999(:)
-      real, intent(in)  :: waer300(:), waer400(:),        &
+      real(rk), intent(in)  :: waer300(:), waer400(:),        &
                            waer600(:), waer999(:)
-      real, intent(in)  :: gaer300(:), gaer400(:),        &
+      real(rk), intent(in)  :: gaer300(:), gaer400(:),        &
                            gaer600(:), gaer999(:)
-      real, intent(out) :: dtaer(:,:), omaer(:,:), gaer(:,:)
+      real(rk), intent(out) :: dtaer(:,:), omaer(:,:), gaer(:,:)
 
 !-----------------------------------------------------------------------------
 ! Local Variables
 !-----------------------------------------------------------------------------
-      real, parameter :: thresh = 1.e-9
+      real(rk), parameter :: thresh = 1.e-9_rk
       integer     :: k, wn, nlyr, nwave
-      real        :: ang, slope, wfac
+      real(rk)        :: ang, slope, wfac
 
       nlyr =  size(dtaer,dim=1)
       nwave = size(dtaer,dim=2)
 
 wave_loop: &
       do wn = nlambda_start,nwave
-        wfac = wc(wn)*1.e-3 - .6
+        wfac = wc(wn)*1.e-3_rk - .6_rk
         do k = 1,nlyr-1
 !-----------------------------------------------------------------------------
 ! use angstrom exponent to calculate aerosol optical depth; wc is in nm.  
 !-----------------------------------------------------------------------------
           if( tauaer300(k) > thresh .and. tauaer999(k) > thresh ) then
-            ang = log(tauaer300(k)/tauaer999(k))/log(0.999/0.3)
-            dtaer(k,wn) = tauaer400(k)*(0.4/(wc(wn)*1.e-3))**ang
+            ang = log(tauaer300(k)/tauaer999(k))/log(0.999_rk/0.3_rk)
+            dtaer(k,wn) = tauaer400(k)*(0.4_rk/(wc(wn)*1.e-3_rk))**ang
 !-----------------------------------------------------------------------------
 ! ssa - use linear interpolation/extrapolation
 !-----------------------------------------------------------------------------
-            slope = 5.*(waer600(k) - waer400(k))
+            slope = 5._rk*(waer600(k) - waer400(k))
             omaer(k,wn) = slope*wfac + waer600(k)
-            omaer(k,wn) = max( .4,min( 1.,omaer(k,wn) ) )
+            omaer(k,wn) = max( .4_rk,min( 1._rk,omaer(k,wn) ) )
 !-----------------------------------------------------------------------------
 ! asymmetry parameter - use linear interpolation/extrapolation
 !-----------------------------------------------------------------------------
-            slope = 5.*(gaer600(k) - gaer400(k))
+            slope = 5._rk*(gaer600(k) - gaer400(k))
             gaer(k,wn) = slope*wfac + gaer600(k)
-            gaer(k,wn) = max( .5,min( 1.,gaer(k,wn) ) )
+            gaer(k,wn) = max( .5_rk,min( 1._rk,gaer(k,wn) ) )
           endif
         end do
       end do wave_loop
@@ -500,12 +501,12 @@ wave_loop: &
 !-----------------------------------------------------------------------------
       integer, intent(in) :: nlambda_start
       integer, intent(in) :: cld_od_opt
-      real, intent(in)  :: z(:)
-      real, intent(in)  :: xlwc(:)
-      real, intent(in)  :: cldfrac(:)
-      real, intent(inout) :: dtcld(:,:)
-      real, intent(inout) :: omcld(:,:)
-      real, intent(inout) :: gcld(:,:)
+      real(rk), intent(in)  :: z(:)
+      real(rk), intent(in)  :: xlwc(:)
+      real(rk), intent(in)  :: cldfrac(:)
+      real(rk), intent(inout) :: dtcld(:,:)
+      real(rk), intent(inout) :: omcld(:,:)
+      real(rk), intent(inout) :: gcld(:,:)
 
       character(len=*), intent(out)   :: errmsg
       integer,            intent(out)   :: errflg
@@ -513,15 +514,15 @@ wave_loop: &
 !-----------------------------------------------------------------------------
 ! ... Local variables
 !-----------------------------------------------------------------------------
-      real, parameter :: km2m = 1.e3        ! kilometer to meter
-      real, parameter :: wden = 1.e6        ! g/m3 (1 m3 water = 1e6 g water)
-      real, parameter :: re = 10.0 * 1.e-6  ! assuming cloud drop radius = 10 um to M
-      real, parameter :: fac = 1./(wden*re)
+      real(rk), parameter :: km2m = 1.e3_rk        ! kilometer to meter
+      real(rk), parameter :: wden = 1.e6_rk        ! g/m3 (1 m3 water = 1e6 g water)
+      real(rk), parameter :: re = 10.0_rk * 1.e-6_rk  ! assuming cloud drop radius = 10 um to M
+      real(rk), parameter :: fac = 1._rk/(wden*re)
 
       integer  :: astat
       integer  :: wn
       integer  :: nlyr, nwave
-      real, allocatable :: wrk(:), layer_cldfrac(:)
+      real(rk), allocatable :: wrk(:), layer_cldfrac(:)
 
       errmsg = ' '
       errflg = 0
@@ -540,21 +541,21 @@ wave_loop: &
 ! ... calculate optical depth
 !-----------------------------------------------------------------------------     
       wrk(1:nlyr-1) = (z(2:nlyr) - z(1:nlyr-1))*km2m   !  (km -> m)
-      wrk(1:nlyr-1) = 1.5 * .5*(xlwc(1:nlyr-1) + xlwc(2:nlyr))*wrk(1:nlyr-1)*fac
-      wrk(1:nlyr-1) = max( wrk(1:nlyr-1),0. )
+      wrk(1:nlyr-1) = 1.5_rk * .5_rk*(xlwc(1:nlyr-1) + xlwc(2:nlyr))*wrk(1:nlyr-1)*fac
+      wrk(1:nlyr-1) = max( wrk(1:nlyr-1),0._rk )
       if( cld_od_opt == 2 ) then
-        layer_cldfrac(1:nlyr-1) = .5*(cldfrac(1:nlyr-1) + cldfrac(2:nlyr))
+        layer_cldfrac(1:nlyr-1) = .5_rk*(cldfrac(1:nlyr-1) + cldfrac(2:nlyr))
         wrk(1:nlyr-1) = wrk(1:nlyr-1)*layer_cldfrac(1:nlyr-1)*sqrt( layer_cldfrac(1:nlyr-1) )
       endif
 !----------------------------------------------------
 ! ....calculate cloud optical depth T
 ! following Liao et al. JGR, 104, 23697, 1999
 !----------------------------------------------------
-      if( any( wrk(1:nlyr-1) > 0. ) ) then
+      if( any( wrk(1:nlyr-1) > 0._rk ) ) then
         do wn = nlambda_start,nwave
           dtcld(1:nlyr-1,wn) = wrk(1:nlyr-1)
-          omcld(1:nlyr-1,wn) = .9999
-          gcld (1:nlyr-1,wn) = .85
+          omcld(1:nlyr-1,wn) = .9999_rk
+          gcld (1:nlyr-1,wn) = .85_rk
         end do
       endif
 
@@ -567,7 +568,7 @@ wave_loop: &
 
       end subroutine setcld
 
-      REAL FUNCTION sundis( julday )
+      REAL(rk) FUNCTION sundis( julday )
 !-----------------------------------------------------------------------------
 ! purpose:
 ! calculate earth-sun distance variation for a given date. based on
@@ -641,9 +642,9 @@ wave_loop: &
         integer, intent(in)  :: ims,ime
         integer, intent(in)  :: jms,jme
         real(dp), intent(in) :: gmt
-        real, intent(in)     :: lat(ims:ime,jms:jme)
-        real, intent(in)     :: long(ims:ime,jms:jme)
-        real, intent(out)    :: zenith(ims:ime,jms:jme)
+        real(rk), intent(in)     :: lat(ims:ime,jms:jme)
+        real(rk), intent(in)     :: long(ims:ime,jms:jme)
+        real(rk), intent(out)    :: zenith(ims:ime,jms:jme)
 
 !-------------------------------------------------------------------
 ! .. Local variables
@@ -765,23 +766,23 @@ wave_loop: &
 !     ... dummy arguments
 !-----------------------------------------------------------------------------
       INTEGER, intent(in) :: nlyr
-      REAL,    intent(in) :: zen
-      REAL,    intent(in) :: z(:)
+      REAL(rk),    intent(in) :: zen
+      REAL(rk),    intent(in) :: z(:)
 
       INTEGER, intent(inout) :: nid(0:nlyr)
-      REAL,    intent(inout) :: dsdh(0:nlyr,nlyr)
+      REAL(rk),    intent(inout) :: dsdh(0:nlyr,nlyr)
 
 
 !-----------------------------------------------------------------------------
 !     ... local variables
 !-----------------------------------------------------------------------------
-      REAL, parameter ::  dr = pi/180.
+      REAL(rk), parameter ::  dr = pi/180._rk
 
       INTEGER :: j, jm1, k
       INTEGER :: id
-      REAL    :: re
-      REAL    :: zd(0:nlyr)
-      REAL    :: ds_dh(1:nlyr)
+      REAL(rk)    :: re
+      REAL(rk)    :: zd(0:nlyr)
+      REAL(rk)    :: ds_dh(1:nlyr)
       REAL(dp) :: zenrad, rpsinz, rj, rjp1, dsj, dhj, ga, gb, sm
 
       zenrad = REAL( zen*dr, dp )
@@ -806,15 +807,15 @@ wave_loop: &
 !-----------------------------------------------------------------------------
 layer_loop : &
       DO k = 0, nlyr
-        ds_dh(:) = 0.
+        ds_dh(:) = 0._rk
         rpsinz = real(re + zd(k),dp) * SIN(zenrad)
 !       IF( zen > 90.0 .AND. rpsinz < real(re,8) ) THEN
-        IF( zen <= 90.0 .or. rpsinz >= real(re,dp) ) THEN
+        IF( zen <= 90.0_rk .or. rpsinz >= real(re,dp) ) THEN
 !-----------------------------------------------------------------------------
 ! Find index of layer in which the screening height lies
 !-----------------------------------------------------------------------------
           id = k 
-          IF( zen > 90.0 ) THEN
+          IF( zen > 90.0_rk ) THEN
             DO j = 1,nlyr
               IF( rpsinz < real(zd(j-1) + re,dp) .AND. &
                   rpsinz >= real(zd(j) + re,dp) ) then
@@ -826,7 +827,7 @@ layer_loop : &
           DO j = 1, id
             jm1 = j - 1
 !           IF( j == id .AND. id == k .AND. zen > 90.0 ) then
-            IF( j /= id .or. k /= id .or. zen <= 90.0 ) then
+            IF( j /= id .or. k /= id .or. zen <= 90.0_rk ) then
               sm = 1.0_dp
             ELSE
               sm = -1.0_dp
@@ -884,27 +885,27 @@ layer_loop : &
 !-----------------------------------------------------------------------------
       INTEGER, intent(in) :: nlyr
       INTEGER, intent(in) :: nid(0:nlyr)
-      REAL,    intent(in) :: dsdh(0:nlyr,nlyr)
-      REAL,    intent(in) :: cz(nlyr)
+      REAL(rk),    intent(in) :: dsdh(0:nlyr,nlyr)
+      REAL(rk),    intent(in) :: cz(nlyr)
 
-      REAL, intent(inout) :: vcol(nlyr), scol(nlyr)
+      REAL(rk), intent(inout) :: vcol(nlyr), scol(nlyr)
 
 !-----------------------------------------------------------------------------
 !     ... local variables
 !-----------------------------------------------------------------------------
       INTEGER :: lyr, j, nlev, nlevi
-      REAL    :: sum, vsum
+      REAL(rk)    :: sum, vsum
 
 !-----------------------------------------------------------------------------
 ! calculate vertical and slant column from each level: work downward
 !-----------------------------------------------------------------------------
       nlev = nlyr + 1
-      vsum = 0.
+      vsum = 0._rk
       DO lyr = 1, nlyr
         nlevi = nlev - lyr
         vsum = vsum + cz(nlevi)
         vcol(nlevi) = vsum
-        sum = 0.
+        sum = 0._rk
         IF( nid(lyr) < 0 ) THEN
           sum = largest
         ELSE
@@ -918,7 +919,7 @@ layer_loop : &
 ! double pass layers:
 !-----------------------------------------------------------------------------
            DO j = MIN(nid(lyr),lyr)+1, nid(lyr)
-             sum = sum + 2.*cz(nlev-j)*dsdh(lyr,j)
+             sum = sum + 2._rk*cz(nlev-j)*dsdh(lyr,j)
            END DO
         ENDIF
         scol(nlevi) = sum

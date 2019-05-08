@@ -167,23 +167,23 @@ contains
     integer, intent(in) :: nlev
     real(rk), intent(in)  :: temp(:)
     real(rk), intent(in)  :: press_mid(:)
-    real, intent(in)  :: radfld(:,:) ! (nwave,nlev)
-    real, intent(in)  :: srb_o2_xs(:,:) !(nwave,kts:kte)
-    real, intent(out) :: tuv_prates(:,:) ! /sec
+    real(rk), intent(in)  :: radfld(:,:) ! (nwave,nlev)
+    real(rk), intent(in)  :: srb_o2_xs(:,:) !(nwave,kts:kte)
+    real(rk), intent(out) :: tuv_prates(:,:) ! /sec
 
     character(len=*), intent(out) :: errmsg
     integer,            intent(out) :: errflg
 
     integer :: k, kk, j
-    real :: airdens(nlev) ! # molecules / cm3 in each layer
-    real :: tlev(nlev) ! # K -- bottom up
+    real(rk) :: airdens(nlev) ! # molecules / cm3 in each layer
+    real(rk) :: tlev(nlev) ! # K -- bottom up
 
-    real, parameter :: kboltz= 1.38064852e-16 ! boltzmann constant (erg/K)
+    real(rk), parameter :: kboltz= 1.38064852e-16_rk ! boltzmann constant (erg/K)
 
     ! inputs need to be bottom vertical coord
     do k=1,nlev
        kk=nlev-k+1
-       airdens(kk) = 10.*press_mid(k)/(kboltz*temp(k))
+       airdens(kk) = 10._rk*press_mid(k)/(kboltz*temp(k))
     end do
     tlev(nlev:1:-1) = temp(1:nlev)
 

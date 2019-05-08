@@ -1,24 +1,26 @@
       module PARAMS_MOD
 
+      use phot_kind_mod, only: rk => kind_phot
+
       implicit none
 
-      real, parameter :: m2km = .001                          ! meters to km
-      real, parameter :: ppm2vmr = 1.e-6                      ! ppm to vmr
-      real, parameter :: o2vmr = .2095                        ! o2 vmr
-      real, parameter :: km2cm = 1.e5                         ! km to centimeters
-      real, parameter :: m2s   = 60.                          ! minutes to seconds
+      real(rk), parameter :: m2km = .001_rk                          ! meters to km
+      real(rk), parameter :: ppm2vmr = 1.e-6_rk                      ! ppm to vmr
+      real(rk), parameter :: o2vmr = .2095_rk                        ! o2 vmr
+      real(rk), parameter :: km2cm = 1.e5_rk                         ! km to centimeters
+      real(rk), parameter :: m2s   = 60._rk                          ! minutes to seconds
 
-      REAL, PARAMETER :: pi = 3.1415926535898
-      REAL, PARAMETER :: radius = 6.371E+3                    ! km
-      REAL, PARAMETER :: hc = 6.626068E-34 * 2.99792458E8
-      REAL, PARAMETER :: largest=1.E+36
+      REAL(rk), PARAMETER :: pi = 3.1415926535898_rk
+      REAL(rk), PARAMETER :: radius = 6.371E+3_rk                    ! km
+      REAL(rk), PARAMETER :: hc = 6.626068E-34_rk * 2.99792458E8_rk
+      REAL(rk), PARAMETER :: largest=1.E+36_rk
 
-      REAL, PARAMETER :: pzero = +10./largest
-      REAL, PARAMETER :: nzero = -10./largest
+      REAL(rk), PARAMETER :: pzero = +10._rk/largest
+      REAL(rk), PARAMETER :: nzero = -10._rk/largest
 
-      REAL, PARAMETER :: precis = 1.e-7
+      REAL(rk), PARAMETER :: precis = 1.e-7_rk
 
-      real :: lambda_cutoff                        ! nm
+      real(rk) :: lambda_cutoff                        ! nm
 
       character(len=256) :: input_data_root = 'NOT_SET'
 

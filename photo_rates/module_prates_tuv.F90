@@ -1,4 +1,5 @@
 module  module_prates_tuv
+  use phot_kind_mod, only: rk => kind_phot
   use module_rxn, only : xsqy_table => xsqy_tab, the_subs, npht_tab, rxn_init
   use module_rxn, only : get_initialization, set_initialization
 
@@ -11,21 +12,21 @@ module  module_prates_tuv
   
   integer :: nconc, ntemp, nwave
 
-  real, allocatable :: z_temp_data(:), temp_data(:)
-  real, allocatable :: xsqy_tab(:,:,:,:)
-  real, allocatable :: z_o3_data(:), o3_data(:)
-  real, allocatable :: z_air_dens_data(:), air_dens_data(:)
-  real, allocatable :: wl(:)
-  real, allocatable :: wc(:)
-  real, allocatable :: dw(:)
-  real, allocatable :: w_fac(:)
-  real, allocatable :: etfl(:)
-  real, allocatable :: temp_tab(:)
-  real, allocatable :: conc_tab(:)
-  real, allocatable :: del_temp_tab(:)
-  real, allocatable :: del_conc_tab(:)
-  real, allocatable :: o3_xs_tab(:,:)
-  real, allocatable :: no2_xs_tab(:,:)
+  real(rk), allocatable :: z_temp_data(:), temp_data(:)
+  real(rk), allocatable :: xsqy_tab(:,:,:,:)
+  real(rk), allocatable :: z_o3_data(:), o3_data(:)
+  real(rk), allocatable :: z_air_dens_data(:), air_dens_data(:)
+  real(rk), allocatable :: wl(:)
+  real(rk), allocatable :: wc(:)
+  real(rk), allocatable :: dw(:)
+  real(rk), allocatable :: w_fac(:)
+  real(rk), allocatable :: etfl(:)
+  real(rk), allocatable :: temp_tab(:)
+  real(rk), allocatable :: conc_tab(:)
+  real(rk), allocatable :: del_temp_tab(:)
+  real(rk), allocatable :: del_conc_tab(:)
+  real(rk), allocatable :: o3_xs_tab(:,:)
+  real(rk), allocatable :: no2_xs_tab(:,:)
   character(len=32), allocatable :: tuv_jname(:)
   integer :: n_temp_data, n_o3_data, n_air_dens_data
 
@@ -37,7 +38,7 @@ module  module_prates_tuv
   integer, protected, allocatable :: rxn_ndx(:)
 
   integer, parameter :: nlambda_start = 1
-  real    :: esfact = 1.0
+  real(rk)    :: esfact = 1.0_rk
 contains
 
   !------------------------------------------------------------------------------
@@ -104,25 +105,25 @@ contains
 
     ! Args
     integer, intent(in) :: kts,kte,nlevs
-    real, intent(in)    :: tlev(kts:kte)     ! K
-    real, intent(in)    :: dens_air(kts:kte) ! molecules / cm3
-    real, intent(in)    :: rad_fld(nwave,kts:kte)
-    real, intent(in)    :: srb_o2_xs(nwave,kts:kte)
-    real, intent(out)   :: tuv_prate(nlevs, nj) ! /sec
+    real(rk), intent(in)    :: tlev(kts:kte)     ! K
+    real(rk), intent(in)    :: dens_air(kts:kte) ! molecules / cm3
+    real(rk), intent(in)    :: rad_fld(nwave,kts:kte)
+    real(rk), intent(in)    :: srb_o2_xs(nwave,kts:kte)
+    real(rk), intent(out)   :: tuv_prate(nlevs, nj) ! /sec
 
     character(len=*), intent(out) :: errmsg
     integer,          intent(out) :: errflg
 
     ! Locals
-    real :: xsect(nwave)
-    real :: xsqy(nwave,kts:kte)
-    real :: rad_fld_tpose(kts:kte,nwave)
+    real(rk) :: xsect(nwave)
+    real(rk) :: xsqy(nwave,kts:kte)
+    real(rk) :: rad_fld_tpose(kts:kte,nwave)
 
     integer :: n,jndx
     integer :: k
-    real :: dummy(nlevs)
+    real(rk) :: dummy(nlevs)
     logical :: rxn_initialized
-    real :: xnan
+    real(rk) :: xnan
 
     xnan =  IEEE_VALUE(xnan,IEEE_QUIET_NAN)
     tuv_prate = xnan
@@ -548,11 +549,11 @@ contains
     endif
 
     if( .not. is_full_tuv ) then
-       del_temp_tab(:ntemp-1) = 1./(temp_tab(2:ntemp) - temp_tab(1:ntemp-1))
-       del_conc_tab(:nconc-1) = 1./(conc_tab(2:nconc) - conc_tab(1:nconc-1))
+       del_temp_tab(:ntemp-1) = 1._rk/(temp_tab(2:ntemp) - temp_tab(1:ntemp-1))
+       del_conc_tab(:nconc-1) = 1._rk/(conc_tab(2:nconc) - conc_tab(1:nconc-1))
     endif
     dw(:nwave)    = wl(2:nwave+1) - wl(1:nwave)
-    w_fac(:nwave) = dw(:nwave)*etfl(:nwave)*1.e-13*wc(:nwave)/hc
+    w_fac(:nwave) = dw(:nwave)*etfl(:nwave)*1.e-13_rk*wc(:nwave)/hc
 
     ret = nf90_close( ncid )
     if( ret /= nf90_noerr ) then
@@ -569,16 +570,16 @@ contains
 !---------------------------------------------------------------------
 
       integer, intent(in)  :: n 
-      real,    intent(in)  :: tlev(:)
-      real,    intent(in)  :: dens_air(:)
-      real,    intent(out) :: xsqy(:,:)
+      real(rk),    intent(in)  :: tlev(:)
+      real(rk),    intent(in)  :: dens_air(:)
+      real(rk),    intent(out) :: xsqy(:,:)
 
-      real, parameter :: m0 = 2.45e19
+      real(rk), parameter :: m0 = 2.45e19_rk
       integer :: tndx, mndx, tndxp1, mndxp1
       integer :: k, ku
-      real    :: temp, dens
-      real    :: w(4)
-      real    :: del_t, del_d
+      real(rk)    :: temp, dens
+      real(rk)    :: w(4)
+      real(rk)    :: del_t, del_d
 
       ku = size( tlev )
       do k = 1,ku
@@ -590,7 +591,7 @@ contains
         end do
         tndx = max( min( tndx,ntemp ) - 1,1 )
         tndxp1 = tndx + 1
-        del_t = max( 0.,min( 1.,(temp - temp_tab(tndx))*del_temp_tab(tndx) ) )
+        del_t = max( 0._rk,min( 1._rk,(temp - temp_tab(tndx))*del_temp_tab(tndx) ) )
 
 !       dens = dens_air(k)
         dens = dens_air(k)/m0
@@ -601,11 +602,11 @@ contains
         end do
         mndx = max( min( mndx,nconc ) - 1,1 )
         mndxp1 = mndx + 1
-        del_d = max( 0.,min( 1.,(dens - conc_tab(mndx))*del_conc_tab(mndx) ) )
+        del_d = max( 0._rk,min( 1._rk,(dens - conc_tab(mndx))*del_conc_tab(mndx) ) )
 
-        w(1) = (1. - del_t)*(1. - del_d)
-        w(2) = del_t*(1. - del_d)
-        w(3) = (1. - del_t)*del_d
+        w(1) = (1._rk - del_t)*(1._rk - del_d)
+        w(2) = del_t*(1._rk - del_d)
+        w(3) = (1._rk - del_t)*del_d
         w(4) = del_t*del_d
 
         xsqy(1:nwave,k) = w(1)*xsqy_tab(1:nwave,tndx,mndx,n) &
@@ -621,15 +622,15 @@ contains
 !	... interpolate tables for xs
 !---------------------------------------------------------------------
 
-      real,    intent(in)  :: tlev(:)
-      real,    intent(in)  :: xs_tab(:,:)
-      real,    intent(out) :: xs(:,:)
+      real(rk),    intent(in)  :: tlev(:)
+      real(rk),    intent(in)  :: xs_tab(:,:)
+      real(rk),    intent(out) :: xs(:,:)
 
       integer :: tndx, tndxp1
       integer :: k, ku
-      real    :: temp
-      real    :: w(2)
-      real    :: del_t
+      real(rk)    :: temp
+      real(rk)    :: w(2)
+      real(rk)    :: del_t
 
       ku = size( tlev )
       do k = 1,ku
@@ -641,9 +642,9 @@ contains
         end do
         tndx = max( min( tndx,ntemp ) - 1,1 )
         tndxp1 = tndx + 1
-        del_t = max( 0.,min( 1.,(temp - temp_tab(tndx))*del_temp_tab(tndx) ) )
+        del_t = max( 0._rk,min( 1._rk,(temp - temp_tab(tndx))*del_temp_tab(tndx) ) )
 
-        w(1) = (1. - del_t)
+        w(1) = (1._rk - del_t)
         w(2) = del_t
 
         xs(1:nwave,k) = w(1)*xs_tab(1:nwave,tndx) &

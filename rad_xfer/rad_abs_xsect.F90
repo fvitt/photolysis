@@ -1,13 +1,15 @@
 module rad_abs_xsect
 
+  use phot_kind_mod, only: rk => kind_phot
+
   implicit none
 
   public
 
-  real, protected, allocatable :: o2_xs(:)
-  real, protected, allocatable :: so2_xs(:)
-  real, protected, allocatable :: wl(:)
-  real, protected, allocatable :: wc(:)
+  real(rk), protected, allocatable :: o2_xs(:)
+  real(rk), protected, allocatable :: so2_xs(:)
+  real(rk), protected, allocatable :: wl(:)
+  real(rk), protected, allocatable :: wc(:)
 
   integer, protected :: nwave
 

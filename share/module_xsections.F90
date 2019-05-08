@@ -27,6 +27,7 @@
 
       module module_xsections
 
+      use phot_kind_mod, only: rk => kind_phot
       use module_params, only: deltax, kin
       use params_mod, only: input_data_root
       use  numer_mod, only: addpnt, inter2
@@ -37,28 +38,28 @@
       public :: rdxs_init
       private
 
-      REAL, allocatable :: rei218(:), rei228(:), rei243(:), rei295(:)
-      REAL :: v195, v345, v830
-      REAL, allocatable :: wmo203(:), wmo273(:)
-      REAL :: v176, v850
+      REAL(rk), allocatable :: rei218(:), rei228(:), rei243(:), rei295(:)
+      REAL(rk) :: v195, v345, v830
+      REAL(rk), allocatable :: wmo203(:), wmo273(:)
+      REAL(rk) :: v176, v850
 
-      REAL, allocatable :: jpl295(:), jpl218(:)
-      REAL :: v186, v825
+      REAL(rk), allocatable :: jpl295(:), jpl218(:)
+      REAL(rk) :: v186, v825
 
-      REAL, allocatable :: mol226(:), mol263(:), mol298(:)
-      REAL :: v185, v240, v350
+      REAL(rk), allocatable :: mol226(:), mol263(:), mol298(:)
+      REAL(rk) :: v185, v240, v350
 
-      REAL, allocatable :: c0(:), c1(:), c2(:)
-      REAL vb245, vb342
+      REAL(rk), allocatable :: c0(:), c1(:), c2(:)
+      REAL(rk) vb245, vb342
 
-      REAL, allocatable :: no2xs_a(:), no2xs_b(:)
+      REAL(rk), allocatable :: no2xs_a(:), no2xs_b(:)
 
       CONTAINS
 
       SUBROUTINE rdxs_init( nw, wl, errmsg, errflg )
 
       integer, intent(in) :: nw
-      real, intent(in)    :: wl(nw)
+      real(rk), intent(in)    :: wl(nw)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
 
@@ -143,10 +144,10 @@
 ! input: (altitude working grid)
 
       INTEGER, intent(in) :: nw
-      REAL, intent(in)    :: wl(nw)
+      REAL(rk), intent(in)    :: wl(nw)
 
       INTEGER, intent(in) :: nz
-      REAL, intent(in) :: t(nz)
+      REAL(rk), intent(in) :: t(nz)
 
 ! output:
 ! ozone absorption cross sections interpolated to 
@@ -154,12 +155,12 @@
 !   working altitude grid (iz) for temperature of layer or level (specified in call)
 ! Units are cm2 molecule-1 in vacuum
 
-      REAL, intent(inout) :: xs(:,:)
+      REAL(rk), intent(inout) :: xs(:,:)
 
 ! internal
 
       INTEGER :: iw
-      REAL    :: factor
+      REAL(rk)    :: factor
 
 !***** option 1:
 ! assign according to wavelength range:
@@ -171,36 +172,36 @@
       
       DO iw = 1, nw-1
         IF(wl(iw) < v185) THEN
-          factor = (wmo273(iw) - wmo203(iw))/(273. - 203.)
-          xs(1:nz,iw) = wmo203(iw) + (t(1:nz) - 203.)*factor
-          WHERE (t(1:nz) <= 203.) 
+          factor = (wmo273(iw) - wmo203(iw))/(273._rk - 203._rk)
+          xs(1:nz,iw) = wmo203(iw) + (t(1:nz) - 203._rk)*factor
+          WHERE (t(1:nz) <= 203._rk) 
             xs(1:nz,iw) = wmo203(iw)
-          ELSEWHERE (t(1:nz) >= 273.) 
+          ELSEWHERE (t(1:nz) >= 273._rk) 
             xs(1:nz,iw) = wmo273(iw)
           ENDWHERE
         ELSEIF(wl(iw) >= v185 .AND. wl(iw) < v195) THEN
-          factor = (jpl295(iw) - jpl218(iw))/(295. - 218.)
-          xs(1:nz,iw) = jpl218(iw) + (t(1:nz) - 218.)*factor
-          WHERE (t(1:nz) <= 218.) 
+          factor = (jpl295(iw) - jpl218(iw))/(295._rk - 218._rk)
+          xs(1:nz,iw) = jpl218(iw) + (t(1:nz) - 218._rk)*factor
+          WHERE (t(1:nz) <= 218._rk) 
             xs(1:nz,iw) = jpl218(iw)
-          ELSEWHERE (t(1:nz) >= 295.) 
+          ELSEWHERE (t(1:nz) >= 295._rk) 
             xs(1:nz,iw) = jpl295(iw)
           ENDWHERE
         ELSEIF(wl(iw) >= v195 .AND. wl(iw) < v345) THEN
-          factor = .1*(rei228(iw) - rei218(iw))
-          WHERE( t(1:nz) < 218. ) 
+          factor = .1_rk*(rei228(iw) - rei218(iw))
+          WHERE( t(1:nz) < 218._rk ) 
             xs(1:nz,iw) = rei218(iw)
-          ELSEWHERE( t(1:nz) >= 218. .AND. t(1:nz) < 228. )
-            xs(1:nz,iw) = rei218(iw) + (t(1:nz) - 218.)*factor
+          ELSEWHERE( t(1:nz) >= 218._rk .AND. t(1:nz) < 228._rk )
+            xs(1:nz,iw) = rei218(iw) + (t(1:nz) - 218._rk)*factor
           ENDWHERE
-          factor = (rei243(iw) - rei228(iw))/15.
-          WHERE( t(1:nz) >= 228. .AND. t(1:nz) < 243. )
-            xs(1:nz,iw) = rei228(iw) + (t(1:nz) - 228.)*factor
+          factor = (rei243(iw) - rei228(iw))/15._rk
+          WHERE( t(1:nz) >= 228._rk .AND. t(1:nz) < 243._rk )
+            xs(1:nz,iw) = rei228(iw) + (t(1:nz) - 228._rk)*factor
           ENDWHERE
-          factor = (rei295(iw) - rei243(iw))/(295. - 243.)
-          WHERE( t(1:nz) >= 243. .AND. t(1:nz) < 295.)
-            xs(1:nz,iw) = rei243(iw) + (t(1:nz) - 243.)*factor
-          ELSEWHERE( t(1:nz) >= 295. )
+          factor = (rei295(iw) - rei243(iw))/(295._rk - 243._rk)
+          WHERE( t(1:nz) >= 243._rk .AND. t(1:nz) < 295._rk)
+            xs(1:nz,iw) = rei243(iw) + (t(1:nz) - 243._rk)*factor
+          ELSEWHERE( t(1:nz) >= 295._rk )
             xs(1:nz,iw) = rei295(iw)
           ENDWHERE
         ELSEIF(wl(iw) >= v345) THEN
@@ -235,7 +236,7 @@
 !  input
 
       INTEGER, intent(in) :: nw
-      REAL, intent(in)    :: wl(nw)
+      REAL(rk), intent(in)    :: wl(nw)
 
 ! output:
 
@@ -247,15 +248,15 @@
       INTEGER, PARAMETER :: kdata = 70000
 
       INTEGER n1, n2, n3, n4
-      REAL x1(kdata), x2(kdata), x3(kdata), x4(kdata)
-      REAL y1(kdata), y2(kdata), y3(kdata), y4(kdata)
+      REAL(rk) x1(kdata), x2(kdata), x3(kdata), x4(kdata)
+      REAL(rk) y1(kdata), y2(kdata), y3(kdata), y4(kdata)
 
       INTEGER i
       INTEGER ierr
 
 ! used for air-to-vacuum wavelength conversion
 
-      REAL ri(kdata)
+      REAL(rk) ri(kdata)
 
       errmsg = ' '
       errflg = 0
@@ -310,19 +311,19 @@
       CLOSE (kin)
 
       DO i = 1, n1
-         ri(i) = refrac(x1(i), 2.45E19)
+         ri(i) = refrac(x1(i), 2.45E19_rk)
       ENDDO
       DO i = 1, n1
          x1(i) = x1(i) * ri(i)
       ENDDO
 
-      CALL addpnt(x1,y1,kdata,n1,x1(1)*(1.-deltax),0.,errmsg, errflg)
+      CALL addpnt(x1,y1,kdata,n1,x1(1)*(1._rk-deltax),0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x1,y1,kdata,n1,               0.,0.,errmsg, errflg)
+      CALL addpnt(x1,y1,kdata,n1,               0._rk,0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x1,y1,kdata,n1,x1(n1)*(1.+deltax),0.,errmsg, errflg)
+      CALL addpnt(x1,y1,kdata,n1,x1(n1)*(1._rk+deltax),0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x1,y1,kdata,n1,            1.e+38,0.,errmsg, errflg)
+      CALL addpnt(x1,y1,kdata,n1,            1.e+38_rk,0._rk,errmsg, errflg)
       if (errflg.ne.0) return
       CALL inter2(nw,wl,rei295,n1,x1,y1,errmsg, errflg)
       IF (errflg .NE. 0) THEN
@@ -331,7 +332,7 @@
       ENDIF
 
       DO i = 1, n2
-         ri(i) = refrac(x2(i), 2.45E19)
+         ri(i) = refrac(x2(i), 2.45E19_rk)
       ENDDO
       DO i = 1, n2
          x2(i) = x2(i) * ri(i)
@@ -339,13 +340,13 @@
          x4(i) = x2(i)
       ENDDO
 
-      CALL addpnt(x2,y2,kdata,n2,x2(1)*(1.-deltax),0.,errmsg, errflg)
+      CALL addpnt(x2,y2,kdata,n2,x2(1)*(1._rk-deltax),0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x2,y2,kdata,n2,               0.,0.,errmsg, errflg)
+      CALL addpnt(x2,y2,kdata,n2,               0._rk,0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x2,y2,kdata,n2,x2(n2)*(1.+deltax),0.,errmsg, errflg)
+      CALL addpnt(x2,y2,kdata,n2,x2(n2)*(1._rk+deltax),0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x2,y2,kdata,n2,            1.e+38,0.,errmsg, errflg)
+      CALL addpnt(x2,y2,kdata,n2,            1.e+38_rk,0._rk,errmsg, errflg)
       if (errflg.ne.0) return
       CALL inter2(nw,wl,rei243,n2,x2,y2,errmsg, errflg)
       IF (errflg .NE. 0) THEN
@@ -353,13 +354,13 @@
          return
       ENDIF
 
-      CALL addpnt(x3,y3,kdata,n3,x3(1)*(1.-deltax),0.,errmsg, errflg)
+      CALL addpnt(x3,y3,kdata,n3,x3(1)*(1._rk-deltax),0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x3,y3,kdata,n3,               0.,0.,errmsg, errflg)
+      CALL addpnt(x3,y3,kdata,n3,               0._rk,0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x3,y3,kdata,n3,x3(n3)*(1.+deltax),0.,errmsg, errflg)
+      CALL addpnt(x3,y3,kdata,n3,x3(n3)*(1._rk+deltax),0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x3,y3,kdata,n3,            1.e+38,0.,errmsg, errflg)
+      CALL addpnt(x3,y3,kdata,n3,            1.e+38_rk,0._rk,errmsg, errflg)
       if (errflg.ne.0) return
       CALL inter2(nw,wl,rei228,n3,x3,y3,errmsg, errflg)
       IF (errflg .NE. 0) THEN
@@ -367,13 +368,13 @@
          return
       ENDIF
 
-      CALL addpnt(x4,y4,kdata,n4,x4(1)*(1.-deltax),0.,errmsg, errflg)
+      CALL addpnt(x4,y4,kdata,n4,x4(1)*(1._rk-deltax),0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x4,y4,kdata,n4,               0.,0.,errmsg, errflg)
+      CALL addpnt(x4,y4,kdata,n4,               0._rk,0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x4,y4,kdata,n4,x4(n4)*(1.+deltax),0.,errmsg, errflg)
+      CALL addpnt(x4,y4,kdata,n4,x4(n4)*(1._rk+deltax),0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x4,y4,kdata,n4,            1.e+38,0.,errmsg, errflg)
+      CALL addpnt(x4,y4,kdata,n4,            1.e+38_rk,0._rk,errmsg, errflg)
       if (errflg.ne.0) return
       CALL inter2(nw,wl,rei218,n4,x4,y4,errmsg, errflg)
       IF (errflg .NE. 0) THEN
@@ -383,9 +384,9 @@
 
 ! wavelength breaks must be converted to vacuum:
 
-      v195 = 195.00 * refrac(195.00, 2.45E19)
-      v345 = 345.00 * refrac(345.00, 2.45E19)
-      v830 = 830.00 * refrac(830.00, 2.45E19)
+      v195 = 195.00_rk * refrac(195.00_rk, 2.45E19_rk)
+      v345 = 345.00_rk * refrac(345.00_rk, 2.45E19_rk)
+      v830 = 830.00_rk * refrac(830.00_rk, 2.45E19_rk)
 
       END SUBROUTINE o3_rei
 
@@ -412,7 +413,7 @@
 !  input
 
       INTEGER, intent(in) :: nw
-      REAL, intent(in)    :: wl(nw)
+      REAL(rk), intent(in)    :: wl(nw)
 
 ! output
       character(len=*), intent(out) :: errmsg
@@ -423,16 +424,16 @@
       INTEGER, parameter :: kdata = 200
 
       INTEGER n1, n2
-      REAL x1(kdata), x2(kdata)
-      REAL y1(kdata), y2(kdata)
+      REAL(rk) x1(kdata), x2(kdata)
+      REAL(rk) y1(kdata), y2(kdata)
 
       INTEGER i, idum
-      REAL a1, a2, dum
+      REAL(rk) a1, a2, dum
       INTEGER ierr
 
 ! used for air-to-vacuum wavelength conversion
 
-      REAL ri(kdata)
+      REAL(rk) ri(kdata)
 
 ! output
 
@@ -465,28 +466,28 @@
            errflg = ierr
            return
          endif
-         x1(i) = (a1+a2)/2.
-         x2(i) = (a1+a2)/2.
+         x1(i) = (a1+a2)/2._rk
+         x2(i) = (a1+a2)/2._rk
       ENDDO
       CLOSE (kin)
 
 ! convert wavelengths to vacuum
 
       DO i = 1, n1
-         ri(i) = refrac(x1(i), 2.45E19)
+         ri(i) = refrac(x1(i), 2.45E19_rk)
       ENDDO
       DO i = 1, n1
          x1(i) = x1(i) * ri(i)
          x2(i) = x2(i) * ri(i)
       ENDDO
 
-      CALL addpnt(x1,y1,kdata,n1,x1(1)*(1.-deltax),0.,errmsg, errflg)
+      CALL addpnt(x1,y1,kdata,n1,x1(1)*(1._rk-deltax),0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x1,y1,kdata,n1,               0.,0.,errmsg, errflg)
+      CALL addpnt(x1,y1,kdata,n1,               0._rk,0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x1,y1,kdata,n1,x1(n1)*(1.+deltax),0.,errmsg, errflg)
+      CALL addpnt(x1,y1,kdata,n1,x1(n1)*(1._rk+deltax),0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x1,y1,kdata,n1,           1.e+38,0.,errmsg, errflg)
+      CALL addpnt(x1,y1,kdata,n1,           1.e+38_rk,0._rk,errmsg, errflg)
       if (errflg.ne.0) return
       CALL inter2(nw,wl,wmo203,n1,x1,y1,errmsg, errflg)
       IF (errflg .NE. 0) THEN
@@ -494,13 +495,13 @@
          return
       ENDIF
 
-      CALL addpnt(x2,y2,kdata,n2,x2(1)*(1.-deltax),0.,errmsg, errflg)
+      CALL addpnt(x2,y2,kdata,n2,x2(1)*(1._rk-deltax),0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x2,y2,kdata,n2,               0.,0.,errmsg, errflg)
+      CALL addpnt(x2,y2,kdata,n2,               0._rk,0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x2,y2,kdata,n2,x2(n2)*(1.+deltax),0.,errmsg, errflg)
+      CALL addpnt(x2,y2,kdata,n2,x2(n2)*(1._rk+deltax),0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x2,y2,kdata,n2,           1.e+38,0.,errmsg, errflg)
+      CALL addpnt(x2,y2,kdata,n2,           1.e+38_rk,0._rk,errmsg, errflg)
       if (errflg.ne.0) return
       CALL inter2(nw,wl,wmo273,n2,x2,y2,errmsg, errflg)
       IF (errflg .NE. 0) THEN
@@ -510,11 +511,11 @@
 
 ! wavelength breaks must be converted to vacuum:
       
-      a1 = (175.438 + 176.991) / 2.
-      v176 = a1 * refrac(a1,2.45E19)
+      a1 = (175.438_rk + 176.991_rk) / 2._rk
+      v176 = a1 * refrac(a1,2.45E19_rk)
 
-      a1 = (847.5 + 852.5) / 2.
-      v850 = a1 * refrac(a1, 2.45E19)
+      a1 = (847.5_rk + 852.5_rk) / 2._rk
+      v850 = a1 * refrac(a1, 2.45E19_rk)
 
       END SUBROUTINE o3_wmo
 
@@ -540,7 +541,7 @@
 !  input
 
       INTEGER, intent(in) :: nw
-      REAL, intent(in)    :: wl(nw)
+      REAL(rk), intent(in)    :: wl(nw)
 
 ! output:
 
@@ -552,16 +553,16 @@
       INTEGER, parameter :: kdata = 200
 
       INTEGER n1, n2
-      REAL x1(kdata), x2(kdata)
-      REAL y1(kdata), y2(kdata)
+      REAL(rk) x1(kdata), x2(kdata)
+      REAL(rk) y1(kdata), y2(kdata)
 
       INTEGER i
-      REAL dum
+      REAL(rk) dum
       INTEGER ierr
 
 ! used for air-to-vacuum wavelength conversion
 
-      REAL ri(kdata)
+      REAL(rk) ri(kdata)
 
       errmsg = ' '
       errflg = 0
@@ -591,28 +592,28 @@
            errflg = ierr
            return
          endif
-         y1(i) = y1(i) * 1.e-20
-         y2(i) = y2(i) * 1.e-20
+         y1(i) = y1(i) * 1.e-20_rk
+         y2(i) = y2(i) * 1.e-20_rk
       ENDDO
       CLOSE (kin)
 
 ! convert wavelengths to vacuum
 
       DO i = 1, n1
-         ri(i) = refrac(x1(i), 2.45E19)
+         ri(i) = refrac(x1(i), 2.45E19_rk)
       ENDDO
       DO i = 1, n1
          x1(i) = x1(i) * ri(i)
          x2(i) = x1(i)
       ENDDO
 
-      CALL addpnt(x1,y1,kdata,n1,x1(1)*(1.-deltax),0.,errmsg, errflg)
+      CALL addpnt(x1,y1,kdata,n1,x1(1)*(1._rk-deltax),0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x1,y1,kdata,n1,               0.,0.,errmsg, errflg)
+      CALL addpnt(x1,y1,kdata,n1,               0._rk,0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x1,y1,kdata,n1,x1(n1)*(1.+deltax),0.,errmsg, errflg)
+      CALL addpnt(x1,y1,kdata,n1,x1(n1)*(1._rk+deltax),0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x1,y1,kdata,n1,           1.e+38,0.,errmsg, errflg)
+      CALL addpnt(x1,y1,kdata,n1,           1.e+38_rk,0._rk,errmsg, errflg)
       if (errflg.ne.0) return
       CALL inter2(nw,wl,jpl295,n1,x1,y1,errmsg, errflg)
       IF (errflg .NE. 0) THEN
@@ -620,13 +621,13 @@
          return
       ENDIF
 
-      CALL addpnt(x2,y2,kdata,n2,x2(1)*(1.-deltax),0.,errmsg, errflg)
+      CALL addpnt(x2,y2,kdata,n2,x2(1)*(1._rk-deltax),0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x2,y2,kdata,n2,               0.,0.,errmsg, errflg)
+      CALL addpnt(x2,y2,kdata,n2,               0._rk,0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x2,y2,kdata,n2,x2(n2)*(1.+deltax),0.,errmsg, errflg)
+      CALL addpnt(x2,y2,kdata,n2,x2(n2)*(1._rk+deltax),0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x2,y2,kdata,n2,           1.e+38,0.,errmsg, errflg)
+      CALL addpnt(x2,y2,kdata,n2,           1.e+38_rk,0._rk,errmsg, errflg)
       if (errflg.ne.0) return
       CALL inter2(nw,wl,jpl218,n2,x2,y2,errmsg, errflg)
       IF (errflg .NE. 0) THEN
@@ -636,8 +637,8 @@
 
 ! wavelength breaks must be converted to vacuum:
 
-      v186 = 186.051 * refrac(186.051, 2.45E19)
-      v825 = 825.    * refrac(825.   , 2.45E19)
+      v186 = 186.051_rk * refrac(186.051_rk, 2.45E19_rk)
+      v825 = 825._rk    * refrac(825._rk   , 2.45E19_rk)
 
       END SUBROUTINE o3_jpl
 
@@ -665,7 +666,7 @@
 !  input
 
       INTEGER, intent(in) :: nw
-      REAL, intent(in)    :: wl(nw)
+      REAL(rk), intent(in)    :: wl(nw)
 
 ! output:
 
@@ -679,12 +680,12 @@
 
       INTEGER, parameter :: kdata = 335
       INTEGER n1, n2, n3
-      REAL x1(kdata), x2(kdata), x3(kdata)
-      REAL y1(kdata), y2(kdata), y3(kdata)
+      REAL(rk) x1(kdata), x2(kdata), x3(kdata)
+      REAL(rk) y1(kdata), y2(kdata), y3(kdata)
 
 ! used for air-to-vacuum wavelength conversion
 
-      REAL ri(kdata)
+      REAL(rk) ri(kdata)
 
       errmsg = ' '
       errflg = 0
@@ -737,21 +738,21 @@
 ! convert all wavelengths from air to vacuum
 
       DO i = 1, n1
-         ri(i) = refrac(x1(i), 2.45E19)
+         ri(i) = refrac(x1(i), 2.45E19_rk)
       ENDDO
       DO i = 1, n1
          x1(i) = x1(i) * ri(i)
       ENDDO
 
       DO i = 1, n2
-         ri(i) = refrac(x2(i), 2.45E19)
+         ri(i) = refrac(x2(i), 2.45E19_rk)
       ENDDO
       DO i = 1, n2
          x2(i) = x2(i) * ri(i)
       ENDDO
 
       DO i = 1, n3
-         ri(i) = refrac(x3(i), 2.45E19)
+         ri(i) = refrac(x3(i), 2.45E19_rk)
       ENDDO
       DO i = 1, n3
          x3(i) = x3(i) * ri(i)
@@ -759,19 +760,19 @@
 
 ! convert wavelength breaks from air to vacuum
 
-      v185 = 185.  * refrac(185. , 2.45E19)
-      v240 = 240.5 * refrac(240.5, 2.45E19)
-      v350 = 350.  * refrac(350. , 2.45E19)
+      v185 = 185._rk  * refrac(185._rk , 2.45E19_rk)
+      v240 = 240.5_rk * refrac(240.5_rk, 2.45E19_rk)
+      v350 = 350._rk  * refrac(350._rk , 2.45E19_rk)
 
 ! interpolate to working grid
 
-      CALL addpnt(x1,y1,kdata,n1,x1(1)*(1.-deltax),0.,errmsg, errflg)
+      CALL addpnt(x1,y1,kdata,n1,x1(1)*(1._rk-deltax),0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x1,y1,kdata,n1,               0.,0.,errmsg, errflg)
+      CALL addpnt(x1,y1,kdata,n1,               0._rk,0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x1,y1,kdata,n1,x1(n1)*(1.+deltax),0.,errmsg, errflg)
+      CALL addpnt(x1,y1,kdata,n1,x1(n1)*(1._rk+deltax),0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x1,y1,kdata,n1,            1.e+38,0.,errmsg, errflg)
+      CALL addpnt(x1,y1,kdata,n1,            1.e+38_rk,0._rk,errmsg, errflg)
       if (errflg.ne.0) return
       CALL inter2(nw,wl,mol226,n1,x1,y1,errmsg, errflg)
       IF (errflg .NE. 0) THEN
@@ -779,13 +780,13 @@
          return
       ENDIF
 
-      CALL addpnt(x2,y2,kdata,n2,x2(1)*(1.-deltax),0.,errmsg, errflg)
+      CALL addpnt(x2,y2,kdata,n2,x2(1)*(1._rk-deltax),0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x2,y2,kdata,n2,               0.,0.,errmsg, errflg)
+      CALL addpnt(x2,y2,kdata,n2,               0._rk,0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x2,y2,kdata,n2,x2(n2)*(1.+deltax),0.,errmsg, errflg)
+      CALL addpnt(x2,y2,kdata,n2,x2(n2)*(1._rk+deltax),0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x2,y2,kdata,n2,            1.e+38,0.,errmsg, errflg)
+      CALL addpnt(x2,y2,kdata,n2,            1.e+38_rk,0._rk,errmsg, errflg)
       if (errflg.ne.0) return
       CALL inter2(nw,wl,mol263,n2,x2,y2,errmsg, errflg)
       IF (errflg .NE. 0) THEN
@@ -793,13 +794,13 @@
          return
       ENDIF
 
-      CALL addpnt(x3,y3,kdata,n3,x3(1)*(1.-deltax),0.,errmsg, errflg)
+      CALL addpnt(x3,y3,kdata,n3,x3(1)*(1._rk-deltax),0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x3,y3,kdata,n3,               0.,0.,errmsg, errflg)
+      CALL addpnt(x3,y3,kdata,n3,               0._rk,0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x3,y3,kdata,n3,x3(n3)*(1.+deltax),0.,errmsg, errflg)
+      CALL addpnt(x3,y3,kdata,n3,x3(n3)*(1._rk+deltax),0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x3,y3,kdata,n3,            1.e+38,0.,errmsg, errflg)
+      CALL addpnt(x3,y3,kdata,n3,            1.e+38_rk,0._rk,errmsg, errflg)
       if (errflg.ne.0) return
       CALL inter2(nw,wl,mol298,n3,x3,y3,errmsg, errflg)
       IF (errflg .NE. 0) THEN
@@ -832,7 +833,7 @@
 ! input:
 
       INTEGER, intent(in) :: nw
-      REAL, intent(in)    :: wl(nw)
+      REAL(rk), intent(in)    :: wl(nw)
 
 ! output:
 
@@ -847,12 +848,12 @@
       INTEGER ierr
 
       INTEGER n1, n2, n3
-      REAL x1(kdata), x2(kdata), x3(kdata)
-      REAL y1(kdata), y2(kdata), y3(kdata)
+      REAL(rk) x1(kdata), x2(kdata), x3(kdata)
+      REAL(rk) y1(kdata), y2(kdata), y3(kdata)
 
 ! used for air-to-vacuum wavelength conversion
 
-      REAL ri(kdata)
+      REAL(rk) ri(kdata)
 
       errmsg = ' '
       errflg = 0
@@ -878,14 +879,14 @@
         endif
       ENDDO
       CLOSE (kin)
-      y1(1:n1) = 1.e-20 * y1(1:n1)
-      y2(1:n1) = 1.e-20 * y2(1:n1)
-      y3(1:n1) = 1.e-20 * y3(1:n1)
+      y1(1:n1) = 1.e-20_rk * y1(1:n1)
+      y2(1:n1) = 1.e-20_rk * y2(1:n1)
+      y3(1:n1) = 1.e-20_rk * y3(1:n1)
 
 ! convert all wavelengths from air to vacuum
 
       DO i = 1, n1
-         ri(i) = refrac(x1(i), 2.45E19)
+         ri(i) = refrac(x1(i), 2.45E19_rk)
       ENDDO
       x1(1:n1) = x1(1:n1) * ri(1:n1)
       x2(1:n1) = x1(1:n1)
@@ -893,18 +894,18 @@
 
 ! convert wavelength breaks to vacuum
 
-      vb245 = 245.018 * refrac(245.018, 2.45E19)
-      vb342 = 341.981 * refrac(341.981, 2.45E19)
+      vb245 = 245.018_rk * refrac(245.018_rk, 2.45E19_rk)
+      vb342 = 341.981_rk * refrac(341.981_rk, 2.45E19_rk)
 
 ! interpolate to working grid
 
-      CALL addpnt(x1,y1,kdata,n1,x1(1)*(1.-deltax),0.,errmsg, errflg)
+      CALL addpnt(x1,y1,kdata,n1,x1(1)*(1._rk-deltax),0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x1,y1,kdata,n1,               0.,0.,errmsg, errflg)
+      CALL addpnt(x1,y1,kdata,n1,               0._rk,0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x1,y1,kdata,n1,x1(n1)*(1.+deltax),0.,errmsg, errflg)
+      CALL addpnt(x1,y1,kdata,n1,x1(n1)*(1._rk+deltax),0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x1,y1,kdata,n1,            1.e+38,0.,errmsg, errflg)
+      CALL addpnt(x1,y1,kdata,n1,            1.e+38_rk,0._rk,errmsg, errflg)
       if (errflg.ne.0) return
       CALL inter2(nw,wl,c0,n1,x1,y1,errmsg, errflg)
       IF (errflg .NE. 0) THEN
@@ -912,13 +913,13 @@
          return
       ENDIF
 
-      CALL addpnt(x2,y2,kdata,n2,x2(1)*(1.-deltax),0.,errmsg, errflg)
+      CALL addpnt(x2,y2,kdata,n2,x2(1)*(1._rk-deltax),0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x2,y2,kdata,n2,               0.,0.,errmsg, errflg)
+      CALL addpnt(x2,y2,kdata,n2,               0._rk,0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x2,y2,kdata,n2,x2(n2)*(1.+deltax),0.,errmsg, errflg)
+      CALL addpnt(x2,y2,kdata,n2,x2(n2)*(1._rk+deltax),0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x2,y2,kdata,n2,            1.e+38,0.,errmsg, errflg)
+      CALL addpnt(x2,y2,kdata,n2,            1.e+38_rk,0._rk,errmsg, errflg)
       if (errflg.ne.0) return
       CALL inter2(nw,wl,c1,n2,x2,y2,errmsg, errflg)
       IF (errflg .NE. 0) THEN
@@ -926,13 +927,13 @@
          return
       ENDIF
 
-      CALL addpnt(x3,y3,kdata,n3,x3(1)*(1.-deltax),0.,errmsg, errflg)
+      CALL addpnt(x3,y3,kdata,n3,x3(1)*(1._rk-deltax),0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x3,y3,kdata,n3,               0.,0.,errmsg, errflg)
+      CALL addpnt(x3,y3,kdata,n3,               0._rk,0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x3,y3,kdata,n3,x3(n3)*(1.+deltax),0.,errmsg, errflg)
+      CALL addpnt(x3,y3,kdata,n3,x3(n3)*(1._rk+deltax),0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x3,y3,kdata,n3,            1.e+38,0.,errmsg, errflg)
+      CALL addpnt(x3,y3,kdata,n3,            1.e+38_rk,0._rk,errmsg, errflg)
       if (errflg.ne.0) return
       CALL inter2(nw,wl,c2,n3,x3,y3,errmsg, errflg)
       IF (errflg .NE. 0) THEN
@@ -963,12 +964,12 @@
 ! Input
 
       INTEGER, intent(in) :: nw
-      REAL, intent(in)    :: wl(nw)
+      REAL(rk), intent(in)    :: wl(nw)
 
 ! Output O2 xsect, temporary, will be over-written in Lyman-alpha and 
 !   Schumann-Runge wavelength bands.
 
-      REAL, intent(inout) :: o2xs1(:)
+      REAL(rk), intent(inout) :: o2xs1(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
 
@@ -977,8 +978,8 @@
       INTEGER, parameter :: kdata = 200
       INTEGER :: i, n
       INTEGER :: ierr
-      REAL    :: x, y
-      REAL    :: x1(kdata), y1(kdata)
+      REAL(rk)    :: x, y
+      REAL(rk)    :: x1(kdata), y1(kdata)
 
       errmsg = ' '
       errflg = 0
@@ -1015,7 +1016,7 @@
            errflg = ierr
            return
          endif
-         IF (x .LE. 204.) THEN
+         IF (x .LE. 204._rk) THEN
             n = n + 1
             x1(n) = x
             y1(n) = y
@@ -1046,7 +1047,7 @@
             errflg = ierr
             return
          endif
-         y1(n) = y*1.E-24
+         y1(n) = y*1.E-24_rk
          x1(n) = x
       END DO
       CLOSE (kin)
@@ -1054,13 +1055,13 @@
 ! Add termination points and interpolate onto the 
 !  user grid (set in subroutine gridw):
 
-      CALL addpnt(x1,y1,kdata,n,x1(1)*(1.-deltax),y1(1),errmsg, errflg)
+      CALL addpnt(x1,y1,kdata,n,x1(1)*(1._rk-deltax),y1(1),errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x1,y1,kdata,n,0.               ,y1(1),errmsg, errflg)
+      CALL addpnt(x1,y1,kdata,n,0._rk               ,y1(1),errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x1,y1,kdata,n,x1(n)*(1.+deltax),0.,errmsg, errflg)
+      CALL addpnt(x1,y1,kdata,n,x1(n)*(1._rk+deltax),0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x1,y1,kdata,n,              1.E+38,0.,errmsg, errflg)
+      CALL addpnt(x1,y1,kdata,n,              1.E+38_rk,0._rk,errmsg, errflg)
       if (errflg.ne.0) return
       CALL inter2(nw,wl,o2xs1, n,x1,y1,errmsg, errflg)
       IF (errflg .NE. 0) THEN
@@ -1090,7 +1091,7 @@
 ! input:
 
       INTEGER, intent(in) :: nw
-      REAL, intent(in)    :: wl(nw)
+      REAL(rk), intent(in)    :: wl(nw)
 
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
@@ -1098,8 +1099,8 @@
 ! locals:
       INTEGER, parameter :: kdata = 100
       INTEGER :: i, n1, n2
-      REAL    :: dum1, dum2
-      REAL    :: x1(kdata), x2(kdata), y1(kdata), y2(kdata)
+      REAL(rk)    :: dum1, dum2
+      REAL(rk)    :: x1(kdata), x2(kdata), y1(kdata), y2(kdata)
 
       errmsg = ' '
       errflg = 0
@@ -1114,32 +1115,32 @@
       n1 = 81
       DO i = 1, n1
          READ(kin,*) dum1, dum2, y1(i), y2(i)
-         x1(i) = 0.5 * (dum1 + dum2)
+         x1(i) = 0.5_rk * (dum1 + dum2)
          x2(i) = x1(i) 
-         y1(i) = y1(i)*1.E-20
-         y2(i) = y2(i)*1.E-20
+         y1(i) = y1(i)*1.E-20_rk
+         y2(i) = y2(i)*1.E-20_rk
       ENDDO
       CLOSE(kin)
       n2 = n1
 
-      CALL addpnt(x1,y1,kdata,n1,x1(1)*(1.-deltax),0.,errmsg, errflg)
+      CALL addpnt(x1,y1,kdata,n1,x1(1)*(1._rk-deltax),0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x1,y1,kdata,n1,               0.,0.,errmsg, errflg)
+      CALL addpnt(x1,y1,kdata,n1,               0._rk,0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x1,y1,kdata,n1,x1(n1)*(1.+deltax),   0.,errmsg, errflg)
+      CALL addpnt(x1,y1,kdata,n1,x1(n1)*(1._rk+deltax),   0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x1,y1,kdata,n1,            1.e+38,   0.,errmsg, errflg)
+      CALL addpnt(x1,y1,kdata,n1,            1.e+38_rk,   0._rk,errmsg, errflg)
       if (errflg.ne.0) return
       CALL inter2(nw,wl,no2xs_a,n1,x1,y1,errmsg, errflg)
       if ( errflg .ne. 0) return
       
-      CALL addpnt(x2,y2,kdata,n2,x2(1)*(1.-deltax),0.,errmsg, errflg)
+      CALL addpnt(x2,y2,kdata,n2,x2(1)*(1._rk-deltax),0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x2,y2,kdata,n2,               0.,0.,errmsg, errflg)
+      CALL addpnt(x2,y2,kdata,n2,               0._rk,0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x2,y2,kdata,n2,x2(n2)*(1.+deltax),   0.,errmsg, errflg)
+      CALL addpnt(x2,y2,kdata,n2,x2(n2)*(1._rk+deltax),   0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x2,y2,kdata,n2,            1.e+38,   0.,errmsg, errflg)
+      CALL addpnt(x2,y2,kdata,n2,            1.e+38_rk,   0._rk,errmsg, errflg)
       if (errflg.ne.0) return
       CALL inter2(nw,wl,no2xs_b,n2,x2,y2,errmsg, errflg)
       if ( errflg .ne. 0) return
@@ -1156,19 +1157,19 @@
 
       INTEGER, intent(in) :: nz
       INTEGER, intent(in) :: nw
-      REAL, intent(in)    :: t(nz)
-      REAL, intent(in)    :: wl(nw)
+      REAL(rk), intent(in)    :: t(nz)
+      REAL(rk), intent(in)    :: wl(nw)
 
 ! output:
 
-      REAL, intent(inout) :: no2xs(:,:)
+      REAL(rk), intent(inout) :: no2xs(:,:)
 
 ! local
 
       INTEGER :: iw
-      REAL    :: tfac(nz)
+      REAL(rk)    :: tfac(nz)
       
-      tfac(1:nz) = (t(1:nz) - 220.)/74.
+      tfac(1:nz) = (t(1:nz) - 220._rk)/74._rk
       DO iw = 1, nw-1
         no2xs(1:nz,iw) = no2xs_a(iw) + (no2xs_b(iw)-no2xs_a(iw))*tfac(1:nz)
       ENDDO 
@@ -1188,18 +1189,18 @@
 
 ! input: (altitude working grid)
       INTEGER, intent(in) :: nw
-      REAL, intent(in)    :: wl(nw)
+      REAL(rk), intent(in)    :: wl(nw)
 
 ! output:
 
-      REAL, intent(inout) :: so2xs(nw)
+      REAL(rk), intent(inout) :: so2xs(nw)
 
       character(len=*), intent(out)   :: errmsg
       integer,          intent(out)   :: errflg
 
 !! local:
-      REAL x1(kdata)
-      REAL y1(kdata)
+      REAL(rk) x1(kdata)
+      REAL(rk) y1(kdata)
       INTEGER i, n
       CHARACTER(len=40)  :: fil
 
@@ -1218,58 +1219,58 @@
       n = 704 
       DO i = 1, n
         READ(kin,*) x1(i), y1(i)
-        x1(i) = .1*x1(i)
+        x1(i) = .1_rk*x1(i)
       ENDDO
       CLOSE (kin)
 
-      CALL addpnt(x1,y1,kdata,n,x1(1)*(1.-deltax),0.,errmsg, errflg)
+      CALL addpnt(x1,y1,kdata,n,x1(1)*(1._rk-deltax),0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x1,y1,kdata,n,          0.,0.,errmsg, errflg)
+      CALL addpnt(x1,y1,kdata,n,          0._rk,0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x1,y1,kdata,n,x1(n)*(1.+deltax),0.,errmsg, errflg)
+      CALL addpnt(x1,y1,kdata,n,x1(n)*(1._rk+deltax),0._rk,errmsg, errflg)
       if (errflg.ne.0) return
-      CALL addpnt(x1,y1,kdata,n,      1.e+38,0.,errmsg, errflg)
+      CALL addpnt(x1,y1,kdata,n,      1.e+38_rk,0._rk,errmsg, errflg)
       if (errflg.ne.0) return
       CALL inter2(nw,wl,so2xs,n,x1,y1,errmsg, errflg)
 
       END SUBROUTINE rdso2xs
 
-      real FUNCTION refrac(w,airden)
+      real(rk) FUNCTION refrac(w,airden)
 
       IMPLICIT NONE
 
 ! input vacuum wavelength, nm and air density, molec cm-3
 
-      REAL, intent(in) :: w, airden
+      REAL(rk), intent(in) :: w, airden
 
 ! output refractive index for standard air
 ! (dry air at 15 deg. C, 101.325 kPa, 0.03% CO2)
 
 ! internal
 
-      REAL :: sig,  sigsq, dum
+      REAL(rk) :: sig,  sigsq, dum
 
 ! from CRC Handbook, originally from Edlen, B., Metrologia, 2, 71, 1966.
 ! valid from 200 nm to 2000 nm
 ! beyond this range, use constant value
 
-      IF (w < 200.) then
-        dum = 5.e-3
-      ELSEIF (w > 2000.) then
-        dum = 5.e-4
+      IF (w < 200._rk) then
+        dum = 5.e-3_rk
+      ELSEIF (w > 2000._rk) then
+        dum = 5.e-4_rk
       ELSE
-        dum = 1./w
+        dum = 1._rk/w
       ENDIF
-      sig = 1.E3*dum
+      sig = 1.E3_rk*dum
       sigsq = sig * sig
 
-      dum = 8342.13 + 2406030./(130. - sigsq) + 15997./(38.9 - sigsq)
+      dum = 8342.13_rk + 2406030._rk/(130._rk - sigsq) + 15997._rk/(38.9_rk - sigsq)
 
 ! adjust to local air density
-      dum = dum * airden/(2.69e19 * 273.15/288.15)
+      dum = dum * airden/(2.69e19_rk * 273.15_rk/288.15_rk)
 
 ! index of refraction:
-      refrac = 1. + 1.E-8 * dum
+      refrac = 1._rk + 1.E-8_rk * dum
 
       END function refrac
 

@@ -66,64 +66,64 @@ contains
     real(rk),         intent(in)  :: o3vmr(:)
     real(rk),         intent(in)  :: so2vmr(:)
     real(rk),         intent(in)  :: no2vmr(:)
-    real,             intent(out) :: radfld(:,:) ! /sec
-    real,             intent(out) :: srb_o2_xs(:,:)
+    real(rk),         intent(out) :: radfld(:,:) ! /sec
+    real(rk),         intent(out) :: srb_o2_xs(:,:)
     character(len=*), intent(out) :: errmsg
     integer,          intent(out) :: errflg
 
     integer, parameter :: nlambda_start=1
     integer, parameter :: cld_od_opt=1
     logical, parameter :: has_aer_ra_feedback = .false.
-    real,    parameter :: dobsi = 0.
+    real(rk),    parameter :: dobsi = 0._rk
     
-    real, parameter :: kboltz= 1.38064852e-16 ! boltzmann constant (erg/K)
-    real, parameter :: R=2.8704e6       ! gas constant (erg/g/K)
-    real, parameter :: g=980.616        ! grav acceleration (cm/sec2)
+    real(rk), parameter :: kboltz= 1.38064852e-16_rk ! boltzmann constant (erg/K)
+    real(rk), parameter :: R=2.8704e6_rk       ! gas constant (erg/g/K)
+    real(rk), parameter :: g=980.616_rk        ! grav acceleration (cm/sec2)
 
-    real :: zen
-    real :: alb(nwave)
-    real :: zlev(nlev) ! km 
-    real :: tlev(nlev)
-    real :: aircol(nlyr)  ! # molecules / cm2 in each layer
-    real :: o2col(nlyr)  
-    real :: o3col(nlyr) 
-    real :: so2col(nlyr)
-    real :: no2col(nlyr)
-    real :: dpress(nlyr)
+    real(rk) :: zen
+    real(rk) :: alb(nwave)
+    real(rk) :: zlev(nlev) ! km 
+    real(rk) :: tlev(nlev)
+    real(rk) :: aircol(nlyr)  ! # molecules / cm2 in each layer
+    real(rk) :: o2col(nlyr)  
+    real(rk) :: o3col(nlyr) 
+    real(rk) :: so2col(nlyr)
+    real(rk) :: no2col(nlyr)
+    real(rk) :: dpress(nlyr)
 
-    real :: tauaer300(nlev) ! aerosol properties
-    real :: tauaer400(nlev)
-    real :: tauaer600(nlev)
-    real :: tauaer999(nlev)
-    real :: waer300(nlev)
-    real :: waer400(nlev)
-    real :: waer600(nlev)
-    real :: waer999(nlev)
-    real :: gaer300(nlev)
-    real :: gaer400(nlev)
-    real :: gaer600(nlev)
-    real :: gaer999(nlev)
+    real(rk) :: tauaer300(nlev) ! aerosol properties
+    real(rk) :: tauaer400(nlev)
+    real(rk) :: tauaer600(nlev)
+    real(rk) :: tauaer999(nlev)
+    real(rk) :: waer300(nlev)
+    real(rk) :: waer400(nlev)
+    real(rk) :: waer600(nlev)
+    real(rk) :: waer999(nlev)
+    real(rk) :: gaer300(nlev)
+    real(rk) :: gaer400(nlev)
+    real(rk) :: gaer600(nlev)
+    real(rk) :: gaer999(nlev)
     
-    real :: dtaer(nlyr,nwave), omaer(nlyr,nwave), gaer(nlyr,nwave)
-    real :: dtcld(nlyr,nwave), omcld(nlyr,nwave), gcld(nlyr,nwave)
-    real :: dt_cld(nlyr)
+    real(rk) :: dtaer(nlyr,nwave), omaer(nlyr,nwave), gaer(nlyr,nwave)
+    real(rk) :: dtcld(nlyr,nwave), omcld(nlyr,nwave), gcld(nlyr,nwave)
+    real(rk) :: dt_cld(nlyr)
     
-    real :: qll(nlev) ! cld water content (g/m3)
-    real :: cldfrac(nlev)
-    real :: efld(nlev,nwave)
-    real :: e_dir(nlev,nwave)
-    real :: e_dn(nlev,nwave)
-    real :: e_up(nlev,nwave)
-    real :: dir_fld(nlev,nwave)
-    real :: dwn_fld(nlev,nwave)
-    real :: up_fld(nlev,nwave)
+    real(rk) :: qll(nlev) ! cld water content (g/m3)
+    real(rk) :: cldfrac(nlev)
+    real(rk) :: efld(nlev,nwave)
+    real(rk) :: e_dir(nlev,nwave)
+    real(rk) :: e_dn(nlev,nwave)
+    real(rk) :: e_up(nlev,nwave)
+    real(rk) :: dir_fld(nlev,nwave)
+    real(rk) :: dwn_fld(nlev,nwave)
+    real(rk) :: up_fld(nlev,nwave)
 
     integer :: k, kk
 
-    real :: o3_xs(nwave,nlev)
-    real :: no2_xs(nwave,nlev)
-    real :: o3_xs_tpose(nlev,nwave)
-    real :: no2_xs_tpose(nlev,nwave)
+    real(rk) :: o3_xs(nwave,nlev)
+    real(rk) :: no2_xs(nwave,nlev)
+    real(rk) :: o3_xs_tpose(nlev,nwave)
+    real(rk) :: no2_xs_tpose(nlev,nwave)
 
     errmsg = ''
     errflg = 0
@@ -131,11 +131,11 @@ contains
     dpress(1:nlyr) = press_mid(2:nlyr+1) - press_mid(1:nlyr)
     do k=1,nlyr
        kk=nlyr-k+1
-       aircol(k) = 10.*dpress(k)*R/(kboltz*g)
-       o3col(kk)  = 0.5*(o3vmr(k)+o3vmr(k+1))*aircol(k)
-       o2col(kk)  = 0.5*(o2vmr(k)+o2vmr(k+1))*aircol(k)
-       so2col(kk) = 0.5*(so2vmr(k)+so2vmr(k+1))*aircol(k)
-       no2col(kk) = 0.5*(no2vmr(k)+no2vmr(k+1))*aircol(k)
+       aircol(k) = 10._rk*dpress(k)*R/(kboltz*g)
+       o3col(kk)  = 0.5_rk*(o3vmr(k)+o3vmr(k+1))*aircol(k)
+       o2col(kk)  = 0.5_rk*(o2vmr(k)+o2vmr(k+1))*aircol(k)
+       so2col(kk) = 0.5_rk*(so2vmr(k)+so2vmr(k+1))*aircol(k)
+       no2col(kk) = 0.5_rk*(no2vmr(k)+no2vmr(k+1))*aircol(k)
     end do
 
     ! inputs need to be bottom up vert coord
@@ -143,26 +143,26 @@ contains
     tlev(nlev:1:-1) = temp(1:nlev)
     zlev(nlev:1:-1) = alt(1:nlev) ! km
 
-    qll=0.0
-    cldfrac=0.0
-    tauaer300=0.0
-    tauaer400=0.0
-    tauaer600=0.0
-    tauaer999=0.0
-    waer300=1.0
-    waer400=1.0
-    waer600=1.0
-    waer999=1.0
-    gaer300=0.0
-    gaer400=0.0
-    gaer600=0.0
-    gaer999=0.0
+    qll=0.0_rk
+    cldfrac=0.0_rk
+    tauaer300=0.0_rk
+    tauaer400=0.0_rk
+    tauaer600=0.0_rk
+    tauaer999=0.0_rk
+    waer300=1.0_rk
+    waer400=1.0_rk
+    waer600=1.0_rk
+    waer999=1.0_rk
+    gaer300=0.0_rk
+    gaer400=0.0_rk
+    gaer600=0.0_rk
+    gaer999=0.0_rk
 
     zen = zenith
     alb(:) = albedo
 
-    o3_xs_tpose = 0.0
-    no2_xs_tpose= 0.0
+    o3_xs_tpose = 0.0_rk
+    no2_xs_tpose= 0.0_rk
 
     call o3xs( nlev,tlev,nwave,wl,o3_xs_tpose )
     call no2xs_jpl06a( nlev,tlev,nwave,wl,no2_xs_tpose )
