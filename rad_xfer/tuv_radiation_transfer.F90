@@ -154,6 +154,9 @@ contains
     zen = zenith
     alb(:) = albedo
 
+    o3_xs_tpose = 0.0
+    no2_xs_tpose= 0.0
+
     call o3xs( nlev,tlev,nwave,wl,o3_xs_tpose )
     call no2xs_jpl06a( nlev,tlev,nwave,wl,no2_xs_tpose )
     o3_xs  = transpose( o3_xs_tpose )
