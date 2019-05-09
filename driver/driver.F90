@@ -29,9 +29,9 @@ program driver
   real(r8), allocatable :: o3vmrcol(:)
   real(r8), allocatable :: so2vmrcol(:)
   real(r8), allocatable :: no2vmrcol(:)
-  real, allocatable :: srb_o2_xs(:,:)
-  real, allocatable :: radfld(:,:)
-  real, allocatable :: tuv_prates(:,:)
+  real(r8), allocatable :: srb_o2_xs(:,:)
+  real(r8), allocatable :: radfld(:,:)
+  real(r8), allocatable :: tuv_prates(:,:)
   
   character(len=*), parameter :: nml_file = '/terminator-data1/home/fvitt/tuvdev/driver/test_nml'
   character(len=*), parameter :: env_conds_file = &
