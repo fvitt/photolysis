@@ -18,7 +18,7 @@ contains
     use rad_abs_xsect, only : o2_xs
     use phot_util_mod, only : sphers, airmas
     use la_srb_mod,    only : la_srb_comp
-    use params_mod
+    use params_mod, only: R, g, kboltz
 
     integer,  intent(in)  :: nlev
     real(rk), intent(in)  :: zen
