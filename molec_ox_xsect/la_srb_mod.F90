@@ -7,7 +7,6 @@
 !     effxs
 !     calc_params
 !     init_xs
-!     sjo2   
 ! and the following functions
 !     chebev
 !=============================================================================
@@ -20,10 +19,9 @@
       implicit none
 
       private
-      public :: la_srb, sjo2, init_srb
-      public :: nchebev_term, nchebev_wave
-      public :: chebev_ac, chebev_bc
-      public :: ila, isrb
+
+      public :: la_srb_comp
+      public :: la_srb_init
 
       INTEGER, parameter :: kla = 2
       INTEGER, PARAMETER :: ksrb = 18
@@ -40,10 +38,122 @@
       REAL(rk)    :: xslod(nsrb)
       REAL(rk)    :: wlsrb(ksrb)
       REAL(rk)    :: wlla(kla)
-
+      
       CONTAINS
 
-      SUBROUTINE init_srb
+      SUBROUTINE la_srb_init( errmsg, errflg )
+        use params_mod, only: input_data_root
+        use netcdf
+
+        character(len=*), intent(out) :: errmsg
+        integer,          intent(out) :: errflg
+
+        integer :: ncid, dimid, varid
+        integer :: astat, ret
+        character(len=512) :: filepath
+
+        filepath = trim(input_data_root)//'/wrf_tuv_xsqy.nc'
+
+        errmsg = ' '
+        errflg = 0
+
+        ! open file
+        ret = nf90_open( trim(filepath), nf90_noclobber, ncid )
+        if( ret /= nf90_noerr ) then
+           errflg = 1
+           errmsg = 'la_srb_init: failed to open '//trim(filepath)
+           return
+        end if
+
+
+        ret = nf90_inq_dimid( ncid, 'nchebev_term', dimid )
+        if( ret /= nf90_noerr ) then
+           errflg = 1
+           errmsg = 'get_xsqy_tab: failed to get nchebev_term id'
+           return
+        end if
+        ret = nf90_inquire_dimension( ncid, dimid, len=nchebev_term )
+        if( ret /= nf90_noerr ) then
+           errflg = 1
+           errmsg = 'get_xsqy_tab: failed to get nchebev'
+           return
+        end if
+        ret = nf90_inq_dimid( ncid, 'nchebev_wave', dimid )
+        if( ret /= nf90_noerr ) then
+           errflg = 1
+           errmsg = 'get_xsqy_tab: failed to get nchebev_wave id'
+           return
+        end if
+        ret = nf90_inquire_dimension( ncid, dimid, len=nchebev_wave )
+        if( ret /= nf90_noerr ) then
+           errflg = 1
+           errmsg = 'get_xsqy_tab: failed to get nchebev'
+           return
+        end if
+
+        allocate( chebev_ac(nchebev_term,nchebev_wave), chebev_bc(nchebev_term,nchebev_wave), stat=astat )
+
+        if( astat /= 0 ) then
+           errflg = astat
+           errmsg = 'la_srb_init: failed to allocate chebev memory'
+           return
+        end if
+        ret = nf90_inq_varid( ncid, 'chebev_ac', varid )
+        if( ret /= nf90_noerr ) then
+           errflg = 1
+           errmsg = 'get_xsqy_tab: failed to get chebev_ac variable id'
+           return
+        end if
+        ret = nf90_get_var( ncid, varid, chebev_ac )
+        if( ret /= nf90_noerr ) then
+           errflg = 1
+           errmsg = 'get_xsqy_tab: failed to read chebev_ac variable'
+           return
+        end if
+        ret = nf90_inq_varid( ncid, 'chebev_bc', varid )
+        if( ret /= nf90_noerr ) then
+           errflg = 1
+           errmsg = 'get_xsqy_tab: failed to get chebev_bc variable id'
+           return
+        end if
+        ret = nf90_get_var( ncid, varid, chebev_bc )
+        if( ret /= nf90_noerr ) then
+           errflg = 1
+           errmsg = 'get_xsqy_tab: failed to read chebev_bc variable'
+           return
+        end if
+        ret = nf90_inq_varid( ncid, 'ila', varid )
+        if( ret /= nf90_noerr ) then
+           errflg = 1
+           errmsg = 'get_xsqy_tab: failed to get ila variable id'
+           return
+        end if
+        ret = nf90_get_var( ncid, varid, ila )
+        if( ret /= nf90_noerr ) then
+           errflg = 1
+           errmsg = 'get_xsqy_tab: failed to read ila variable'
+           return
+        end if
+        ret = nf90_inq_varid( ncid, 'isrb', varid )
+        if( ret /= nf90_noerr ) then
+           errflg = 1
+           errmsg = 'get_xsqy_tab: failed to get isrb variable id'
+           return
+        end if
+        ret = nf90_get_var( ncid, varid, isrb )
+        if( ret /= nf90_noerr ) then
+           errflg = 1
+           errmsg = 'get_xsqy_tab: failed to read isrb variable'
+           return
+        end if
+
+        ! close the file
+        ret = nf90_close( ncid )
+        if( ret /= nf90_noerr ) then
+           errflg = 1
+           errmsg = 'la_srb_init: failed to close '//trim(filepath)
+           return
+        end if
 
       b(:) = (/ 6.8431e-01_DP,  2.29841e-01_DP,  8.65412e-02_DP /)
       c(:) = (/ 8.22114e-21_DP, 1.77556e-20_DP,  8.22112e-21_DP /)
@@ -61,10 +171,9 @@
                    192.3_rk, 194.2_rk, 196.1_rk, 198.0_rk, 200.0_rk, &
                    202.0_rk, 204.1_rk, 205.8_rk/)
 
-      END SUBROUTINE init_srb
+      END SUBROUTINE la_srb_init
 
-      SUBROUTINE la_srb( nlyr, tlev, wmin, &
-                         vcol, scol, o2_xs, dto2, srb_o2_xs )
+      SUBROUTINE la_srb_comp( nlyr, wmin, tlev, vcol, scol, o2_xs, dto2, srb_o2_xs )
 !-----------------------------------------------------------------------------
 !=  PURPOSE:
 !=  Compute equivalent optical depths for O2 absorption, and O2 effective
@@ -176,7 +285,7 @@
         ENDDO
       ENDIF
 
-      END SUBROUTINE la_srb
+      END SUBROUTINE la_srb_comp
 
       SUBROUTINE lymana( nlyr, o2col, secchi, dto2la, o2xsla )
 !-----------------------------------------------------------------------------
@@ -484,52 +593,5 @@
       ENDIF
 	
       END FUNCTION chebev
-
-      SUBROUTINE sjo2( nlyr, nwave, xso2, xsqy )
-!-----------------------------------------------------------------------------
-!=  PURPOSE:
-!=  Update the weighting function (cross section x quantum yield) for O2
-!=  photolysis.  The strong spectral variations in the O2 cross sections are
-!=  parameterized into a few bands for Lyman-alpha (121.4-121.9 nm, one band)
-!=  and Schumann-Runge (174.4-205.8, nsrb bands) regions. The parameterizations
-!=  depend on the overhead O2 column, and therefore on altitude and solar
-!=  zenith angle, so they need to be updated at each time/zenith step.
-!-----------------------------------------------------------------------------
-!=  PARAMETERS:
-!=  NZ     - INTEGER, number of altitude levels in working altitude grid  (I)
-!=  NW     - INTEGER, number of specified intervals + 1 in working        (I)
-!=           wavelength grid
-!=  XSO2   - REAL, molecular absorption cross section in SR bands at      (I)
-!=           each specified altitude and wavelength.  Includes Herzberg
-!=            continuum.
-!=  NJ     - INTEGER, index of O2 photolysis in array SQ                  (I)
-!=  xsqy   - REAL, cross section x quantum yield (cm^2) for each          (O)
-!=           photolysis reaction, at each wavelength and each altitude level
-!-----------------------------------------------------------------------------
-
-
-!-----------------------------------------------------------------------------
-!     ... dummy arguments
-!-----------------------------------------------------------------------------
-      INTEGER, intent(in)    :: nlyr, nwave
-      REAL(rk),    intent(in)    :: xso2(:,:)
-      REAL(rk),    intent(inout) :: xsqy(:,:)
-
-!-----------------------------------------------------------------------------
-!     ... local variables
-!-----------------------------------------------------------------------------
-      INTEGER :: k
-
-!-----------------------------------------------------------------------------
-! O2 + hv -> O + O
-! quantum yield assumed to be unity
-! assign cross section values at all wavelengths and at all altitudes
-!      qy = 1.
-!-----------------------------------------------------------------------------
-      DO k = 1, nlyr
-        xsqy(:nwave,k) = xso2(:nwave,k)
-      END DO
-
-      END SUBROUTINE sjo2
 
       end module la_srb_mod

@@ -9,7 +9,7 @@ RM := rm
 FC := pgf90
 
 SRCLIST := Base_Srclist_f
-dirs := .:../share:../rad_xfer:../photo_rates:../../MusicBox/MusicBox_host/src
+dirs := .:../share:../rad_xfer:../photo_rates:../molec_ox_xsect:../../MusicBox/MusicBox_host/src
 
 # Expand any tildes in directory names. Change spaces to colons.
 VPATH    := $(foreach dir,$(dirs),$(dir)) 
@@ -38,5 +38,5 @@ $(EXENAME):	$(OBJS)
 	$(FC) -o $@ $(OBJS) $(LDFLAGS)
 
 clean:
-	$(RM) -f *.o *.mod $(EXENAME)
+	$(RM) -f *.o *.mod $(EXENAME) *.out TUV.diags fort.10
 

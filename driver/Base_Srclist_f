@@ -2,9 +2,11 @@ phot_kind_mod.F90
 numer.F90
 module_params.F90
 params_mod.F90
+phot_util_mod.F90
 module_xsections.F90
-la_srb_mod.F90
 rad_abs_xsect.F90
+la_srb_mod.F90
+molec_ox_xsect.F90 
 rad_trans.F90
 tuv_subs.F90
 tuv_radiation_transfer.F90

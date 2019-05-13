@@ -11,6 +11,8 @@ program driver
   use tuv_photolysis,   only: tuv_jnames
   use module_prates_tuv,only: rxn_ndx
   use module_rxn, only : xsqy_table => xsqy_tab
+  use molec_ox_xsect, only: molec_ox_xsect_init
+  use molec_ox_xsect, only: molec_ox_xsect_run
 
   implicit none
 
@@ -30,6 +32,7 @@ program driver
   real(r8), allocatable :: so2vmrcol(:)
   real(r8), allocatable :: no2vmrcol(:)
   real(r8), allocatable :: srb_o2_xs(:,:)
+  real(r8), allocatable :: dto2(:,:)
   real(r8), allocatable :: radfld(:,:)
   real(r8), allocatable :: tuv_prates(:,:)
   
@@ -38,7 +41,7 @@ program driver
        '/terminator-data1/fvitt/micm_inputs/FW2000climo.f09_f09_mg17.cam6_0_030.n01.cam.h2.0001-01-01-00000.nc'
   type(environ_conditions),pointer :: colEnvConds => null()
 
-  integer :: nlevels
+  integer :: nlevels,k
 
   write(*,*) 'BEGIN TEST'
 
@@ -50,6 +53,12 @@ program driver
   
   errflg=0
   errmsg=' '
+
+  call molec_ox_xsect_init( errmsg, errflg )
+  if (errflg/=0) then
+      write(*,*) 'FAILURE: '//trim(errmsg)
+     call abort()
+  end if
 
   call tuv_photolysis_init( r8, errmsg, errflg )
   if (errflg/=0) then
@@ -63,7 +72,7 @@ program driver
      call abort()
   end if
 
-  allocate(srb_o2_xs(nwave,nlevels))
+  allocate(srb_o2_xs(nwave,nlevels), dto2(nlevels-1,nwave))
   allocate(radfld(nwave,nlevels))
   allocate(tuv_prates(nlevels, tuv_n_phot ) )
  
@@ -86,8 +95,10 @@ program driver
   so2vmrcol(:nlevels) = colEnvConds%getcol('SO2',nlevels)
   no2vmrcol(:nlevels) = colEnvConds%getcol('NO2',nlevels)
 
+  call molec_ox_xsect_run( nlevels, zenith, alt, temp, press_mid, o2vmrcol, dto2, srb_o2_xs )
+
   call  tuv_radiation_transfer_run( &
-       zenith, albedo, press_mid, alt, temp, o2vmrcol, o3vmrcol, so2vmrcol, no2vmrcol, radfld, srb_o2_xs, errmsg, errflg )
+       zenith, albedo, press_mid, alt, temp, o3vmrcol, so2vmrcol, no2vmrcol, dto2, radfld, errmsg, errflg )
 
   call tuv_photolysis_run( nlevels, temp, press_mid, radfld, srb_o2_xs, tuv_prates, errmsg, errflg )
   
@@ -96,10 +107,6 @@ program driver
      call abort()
   end if
 
-  !  do i=1,tuv_n_phot
-
-!  print*,'rxn_ndx: ' ,rxn_ndx
-  
   do i=1,tuv_n_phot
 
      jndx = rxn_ndx(i)
@@ -111,7 +118,9 @@ program driver
      write( *,*) trim(tuv_jnames(i))//'   '//trim(rxn_string)
      write(10,*) trim(tuv_jnames(i))//'   '//trim(rxn_string)
      write( *,'("  rate = ",e12.4," /sec")' ) tuv_prates(nlevels,i)
-     write(10,'("  rate = ",e12.4," /sec")' ) tuv_prates(nlevels,i)
+     do k=1,nlevels
+         write(10,'("  rate = ",e24.16," /sec")' ) tuv_prates(k,i)
+     end do
 
      write(10,*) ' '
      print*,' '

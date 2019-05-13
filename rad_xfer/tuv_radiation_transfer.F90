@@ -51,41 +51,36 @@ contains
   !-------------------------------------------------------------------------------------------------
   !-------------------------------------------------------------------------------------------------
   subroutine tuv_radiation_transfer_run( &
-       zenith, albedo, press_mid, alt, temp, o2vmr, o3vmr, so2vmr, no2vmr, radfld, srb_o2_xs, errmsg, errflg )
+       zenith, albedo, press_mid, alt, temp, o3vmr, so2vmr, no2vmr, dto2, radfld, errmsg, errflg )
 
     use tuv_subs,         only: tuv_radfld
     use rad_abs_xsect,    only: o2_xs, so2_xs, nwave, wl, wc
     use module_xsections, only: o3xs, no2xs_jpl06a
-
+    use params_mod
+ 
     real(rk),         intent(in)  :: zenith
     real(rk),         intent(in)  :: albedo
     real(rk),         intent(in)  :: press_mid(:)
     real(rk),         intent(in)  :: alt(:)  ! km
     real(rk),         intent(in)  :: temp(:) ! K
-    real(rk),         intent(in)  :: o2vmr(:)
     real(rk),         intent(in)  :: o3vmr(:)
     real(rk),         intent(in)  :: so2vmr(:)
     real(rk),         intent(in)  :: no2vmr(:)
+    real(rk),         intent(in)  :: dto2(:,:)
     real(rk),         intent(out) :: radfld(:,:) ! /sec
-    real(rk),         intent(out) :: srb_o2_xs(:,:)
     character(len=*), intent(out) :: errmsg
     integer,          intent(out) :: errflg
 
     integer, parameter :: nlambda_start=1
     integer, parameter :: cld_od_opt=1
     logical, parameter :: has_aer_ra_feedback = .false.
-    real(rk),    parameter :: dobsi = 0._rk
+    real(rk), parameter :: dobsi = 0._rk
     
-    real(rk), parameter :: kboltz= 1.38064852e-16_rk ! boltzmann constant (erg/K)
-    real(rk), parameter :: R=2.8704e6_rk       ! gas constant (erg/g/K)
-    real(rk), parameter :: g=980.616_rk        ! grav acceleration (cm/sec2)
-
     real(rk) :: zen
     real(rk) :: alb(nwave)
     real(rk) :: zlev(nlev) ! km 
     real(rk) :: tlev(nlev)
     real(rk) :: aircol(nlyr)  ! # molecules / cm2 in each layer
-    real(rk) :: o2col(nlyr)  
     real(rk) :: o3col(nlyr) 
     real(rk) :: so2col(nlyr)
     real(rk) :: no2col(nlyr)
@@ -133,7 +128,6 @@ contains
        kk=nlyr-k+1
        aircol(k) = 10._rk*dpress(k)*R/(kboltz*g)
        o3col(kk)  = 0.5_rk*(o3vmr(k)+o3vmr(k+1))*aircol(k)
-       o2col(kk)  = 0.5_rk*(o2vmr(k)+o2vmr(k+1))*aircol(k)
        so2col(kk) = 0.5_rk*(so2vmr(k)+so2vmr(k+1))*aircol(k)
        no2col(kk) = 0.5_rk*(no2vmr(k)+no2vmr(k+1))*aircol(k)
     end do
@@ -171,14 +165,14 @@ contains
 
     call tuv_radfld( nlambda_start, cld_od_opt, cldfrac, nlyr, nwave, &
          zen, zlev, alb, &
-         aircol, o2col, o3col, so2col, no2col, &
+         aircol, o3col, so2col, no2col, &
          tauaer300, tauaer400, tauaer600, tauaer999, &
          waer300, waer400, waer600, waer999, &
          gaer300, gaer400, gaer600, gaer999, &
          dtaer, omaer, gaer, dtcld, omcld, gcld, &
          has_aer_ra_feedback, &
          qll, dobsi, o3_xs, no2_xs, o2_xs, &
-         so2_xs, wl(1), wc, tlev, srb_o2_xs, radfld, efld, &
+         so2_xs, wl(1), wc, tlev, dto2, radfld, efld, &
          e_dir, e_dn, e_up, &
          dir_fld, dwn_fld, up_fld, dt_cld, errmsg, errflg )
 

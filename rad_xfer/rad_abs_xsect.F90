@@ -18,10 +18,6 @@ contains
   subroutine rad_abs_xsect_init( filepath, errmsg, errflg )
 
     use netcdf
-    use la_srb_mod, only : ila, isrb
-    use la_srb_mod, only : nchebev_term, nchebev_wave
-    use la_srb_mod, only : chebev_ac, chebev_bc
-    use la_srb_mod, only : init_srb
 
     character(len=*), intent(in ) :: filepath
     character(len=*), intent(out) :: errmsg
@@ -30,6 +26,9 @@ contains
     integer :: ncid, dimid, varid
     integer :: astat, ret
 
+    errmsg = ' '
+    errflg = 0
+    
     ! open file
     ret = nf90_open( trim(filepath), nf90_noclobber, ncid )
     if( ret /= nf90_noerr ) then
@@ -111,86 +110,6 @@ contains
        return
     end if
 
-    ! for la_srb
-    ret = nf90_inq_dimid( ncid, 'nchebev_term', dimid )
-    if( ret /= nf90_noerr ) then
-       errflg = 1
-       errmsg = 'get_xsqy_tab: failed to get nchebev_term id'
-       return
-    end if
-    ret = nf90_inquire_dimension( ncid, dimid, len=nchebev_term )
-    if( ret /= nf90_noerr ) then
-       errflg = 1
-       errmsg = 'get_xsqy_tab: failed to get nchebev'
-       return
-    end if
-    ret = nf90_inq_dimid( ncid, 'nchebev_wave', dimid )
-    if( ret /= nf90_noerr ) then
-       errflg = 1
-       errmsg = 'get_xsqy_tab: failed to get nchebev_wave id'
-       return
-    end if
-    ret = nf90_inquire_dimension( ncid, dimid, len=nchebev_wave )
-    if( ret /= nf90_noerr ) then
-       errflg = 1
-       errmsg = 'get_xsqy_tab: failed to get nchebev'
-       return
-    end if
-    allocate( chebev_ac(nchebev_term,nchebev_wave), chebev_bc(nchebev_term,nchebev_wave), stat=astat )
-    if( astat /= 0 ) then
-       errflg = astat
-       errmsg = 'rad_abs_xsect_init: failed to allocate la_srb memory'
-       return
-    end if
-    ret = nf90_inq_varid( ncid, 'chebev_ac', varid )
-    if( ret /= nf90_noerr ) then
-       errflg = 1
-       errmsg = 'get_xsqy_tab: failed to get chebev_ac variable id'
-       return
-    end if
-    ret = nf90_get_var( ncid, varid, chebev_ac )
-    if( ret /= nf90_noerr ) then
-       errflg = 1
-       errmsg = 'get_xsqy_tab: failed to read chebev_ac variable'
-       return
-    end if
-    ret = nf90_inq_varid( ncid, 'chebev_bc', varid )
-    if( ret /= nf90_noerr ) then
-       errflg = 1
-       errmsg = 'get_xsqy_tab: failed to get chebev_bc variable id'
-       return
-    end if
-    ret = nf90_get_var( ncid, varid, chebev_bc )
-    if( ret /= nf90_noerr ) then
-       errflg = 1
-       errmsg = 'get_xsqy_tab: failed to read chebev_bc variable'
-       return
-    end if
-    ret = nf90_inq_varid( ncid, 'ila', varid )
-    if( ret /= nf90_noerr ) then
-       errflg = 1
-       errmsg = 'get_xsqy_tab: failed to get ila variable id'
-       return
-    end if
-    ret = nf90_get_var( ncid, varid, ila )
-    if( ret /= nf90_noerr ) then
-       errflg = 1
-       errmsg = 'get_xsqy_tab: failed to read ila variable'
-       return
-    end if
-    ret = nf90_inq_varid( ncid, 'isrb', varid )
-    if( ret /= nf90_noerr ) then
-       errflg = 1
-       errmsg = 'get_xsqy_tab: failed to get isrb variable id'
-       return
-    end if
-    ret = nf90_get_var( ncid, varid, isrb )
-    if( ret /= nf90_noerr ) then
-       errflg = 1
-       errmsg = 'get_xsqy_tab: failed to read isrb variable'
-       return
-    end if
-
     ! close the file
     ret = nf90_close( ncid )
     if( ret /= nf90_noerr ) then
@@ -198,8 +117,6 @@ contains
        errmsg = 'rad_abs_xsect_init: failed to close '//trim(filepath)
        return
     end if
-
-    call init_srb()
 
   end subroutine rad_abs_xsect_init
 

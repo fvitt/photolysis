@@ -14,6 +14,10 @@
       REAL(rk), PARAMETER :: radius = 6.371E+3_rk                    ! km
       REAL(rk), PARAMETER :: hc = 6.626068E-34_rk * 2.99792458E8_rk
       REAL(rk), PARAMETER :: largest=1.E+36_rk
+      real(rk), parameter :: kboltz= 1.38064852e-16_rk ! boltzmann constant (erg/K)
+      real(rk), parameter :: R=2.8704e6_rk       ! gas constant (erg/g/K)
+      real(rk), parameter :: g=980.616_rk        ! grav acceleration (cm/sec2)
+
 
       REAL(rk), PARAMETER :: pzero = +10._rk/largest
       REAL(rk), PARAMETER :: nzero = -10._rk/largest

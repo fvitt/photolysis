@@ -170,7 +170,7 @@ contains
              endif
           endif
        elseif( .not. is_full_tuv ) then
-!!$          call sjo2( kte, nwave, srb_o2_xs, xsqy )
+          call sjo2( kte, nwave, srb_o2_xs, xsqy )
        endif
        !---------------------------------------------------------------------
        ! compute tuv photorates
@@ -652,5 +652,53 @@ contains
       end do
 
       end subroutine xs_int
+
+      SUBROUTINE sjo2( nlyr, nwave, xso2, xsqy )
+!-----------------------------------------------------------------------------
+!=  PURPOSE:
+!=  Update the weighting function (cross section x quantum yield) for O2
+!=  photolysis.  The strong spectral variations in the O2 cross sections are
+!=  parameterized into a few bands for Lyman-alpha (121.4-121.9 nm, one band)
+!=  and Schumann-Runge (174.4-205.8, nsrb bands) regions. The parameterizations
+!=  depend on the overhead O2 column, and therefore on altitude and solar
+!=  zenith angle, so they need to be updated at each time/zenith step.
+!-----------------------------------------------------------------------------
+!=  PARAMETERS:
+!=  NZ     - INTEGER, number of altitude levels in working altitude grid  (I)
+!=  NW     - INTEGER, number of specified intervals + 1 in working        (I)
+!=           wavelength grid
+!=  XSO2   - REAL, molecular absorption cross section in SR bands at      (I)
+!=           each specified altitude and wavelength.  Includes Herzberg
+!=            continuum.
+!=  NJ     - INTEGER, index of O2 photolysis in array SQ                  (I)
+!=  xsqy   - REAL, cross section x quantum yield (cm^2) for each          (O)
+!=           photolysis reaction, at each wavelength and each altitude level
+!-----------------------------------------------------------------------------
+
+
+!-----------------------------------------------------------------------------
+!     ... dummy arguments
+!-----------------------------------------------------------------------------
+      INTEGER, intent(in)    :: nlyr, nwave
+      REAL(rk),    intent(in)    :: xso2(:,:)
+      REAL(rk),    intent(inout) :: xsqy(:,:)
+
+!-----------------------------------------------------------------------------
+!     ... local variables
+!-----------------------------------------------------------------------------
+      INTEGER :: k
+
+!-----------------------------------------------------------------------------
+! O2 + hv -> O + O
+! quantum yield assumed to be unity
+! assign cross section values at all wavelengths and at all altitudes
+!      qy = 1.
+!-----------------------------------------------------------------------------
+      DO k = 1, nlyr
+        xsqy(:nwave,k) = xso2(:nwave,k)
+      END DO
+
+      END SUBROUTINE sjo2
+
 
 end module module_prates_tuv
