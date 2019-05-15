@@ -28,8 +28,7 @@
       module module_xsections
 
       use phot_kind_mod, only: rk => kind_phot
-      use module_params, only: deltax, kin
-      use params_mod, only: input_data_root
+      use params_mod, only: deltax, kin, input_data_root
       use  numer_mod, only: addpnt, inter2
       
       IMPLICIT NONE

@@ -9,8 +9,7 @@
       USE,INTRINSIC :: IEEE_ARITHMETIC
 
       use phot_kind_mod, only: rk => kind_phot
-      use module_params
-      use params_mod, only: input_data_root
+      use params_mod, only: largest, deltax, input_data_root, kin
       use  numer_mod, only: addpnt, inter2, inter4
       
       implicit none
@@ -18,7 +17,19 @@
       private :: fo3qy2, qyacet
 
       logical, private :: initialize = .true.
+
+      ! internal array dimensions
       integer, parameter :: max_files = 5
+      ! altitude, wavelength, time (or solar zenith angle) grids
+      ! altitude
+      integer, parameter :: kz=125
+      ! wavelength
+      integer, parameter :: kw=1000
+      !  wavelength and altitude dependent
+      integer, parameter :: kj=150
+
+      ! small numbers (positive and negative)
+      real(rk), parameter :: pzero = +10._rk/largest
 
       integer :: npht, npht_tab
       

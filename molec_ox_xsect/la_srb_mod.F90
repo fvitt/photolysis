@@ -173,7 +173,7 @@
 
       END SUBROUTINE la_srb_init
 
-      SUBROUTINE la_srb_comp( nlyr, wmin, tlev, vcol, scol, o2_xs, dto2, srb_o2_xs )
+      SUBROUTINE la_srb_comp( nlyr, wmin, tlev, vcol, scol, o2vmr, o2_xs, dto2, srb_o2_xs )
 !-----------------------------------------------------------------------------
 !=  PURPOSE:
 !=  Compute equivalent optical depths for O2 absorption, and O2 effective
@@ -200,7 +200,7 @@
 !=            continuum.
 !-----------------------------------------------------------------------------
 
-      use params_mod, only : o2vmr, largest
+      use params_mod, only : largest
 
 !-----------------------------------------------------------------------------
 !     ... dummy arguments
@@ -211,6 +211,7 @@
 
       REAL(rk), intent(in) :: vcol(:)
       REAL(rk), intent(in) :: scol(:)
+      REAL(rk), intent(in) :: o2vmr(:)
       REAL(rk), intent(in) :: o2_xs(:)
       REAL(rk), intent(inout) :: dto2(:,:)
       REAL(rk), intent(inout) :: srb_o2_xs(:,:)
@@ -248,7 +249,7 @@
 !----------------------------------------------------------------------
 ! Slant O2 column and x-sections.
 !----------------------------------------------------------------------
-        o2col(:nlyr) = o2vmr * scol(:nlyr)
+        o2col(:nlyr) = o2vmr(:nlyr) * scol(:nlyr)
 !----------------------------------------------------------------------
 ! Effective secant of solar zenith angle.  
 ! Use 2.0 if no direct sun (value for isotropic radiation)
