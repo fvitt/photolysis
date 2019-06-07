@@ -66,37 +66,37 @@
 
       errmsg = ' '
       errflg = 0
-      
+
       istat = 0
       if( .not. allocated( rei218 ) ) then
-        allocate( rei218(nw-1),rei228(nw-1),rei243(nw-1),rei295(nw-1),stat=astat )
-        istat = istat + astat
+         allocate( rei218(nw),rei228(nw),rei243(nw),rei295(nw),stat=astat )
+         istat = istat + astat
       endif
       if( .not. allocated( wmo203 ) ) then
-        allocate( wmo203(nw-1),wmo273(nw-1),stat=astat )
-        istat = istat + astat
+         allocate( wmo203(nw),wmo273(nw),stat=astat )
+         istat = istat + astat
       endif
       if( .not. allocated( jpl218 ) ) then
-        allocate( jpl218(nw-1),jpl295(nw-1),stat=astat )
-        istat = istat + astat
+         allocate( jpl218(nw),jpl295(nw),stat=astat )
+         istat = istat + astat
       endif
       if( .not. allocated( mol226 ) ) then
-        allocate( mol226(nw-1),mol263(nw-1),mol298(nw-1),stat=astat )
-        istat = istat + astat
+         allocate( mol226(nw),mol263(nw),mol298(nw),stat=astat )
+         istat = istat + astat
       endif
       if( .not. allocated( c0 ) ) then
-        allocate( c0(nw-1),c1(nw-1),c2(nw-1),stat=astat )
-        istat = istat + astat
+         allocate( c0(nw),c1(nw),c2(nw),stat=astat )
+         istat = istat + astat
       endif
       if( .not. allocated( no2xs_a ) ) then
-        allocate( no2xs_a(nw-1),no2xs_b(nw-1),stat=astat )
-        istat = istat + astat
-     endif
-     if( istat /= 0 ) then
-        write(errmsg,'(''rdxs_init: failed to allocate; error = '',i4)') astat
-        errflg = 1
-        return
-     endif
+         allocate( no2xs_a(nw),no2xs_b(nw),stat=astat )
+         istat = istat + astat
+      endif
+      if( istat /= 0 ) then
+         write(errmsg,'(''rdxs_init: failed to allocate; error = '',i4)') astat
+         errflg = 1
+         return
+      endif
      
 !_______________________________________________________________________
 ! read data from different sources
@@ -168,7 +168,7 @@
 !  195.00  - 345.00   Reims group (218, 228, 243, 295 K)
 !  345.00  - 830.00   Reims group (295 K)
 !  no extrapolations in temperature allowed
-      
+
       DO iw = 1, nw-1
         IF(wl(iw) < v185) THEN
           factor = (wmo273(iw) - wmo203(iw))/(273._rk - 203._rk)

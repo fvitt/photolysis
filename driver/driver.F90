@@ -5,9 +5,8 @@ program driver
   use tuv_radiation_transfer, only: tuv_radiation_transfer_run
   use params_mod, only: input_data_root
   use environ_conditions_mod, only: environ_conditions_create, environ_conditions
-  use rad_abs_xsect,    only: nwave
   use tuv_photolysis,   only: tuv_photolysis_readnl, tuv_photolysis_init, tuv_photolysis_run
-  use tuv_photolysis,   only: tuv_n_phot
+  use tuv_photolysis,   only: tuv_n_phot, tuv_n_wavelen
   use tuv_photolysis,   only: tuv_jnames
   use module_prates_tuv,only: rxn_ndx
   use module_rxn, only : xsqy_table => xsqy_tab
@@ -60,20 +59,20 @@ program driver
      call abort()
   end if
 
-  call tuv_photolysis_init( r8, errmsg, errflg )
-  if (errflg/=0) then
-      write(*,*) 'FAILURE: '//trim(errmsg)
-     call abort()
-  end if
-  
   call tuv_radiation_transfer_init( r8, nlevels, errmsg, errflg )
   if (errflg/=0) then
       write(*,*) 'FAILURE: '//trim(errmsg)
      call abort()
   end if
 
-  allocate(srb_o2_xs(nwave,nlevels), dto2(nlevels-1,nwave))
-  allocate(radfld(nwave,nlevels))
+  call tuv_photolysis_init( r8, errmsg, errflg )
+  if (errflg/=0) then
+      write(*,*) 'FAILURE: '//trim(errmsg)
+     call abort()
+  end if
+
+  allocate(srb_o2_xs(tuv_n_wavelen,nlevels), dto2(nlevels-1,tuv_n_wavelen))
+  allocate(radfld(tuv_n_wavelen,nlevels))
   allocate(tuv_prates(nlevels, tuv_n_phot ) )
  
   allocate(alt(nlevels))
@@ -95,7 +94,7 @@ program driver
   so2vmrcol(:nlevels) = colEnvConds%getcol('SO2',nlevels)
   no2vmrcol(:nlevels) = colEnvConds%getcol('NO2',nlevels)
 
-  call molec_ox_xsect_run( nlevels, zenith, alt, temp, press_mid, o2vmrcol, dto2, srb_o2_xs )
+  call molec_ox_xsect_run( nlevels, zenith, alt, temp, press_mid, o2vmrcol, dto2, srb_o2_xs, errmsg, errflg )
 
   call  tuv_radiation_transfer_run( &
        zenith, albedo, press_mid, alt, temp, o3vmrcol, so2vmrcol, no2vmrcol, dto2, radfld, errmsg, errflg )

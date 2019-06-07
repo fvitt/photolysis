@@ -6,21 +6,28 @@ module tuv_radiation_transfer
   private
   public :: tuv_radiation_transfer_init
   public :: tuv_radiation_transfer_run
+  public :: tuv_radiation_transfer_finalize
   
   integer :: nlev, nlyr
   
 contains
   
-  !-------------------------------------------------------------------------------------------------
-  !-------------------------------------------------------------------------------------------------
-  subroutine tuv_radiation_transfer_init( realkind, nlev_in, errmsg, errflg )
-    use params_mod, only: input_data_root
-    use rad_abs_xsect, only: rad_abs_xsect_init
+!> \section arg_table_tuv_radiation_transfer_init Argument Table
+!! | local_name | standard_name             | long_name                 | units   | rank | type      | kind      | intent | optional |
+!! |------------|---------------------------|---------------------------|---------|------|-----------|-----------|--------|----------|
+!! | realkind   | phys_real_kind            | physics real kind         | none    |    0 | integer   |           | in     | F        |
+!! | nlevels    | num_levels_for_photolysis | number of column layers   | count   |    0 | integer   |           | in     | F        |
+!! | errmsg     | ccpp_error_message        | CCPP error message        | none    |    0 | character | len=*     | out    | F        |
+!! | errflg     | ccpp_error_flag           | CCPP error flag           | flag    |    0 | integer   |           | out    | F        |
+!!
+subroutine tuv_radiation_transfer_init( realkind, nlevels, errmsg, errflg )
+    use params_mod,       only: input_data_root
+    use rad_abs_xsect,    only: rad_abs_xsect_init
     use module_xsections, only: rdxs_init
     use rad_abs_xsect,    only: nwave, wl
 
     integer,          intent(in)  :: realkind
-    integer,          intent(in)  :: nlev_in
+    integer,          intent(in)  :: nlevels
     character(len=*), intent(out) :: errmsg
     integer,          intent(out) :: errflg
 
@@ -35,7 +42,7 @@ contains
        return
     end if
 
-    nlev = nlev_in
+    nlev = nlevels
     nlyr = nlev-1
 
     filepath = trim(input_data_root)//'/wrf_tuv_xsqy.nc'
@@ -48,10 +55,23 @@ contains
    
   end subroutine tuv_radiation_transfer_init
   
-  !-------------------------------------------------------------------------------------------------
-  !-------------------------------------------------------------------------------------------------
-  subroutine tuv_radiation_transfer_run( &
-       zenith, albedo, press_mid, alt, temp, o3vmr, so2vmr, no2vmr, dto2, radfld, errmsg, errflg )
+!> \section arg_table_tuv_radiation_transfer_run Argument Table
+!! | local_name | standard_name                         | long_name                          | units     | rank | type      | kind      | intent | optional |
+!! |------------|---------------------------------------|------------------------------------|-----------|------|-----------|-----------|--------|----------|
+!! | zenith     | solar_zenith                          | solar zenith angle                 | degrees   |    0 | real      | kind_phys | in     | F        |
+!! | albedo     | surface_albedo                        | surface albedo                     | none      |    0 | real      | kind_phys | in     | F        |
+!! | press_mid  | layer_pressure                        | mid-point layer pressure           | Pa        |    1 | real      | kind_phys | in     | F        |
+!! | alt        | layer_altitude                        | mid-point layer altitude           | km        |    1 | real      | kind_phys | in     | F        |
+!! | temp       | layer_temperature                     | mid-point layer temperature        | K         |    1 | real      | kind_phys | in     | F        |
+!! | o3vmr      | O3_vmr_col                            | O3 volume mixing ratio column      | mole/mole |    1 | real      | kind_phys | in     | F        |
+!! | so2vmr     | SO2_vmr_col                           | SO2 volume mixing ratio column     | mole/mole |    1 | real      | kind_phys | in     | F        |
+!! | no2vmr     | NO2_vmr_col                           | NO2 volume mixing ratio column     | mole/mole |    1 | real      | kind_phys | in     | F        |
+!! | dto2       | O2_optical_depth                      | optical depth due to O2 absorption | cm        |    2 | real      | kind_phys | in     | F        |
+!! | radfld     | actinic_photon_fluxes                 | actinic photon fluxes              | cm-2 sec-1|    2 | real      | kind_phys | out    | F        |
+!! | errmsg     | ccpp_error_message                    | CCPP error message                 | none      |    0 | character | len=*     | out    | F        |
+!! | errflg     | ccpp_error_flag                       | CCPP error flag                    | flag      |    0 | integer   |           | out    | F        |
+!!
+  subroutine tuv_radiation_transfer_run( zenith, albedo, press_mid, alt, temp, o3vmr, so2vmr, no2vmr, dto2, radfld, errmsg, errflg )
 
     use tuv_subs,         only: tuv_radfld
     use rad_abs_xsect,    only: o2_xs, so2_xs, nwave, wl, wc
@@ -178,4 +198,22 @@ contains
 
   end subroutine tuv_radiation_transfer_run
   
+!> \section arg_table_tuv_radiation_transfer_finalize Argument Table
+!! | local_name | standard_name                         | long_name                      | units     | rank | type      | kind      | intent | optional |
+!! |------------|---------------------------------------|--------------------------------|-----------|------|-----------|-----------|--------|----------|
+!! | errmsg     | ccpp_error_message                    | CCPP error message             | none      |    0 | character | len=*     | out    | F        |
+!! | errflg     | ccpp_error_flag                       | CCPP error flag                | flag      |    0 | integer   |           | out    | F        |
+!!
+  subroutine tuv_radiation_transfer_finalize( errmsg, errflg )
+
+    !--- arguments
+    character(len=*), intent(out) :: errmsg
+    integer,          intent(out) :: errflg
+
+    !--- initialize CCPP error handling variables
+    errmsg = ''
+    errflg = 0
+
+  end subroutine tuv_radiation_transfer_finalize
+
 end module tuv_radiation_transfer

@@ -9,8 +9,11 @@ module  module_prates_tuv
   public :: calc_tuv_init
   public :: calc_tuv_prates
   public :: rxn_ndx
-  
-  integer :: nconc, ntemp, nwave
+  public :: get_xsqy_tab
+  public :: nwave
+
+  integer, protected :: nwave
+  integer :: nconc, ntemp
 
   real(rk), allocatable :: z_temp_data(:), temp_data(:)
   real(rk), allocatable :: xsqy_tab(:,:,:,:)
@@ -44,9 +47,8 @@ contains
   !------------------------------------------------------------------------------
   ! initialize
   !------------------------------------------------------------------------------
-  subroutine calc_tuv_init( xsqy_filepath, full_tuv, jnames, errmsg, errflg )
+  subroutine calc_tuv_init( full_tuv, jnames, errmsg, errflg )
 
-    character(len=*), intent(in) :: xsqy_filepath
     logical, intent(in) :: full_tuv
     character(len=*), intent(in) :: jnames(:)
     character(len=*), intent(out) :: errmsg
@@ -59,7 +61,6 @@ contains
     allocate( tuv_jname(nj) )
     tuv_jname(:) = jnames(:)
     
-    call get_xsqy_tab(xsqy_filepath, errmsg, errflg)
     if( .not. is_full_tuv ) then
        allocate( xsqy_is_zdep(nj) )
        xsqy_is_zdep(:) = .false.
