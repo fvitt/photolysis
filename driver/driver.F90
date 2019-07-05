@@ -87,7 +87,7 @@ program driver
   zenith = colEnvConds%getsrf('SZA')
   albedo = colEnvConds%getsrf('ASDIR')
   press_mid(:nlevels) = colEnvConds%press_mid(nlevels)
-  alt(:nlevels) = colEnvConds%getcol('Z3',nlevels)*1.e-3 ! m --> km
+  alt(:nlevels) = colEnvConds%getcol('Z3',nlevels) ! meters
   temp(:nlevels) = colEnvConds%getcol('T',nlevels)
   o2vmrcol(:nlevels) = colEnvConds%getcol('O2',nlevels)
   o3vmrcol(:nlevels) = colEnvConds%getcol('O3',nlevels)
