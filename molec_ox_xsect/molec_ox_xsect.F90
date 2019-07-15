@@ -1,6 +1,6 @@
 module molec_ox_xsect
   use phot_kind_mod, only: rk => kind_phot
-  use rad_abs_xsect, only: o2_xs, nwave, wl
+  use wavelength_grid, only: nwave, wl
 
   implicit none
 
@@ -37,7 +37,7 @@ contains
 !! | errflg     | ccpp_error_flag           | CCPP error flag                    | flag      |    0 | integer     |           | out    | F        |
 !!
   subroutine molec_ox_xsect_run( nlev, zen, alt, temp, press_mid, o2vmr, dto2, srb_o2_xs, errmsg, errflg )
-    use rad_abs_xsect, only : o2_xs
+    use module_xsections, only: o2_xs
     use phot_util_mod, only : sphers, airmas
     use la_srb_mod,    only : la_srb_comp
     use params_mod,    only : R, g, kboltz
@@ -86,7 +86,6 @@ contains
     do wn = 1,nwave
        dto2(:nlyr,wn) = o2col(:nlyr) * o2_xs(wn)
     end do
-
     call sphers( nlyr, zlev, zen, dsdh, nid )
     call airmas( nlyr, dsdh, nid, aircol, vcol, scol )
 

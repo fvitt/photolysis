@@ -1,3 +1,8 @@
 &tuv_opts
  input_data_root = '../inputs'
+! wavelength_grid_file = 'wavelength_grid.nc'
+ wavelength_grid_file = 'wavelength_grid_test.nc'
+! etf_file =  'wavelength_grid.nc'
+ is_full_tuv = .true.
+! xsqy_file = 'wrf_tuv_xsqy.nc'
 /

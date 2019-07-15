@@ -21,17 +21,13 @@ contains
 !! | errflg     | ccpp_error_flag           | CCPP error flag           | flag    |    0 | integer   |           | out    | F        |
 !!
 subroutine tuv_radiation_transfer_init( realkind, nlevels, errmsg, errflg )
-    use params_mod,       only: input_data_root
-    use rad_abs_xsect,    only: rad_abs_xsect_init
+    use wavelength_grid,  only: nwave, wl
     use module_xsections, only: rdxs_init
-    use rad_abs_xsect,    only: nwave, wl
 
     integer,          intent(in)  :: realkind
     integer,          intent(in)  :: nlevels
     character(len=*), intent(out) :: errmsg
     integer,          intent(out) :: errflg
-
-    character(len=256) :: filepath
     
     errmsg = ''
     errflg = 0
@@ -45,12 +41,10 @@ subroutine tuv_radiation_transfer_init( realkind, nlevels, errmsg, errflg )
     nlev = nlevels
     nlyr = nlev-1
 
-    filepath = trim(input_data_root)//'/wrf_tuv_xsqy.nc'
-
-    call rad_abs_xsect_init( filepath, errmsg, errflg )
     if (errflg.ne.0) return
     
     call rdxs_init( nwave, wl, errmsg, errflg )
+
     if (errflg.ne.0) return
    
   end subroutine tuv_radiation_transfer_init
@@ -74,8 +68,8 @@ subroutine tuv_radiation_transfer_init( realkind, nlevels, errmsg, errflg )
   subroutine tuv_radiation_transfer_run( zenith, albedo, press_mid, alt, temp, o3vmr, so2vmr, no2vmr, dto2, radfld, errmsg, errflg )
 
     use tuv_subs,         only: tuv_radfld
-    use rad_abs_xsect,    only: o2_xs, so2_xs, nwave, wl, wc
-    use module_xsections, only: o3xs, no2xs_jpl06a
+    use wavelength_grid,    only: nwave, wl, wc
+    use module_xsections, only: o2_xs, so2_xs, o3xs, no2xs_jpl06a
     use params_mod
  
     real(rk),         intent(in)  :: zenith

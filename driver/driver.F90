@@ -35,9 +35,9 @@ program driver
   real(r8), allocatable :: radfld(:,:)
   real(r8), allocatable :: tuv_prates(:,:)
   
-  character(len=*), parameter :: nml_file = '/terminator-data1/home/fvitt/tuvdev/driver/test_nml'
+  character(len=*), parameter :: nml_file = 'test_nml'
   character(len=*), parameter :: env_conds_file = &
-       '/terminator-data1/fvitt/micm_inputs/FW2000climo.f09_f09_mg17.cam6_0_030.n01.cam.h2.0001-01-01-00000.nc'
+       '/terminator-data1/fvitt/micm_inputs/MusicBox_env_cond_1col_c190109.nc'
   type(environ_conditions),pointer :: colEnvConds => null()
 
   integer :: nlevels,k
@@ -47,11 +47,15 @@ program driver
   colEnvConds => environ_conditions_create( env_conds_file, lat=45.0, lon=180. )
 
   nlevels = colEnvConds%nlevels()
-
-  call tuv_photolysis_readnl(nml_file)
   
   errflg=0
   errmsg=' '
+
+  call tuv_photolysis_readnl(nml_file, errmsg, errflg)
+  if (errflg/=0) then
+      write(*,*) 'FAILURE: '//trim(errmsg)
+     call abort()
+  end if
 
   call molec_ox_xsect_init( errmsg, errflg )
   if (errflg/=0) then

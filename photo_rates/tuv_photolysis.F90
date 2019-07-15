@@ -7,6 +7,7 @@ module tuv_photolysis
   implicit none
 
   integer, protected :: tuv_n_wavelen = -1
+
   integer, parameter :: tuv_n_phot = 113
   character(len=16), parameter :: tuv_jnames(tuv_n_phot) = &
        (/'j_o2            ' &
@@ -123,28 +124,52 @@ module tuv_photolysis
        , 'j_io            ' &
        , 'j_ioh           ' &
        /)
+
+  character(len=512) :: xsqy_filepath = 'NOTSET'
+  character(len=512) :: etf_filepath = 'NOTSET'
+  logical :: is_full_tuv = .true.
   
 contains
 
-  subroutine tuv_photolysis_readnl(nml_file) ! this will be a CPF interface someday
+  subroutine tuv_photolysis_readnl(nml_file, errmsg, errflg) ! this will be a CPF interface someday
 
-    use module_prates_tuv, only: get_xsqy_tab, nwave
+    use module_prates_tuv, only: read_etf
+    use wavelength_grid, only: nwave
+    use wavelength_grid, only: wavelength_grid_init
  
     character(len=*), intent(in)  :: nml_file
+    character(len=*), intent(out) :: errmsg
+    integer,          intent(out) :: errflg
 
-    character(len=512) :: errmsg
-    integer :: errflg
+    character(len=512) :: wavelen_grid_filepath
+    character(len=64) :: xsqy_file = 'NONE'
+    character(len=64) :: etf_file = 'NONE'
+    character(len=64) :: wavelength_grid_file = 'NONE'
 
-    character(len=512) :: xsqy_filepath
-
-    namelist /tuv_opts/ input_data_root
+    namelist /tuv_opts/ input_data_root, wavelength_grid_file, etf_file, is_full_tuv, xsqy_file
 
     open(unit=10,file=nml_file)
     read(unit=10,nml=tuv_opts)
     close(10)
 
-    xsqy_filepath = trim(input_data_root)//'/wrf_tuv_xsqy.nc'
-    call get_xsqy_tab(xsqy_filepath, errmsg, errflg) ! call this here since nwave needs to be known earlier than the init phase
+    if (etf_file=='NONE') then
+       etf_file = trim(wavelength_grid_file)
+    end if
+
+    wavelen_grid_filepath = trim(input_data_root)//'/'//trim(wavelength_grid_file)
+    etf_filepath = trim(input_data_root)//'/'//trim(etf_file)
+    xsqy_filepath = trim(input_data_root)//'/'//trim(xsqy_file)
+    
+    call wavelength_grid_init(wavelen_grid_filepath, errmsg, errflg)
+    if(errflg/=0) then
+       return
+    end if
+
+    call read_etf(etf_filepath, errmsg, errflg)
+    if(errflg/=0) then
+       return
+    end if
+
     tuv_n_wavelen = nwave
     
   end subroutine tuv_photolysis_readnl
@@ -157,12 +182,11 @@ contains
 !! | errflg     | ccpp_error_flag           | CCPP error flag           | flag    |    0 | integer   |           | out    | F        |
 !!
 subroutine tuv_photolysis_init( realkind, errmsg, errflg )
+    use wavelength_grid, only: nwave
 
     integer,          intent(in)  :: realkind
     character(len=*), intent(out) :: errmsg
     integer,          intent(out) :: errflg
-
-    logical, parameter :: full_tuv = .true.
 
     errmsg = ' '
     errflg = 0
@@ -173,7 +197,9 @@ subroutine tuv_photolysis_init( realkind, errmsg, errflg )
        return
     end if
 
-    call  calc_tuv_init( full_tuv, tuv_jnames, errmsg, errflg )
+    tuv_n_wavelen = nwave
+
+    call  calc_tuv_init( is_full_tuv, tuv_jnames, xsqy_filepath, errmsg, errflg )
 
   end subroutine tuv_photolysis_init
 
