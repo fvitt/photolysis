@@ -151,31 +151,37 @@
 
         ila = -1
         isrb = -1
-        do iw = 1,nwave
-           if (ila==-1 .and. wc(iw)>wlla(1) .and. wc(iw)<wlla(2) .and. wc(iw+1)>wlla(2)) then
+     
+        ila_loop: do iw = 1,nwave-1
+           if (wc(iw)>wlla(1) .and. wc(iw)<wlla(2) .and. wc(iw+1)>wlla(2)) then
               ila = iw
+              exit ila_loop
            end if
-           if (isrb==-1 .and. wc(iw+ 0)>wlsrb( 1) .and. wc(iw+ 0)<wlsrb( 2) &
-                        .and. wc(iw+ 1)>wlsrb( 2) .and. wc(iw+ 1)<wlsrb( 3) &
-                        .and. wc(iw+ 2)>wlsrb( 3) .and. wc(iw+ 2)<wlsrb( 4) &
-                        .and. wc(iw+ 3)>wlsrb( 4) .and. wc(iw+ 3)<wlsrb( 5) &
-                        .and. wc(iw+ 4)>wlsrb( 5) .and. wc(iw+ 4)<wlsrb( 6) &
-                        .and. wc(iw+ 5)>wlsrb( 6) .and. wc(iw+ 5)<wlsrb( 7) &
-                        .and. wc(iw+ 6)>wlsrb( 7) .and. wc(iw+ 6)<wlsrb( 8) &
-                        .and. wc(iw+ 7)>wlsrb( 8) .and. wc(iw+ 7)<wlsrb( 9) &
-                        .and. wc(iw+ 8)>wlsrb( 9) .and. wc(iw+ 8)<wlsrb(10) &
-                        .and. wc(iw+ 9)>wlsrb(10) .and. wc(iw+ 9)<wlsrb(11) &
-                        .and. wc(iw+10)>wlsrb(11) .and. wc(iw+10)<wlsrb(12) &
-                        .and. wc(iw+11)>wlsrb(12) .and. wc(iw+11)<wlsrb(13) &
-                        .and. wc(iw+12)>wlsrb(13) .and. wc(iw+12)<wlsrb(14) &
-                        .and. wc(iw+13)>wlsrb(14) .and. wc(iw+13)<wlsrb(15) &
-                        .and. wc(iw+14)>wlsrb(15) .and. wc(iw+14)<wlsrb(16) &
-                        .and. wc(iw+15)>wlsrb(16) .and. wc(iw+15)<wlsrb(17) &
-                        .and. wc(iw+16)>wlsrb(17) .and. wc(iw+16)<wlsrb(18) &
-                        .and. wc(iw+17)>wlsrb(18)    ) then             
+        end do ila_loop
+
+        isrb_loop: do iw = 1,nwave-17
+           if (       wc(iw+ 0)>wlsrb( 1) .and. wc(iw+ 0)<wlsrb( 2) &
+                .and. wc(iw+ 1)>wlsrb( 2) .and. wc(iw+ 1)<wlsrb( 3) &
+                .and. wc(iw+ 2)>wlsrb( 3) .and. wc(iw+ 2)<wlsrb( 4) &
+                .and. wc(iw+ 3)>wlsrb( 4) .and. wc(iw+ 3)<wlsrb( 5) &
+                .and. wc(iw+ 4)>wlsrb( 5) .and. wc(iw+ 4)<wlsrb( 6) &
+                .and. wc(iw+ 5)>wlsrb( 6) .and. wc(iw+ 5)<wlsrb( 7) &
+                .and. wc(iw+ 6)>wlsrb( 7) .and. wc(iw+ 6)<wlsrb( 8) &
+                .and. wc(iw+ 7)>wlsrb( 8) .and. wc(iw+ 7)<wlsrb( 9) &
+                .and. wc(iw+ 8)>wlsrb( 9) .and. wc(iw+ 8)<wlsrb(10) &
+                .and. wc(iw+ 9)>wlsrb(10) .and. wc(iw+ 9)<wlsrb(11) &
+                .and. wc(iw+10)>wlsrb(11) .and. wc(iw+10)<wlsrb(12) &
+                .and. wc(iw+11)>wlsrb(12) .and. wc(iw+11)<wlsrb(13) &
+                .and. wc(iw+12)>wlsrb(13) .and. wc(iw+12)<wlsrb(14) &
+                .and. wc(iw+13)>wlsrb(14) .and. wc(iw+13)<wlsrb(15) &
+                .and. wc(iw+14)>wlsrb(15) .and. wc(iw+14)<wlsrb(16) &
+                .and. wc(iw+15)>wlsrb(16) .and. wc(iw+15)<wlsrb(17) &
+                .and. wc(iw+16)>wlsrb(17) .and. wc(iw+16)<wlsrb(18) &
+                .and. wc(iw+17)>wlsrb(18)    ) then             
               isrb= iw
+              exit isrb_loop
            end if
-        end do
+        end do isrb_loop
 
         if (ila<1 .or. isrb<1) then
            errflg = 1

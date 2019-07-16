@@ -84,6 +84,8 @@
 
       type(xsqy_subs), allocatable :: the_subs(:)
 
+      real(rk) :: xnan
+
       CONTAINS
 
       SUBROUTINE no_z_dep(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
@@ -117,12 +119,12 @@
 
       if( initialize ) then
         CALL readit
-        call check_alloc( ndx=j, nz=nw, nw=1, errmsg=errmsg, errflg=errflg )
+        call check_alloc( ndx=j, nz=nw-1, nw=1, errmsg=errmsg, errflg=errflg )
         if( xsqy_tab(j)%qyld == 1._rk ) then
 !*** quantum yield assumed to be unity
-          xsqy_tab(j)%sq(1:nw,1) = yg(1:nw)
+          xsqy_tab(j)%sq(1:nw-1,1) = yg(1:nw-1)
         else
-          xsqy_tab(j)%sq(1:nw,1) = xsqy_tab(j)%qyld * yg(1:nw)
+          xsqy_tab(j)%sq(1:nw-1,1) = xsqy_tab(j)%qyld * yg(1:nw-1)
         endif
       endif
 
@@ -181,6 +183,8 @@
 
       errmsg = ' '
       errflg = 0
+
+      xnan = IEEE_VALUE(xnan,IEEE_QUIET_NAN)
 
       call set_initialization( status=.true. )
 
@@ -1219,14 +1223,16 @@
 ! local
 
       INTEGER :: iw
-      REAL(rk)    :: xs(nz,nw)
+      REAL(rk)    :: xs(nz,nw-1)
       REAL(rk)    :: qy1d(nz)
 
       errmsg = ' '
       errflg = 0
+      xs = xnan
+      qy1d = xnan
 
       if( .not. initialize ) then
-        call check_alloc( j, nz, nw, errmsg, errflg )
+        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 ! call cross section read/interpolate routine
 ! cross sections from WMO 1985 Ozone Assessment
@@ -1237,7 +1243,7 @@
 !     mabs = 1 = mostly Reims grp (Malicet, Brion)
 !     mabs = 2 = JPL 2006
 
-        CALL o3xs(nz,tlev,nw,wl, xs)
+        CALL o3xs(nz,tlev,nw-1,wl, xs)
 
 !****** quantum yield:
 ! choose quantum yield recommendation:
@@ -1250,7 +1256,7 @@
 !    kmats:  Matsumi et al., 2002
 
 ! compute cross sections and yields at different wavelengths, altitudes:
-        DO iw = 1, nw
+        DO iw = 1, nw-1
 ! quantum yields, Matsumi et al.
           CALL fo3qy2(nz,wc(iw),tlev,qy1d)
           if( xsqy_tab(j)%channel == 2 ) then
@@ -1297,7 +1303,7 @@
       REAL(rk) :: yg2(kw)
       REAL(rk) :: qy(nz)
       REAL(rk) :: t(nz)
-      REAL(rk) :: no2xs(nz,nw)
+      REAL(rk) :: no2xs(nz,nw-1)
       INTEGER :: iw, n
 
       errmsg = ' '
@@ -1306,10 +1312,12 @@
  !*************** NO2 photodissociation
 
       if( initialize ) then
+         yg1 = xnan 
+         yg2 = xnan
         CALL readit
-        ydel(1:nw) = yg1(1:nw) - yg2(1:nw)
+        ydel(1:nw-1) = yg1(1:nw-1) - yg2(1:nw-1)
       else
-        call check_alloc( j, nz, nw, errmsg, errflg )
+        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 ! options for NO2 cross section:
 ! 1 = Davidson et al. (1988), indepedent of T
@@ -1331,14 +1339,13 @@
 ! from jpl 2011         
 
         t(1:nz) = .02_rk*(tlev(1:nz) - 298._rk)
-        DO iw = 1, nw
+        DO iw = 1, nw - 1
           qy(1:nz) = yg1(iw) + ydel(iw)*t(1:nz)
           xsqy_tab(j)%sq(1:nz,iw) = no2xs(1:nz,iw)*max( qy(1:nz),0._rk )
         ENDDO
+      endif
 
-     endif
-
-    CONTAINS
+      CONTAINS
 
       SUBROUTINE readit
 
@@ -1412,14 +1419,14 @@
         if( .not. is_initialized ) then
 ! yields from JPL2011:
           CALL readit
-          delabs(1:nw,1,1) = yg_230(1:nw,1) - yg_190(1:nw,1)
-          delabs(1:nw,2,1) = yg_298(1:nw,1) - yg_230(1:nw,1)
-          delabs(1:nw,1,2) = yg_230(1:nw,2) - yg_190(1:nw,2)
-          delabs(1:nw,2,2) = yg_298(1:nw,2) - yg_230(1:nw,2)
+          delabs(1:nw-1,1,1) = yg_230(1:nw-1,1) - yg_190(1:nw-1,1)
+          delabs(1:nw-1,2,1) = yg_298(1:nw-1,1) - yg_230(1:nw-1,1)
+          delabs(1:nw-1,1,2) = yg_230(1:nw-1,2) - yg_190(1:nw-1,2)
+          delabs(1:nw-1,2,2) = yg_298(1:nw-1,2) - yg_230(1:nw-1,2)
           is_initialized = .true.
         endif
       else
-        call check_alloc( j, nz, nw, errmsg, errflg )
+        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 ! mabs = 3:  JPL11
 !     mabs = 3
@@ -1428,7 +1435,7 @@
 
 ! compute T-dependent quantum yields
         chnl = xsqy_tab(j)%channel
-        DO iw = 1, nw
+        DO iw = 1, nw-1
           xsect = yg1(iw)
           where(tlev(1:nz) <= 190._rk )
             sq_wrk(1:nz) = yg_190(iw,chnl)*xsect
@@ -1441,7 +1448,7 @@
           elsewhere(tlev(1:nz) > 298._rk )
             sq_wrk(1:nz) = yg_298(iw,chnl)
           endwhere
-          xsqy_tab(j)%sq(1:nz,iw) = sq_wrk(1:nz)*xsect                
+          xsqy_tab(j)%sq(1:nz,iw) = sq_wrk(1:nz)*xsect
         ENDDO
       endif
 
@@ -1541,16 +1548,16 @@
           is_initialized = .true.
         endif
       else
-        call check_alloc( j, nz, nw, errmsg, errflg )
+        call check_alloc( j, nz, nw-1, errmsg, errflg )
         if( xsqy_tab(j)%channel == 1 ) then
-          DO iw = 1,nw
+          DO iw = 1,nw-1
             xsqy_tab(j)%sq(1:nz,iw) = 0._rk
           ENDDO
         elseif( xsqy_tab(j)%channel == 2 ) then
 ! temperature dependence only valid for 233 - 295 K.  Extend to 300.
           t(1:nz) = MAX(233._rk,MIN(tlev(1:nz),300._rk))
 
-          DO iw = 1, nw
+          DO iw = 1, nw - 1
 ! Apply temperature correction to 300K values. Do not use A-coefficients 
 ! because they are inconsistent with the values at 300K.
 ! quantum yield = 1 for NO2 + NO3, zero for other channels
@@ -1622,11 +1629,11 @@
       if( initialize ) then
         CALL readit
       else
-        call check_alloc( j, nz, nw, errmsg, errflg )
+        call check_alloc( j, nz, nw-1, errmsg, errflg )
 ! quantum yield = 1
 ! correct for temperature dependence
         t(1:nz) = tlev(1:nz) - 298._rk
-        DO iw = 1, nw
+        DO iw = 1, nw - 1
           xsqy_tab(j)%sq(1:nz,iw) = yg1(iw) * exp( yg2(iw)*t(1:nz) )
         ENDDO
       endif
@@ -1718,11 +1725,11 @@
       if( initialize ) then
         CALL readit
       else
-        call check_alloc( j, nz, nw, errmsg, errflg )
+        call check_alloc( j, nz, nw-1, errmsg, errflg )
 ! quantum yield = 1
         t(1:nz) = MIN(MAX(tlev(1:nz),200._rk),400._rk)            
         chi(1:nz) = 1._rk/(1._rk + EXP(-1265._rk/t(1:nz)))
-        DO iw = 1, nw
+        DO iw = 1, nw - 1
 ! Parameterization (JPL94)
 ! Range 260-350 nm; 200-400 K
            IF ((wl(iw) .GE. 260._rk) .AND. (wl(iw) .LT. 350._rk)) THEN
@@ -1804,7 +1811,7 @@
       if( initialize ) then
         CALL readit
       else
-        call check_alloc( j, nz, nw, errmsg, errflg )
+        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 ! option:
 
@@ -1815,7 +1822,7 @@
 ! quantum yield = 1
 
         t(1:nz) = 273._rk - tlev(1:nz)
-        DO iw = 1, nw
+        DO iw = 1, nw - 1
           IF (wc(iw) .GT. 290._rk .AND. wc(iw) .LT. 340._rk ) then
             where( tlev(1:nz) > 210._rk .AND. tlev(1:nz) < 300._rk )
               xsqy_tab(j)%sq(1:nz,iw) = &
@@ -1905,19 +1912,19 @@
           is_initialized = .true.
         endif
         if( chnl > 1 ) then
-          call check_alloc( ndx=j, nz=nw, nw=1, errmsg=errmsg, errflg=errflg )
+          call check_alloc( ndx=j, nz=nw-1, nw=1, errmsg=errmsg, errflg=errflg )
           if( chnl == 2 ) then
-            xsqy_tab(j)%sq(1:nw,1) = yg(1:nw) * yg2(1:nw)
+            xsqy_tab(j)%sq(1:nw-1,1) = yg(1:nw-1) * yg2(1:nw-1)
           elseif( chnl == 3 ) then
-            xsqy_tab(j)%sq(1:nw,1) = yg(1:nw) * yg3(1:nw)
+            xsqy_tab(j)%sq(1:nw-1,1) = yg(1:nw-1) * yg3(1:nw-1)
           endif
         endif
       else
         if( xsqy_tab(j)%channel == 1 ) then
-          call check_alloc( j, nz, nw, errmsg, errflg )
+          call check_alloc( j, nz, nw-1, errmsg, errflg )
 !     mabs = 5
 !     myld = 1
-          DO iw = 1, nw
+          DO iw = 1, nw - 1
             sig = yg(iw)
 ! quantum yields:
 ! input yields at n0 = 1 atm
@@ -1972,7 +1979,7 @@
       CALL add_pnts_inter2(x1,y2,yg2,kdata,n, &
                            nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
-      yg3(1:nw) = 0._rk
+      yg3(1:nw-1) = 0._rk
 
       END SUBROUTINE readit
 
@@ -2019,7 +2026,7 @@
       if( initialize ) then
         CALL readit
       else
-        call check_alloc( j, nz, nw, errmsg, errflg )
+        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 ! Absorption:
 ! 1:  IUPAC-97 data, from Martinez et al.
@@ -2031,7 +2038,7 @@
 !     mabs = 1
 !     myld = 1
 
-        DO iw = 1, nw
+        DO iw = 1, nw - 1
 ! quantum yields:
 ! use Stern-Volmer pressure dependence:
           IF (yg1(iw) .LT. pzero) THEN
@@ -2119,13 +2126,13 @@
           CALL readit
           is_initialized = .true.
         endif
-        call check_alloc( ndx=j, nz=nw, nw=1, errmsg=errmsg, errflg=errflg )
+        call check_alloc( ndx=j, nz=nw-1, nw=1, errmsg=errmsg, errflg=errflg )
         if( xsqy_tab(j)%channel == 1 ) then
-          xsqy_tab(j)%sq(1:nw,1) = yg(1:nw) * yg1(1:nw)
+          xsqy_tab(j)%sq(1:nw-1,1) = yg(1:nw-1) * yg1(1:nw-1)
         elseif( xsqy_tab(j)%channel == 2 ) then
-          xsqy_tab(j)%sq(1:nw,1) = yg(1:nw) * yg2(1:nw)
+          xsqy_tab(j)%sq(1:nw-1,1) = yg(1:nw-1) * yg2(1:nw-1)
         elseif( xsqy_tab(j)%channel == 3 ) then
-          xsqy_tab(j)%sq(1:nw,1) = yg(1:nw) * yg3(1:nw)
+          xsqy_tab(j)%sq(1:nw-1,1) = yg(1:nw-1) * yg3(1:nw-1)
         endif
       endif
 
@@ -2206,12 +2213,12 @@
       if( initialize ) then
         CALL readit
       else
-        call check_alloc( j, nz, nw, errmsg, errflg )
+        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 !     mabs = 8
 !     myld = 5
 
-        DO iw = 1, nw
+        DO iw = 1, nw - 1
           sig = yg(iw)
 ! quantum yields:
 ! zero pressure yield:
@@ -2290,13 +2297,13 @@
       if( initialize ) then
         CALL readit
       else
-        call check_alloc( j, nz, nw, errmsg, errflg )
+        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 !     mabs = 4
 !     myld = 4
 
         T(1:nz) = MIN(MAX(tlev(1:nz), 235._rk),298._rk)
-        DO iw = 1, nw
+        DO iw = 1, nw - 1
           sig(1:nz) = yg(iw) * (1._rk + t(1:nz)*(yg2(iw) + t(1:nz)*yg3(iw)))
           CALL qyacet(nz, wc(iw), tlev, airden, fac)
           xsqy_tab(j)%sq(1:nz,iw) = sig(1:nz)*min(max(0._rk,fac(1:nz)),1._rk)
@@ -2367,13 +2374,13 @@
       if( initialize ) then
         CALL readit
       else
-        call check_alloc( j, nz, nw, errmsg, errflg )
+        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 !     mabs = 9
 ! quantum yield = 1
 
         T(1:nz) = tlev(1:nz) - 298._rk
-        DO iw = 1, nw
+        DO iw = 1, nw - 1
           xsqy_tab(j)%sq(1:nz,iw) = yg(iw) * exp( yg1(iw) * T(1:nz) )
         ENDDO
       endif
@@ -2452,11 +2459,11 @@
           is_initialized = .true.
         endif
       else
-        call check_alloc( j, nz, nw, errmsg, errflg )
+        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
         chnl = xsqy_tab(j)%channel
         T(1:nz) = tlev(1:nz) - 298._rk
-        DO iw = 1, nw
+        DO iw = 1, nw-1
           sig(1:nz) = yg(iw) * EXP( yg2(iw)*T(1:nz) )
           xsqy_tab(j)%sq(1:nz,iw) = qyld(chnl) * sig(1:nz)
         ENDDO 
@@ -2533,7 +2540,7 @@
       if( initialize ) then
         CALL readit
       else
-        call check_alloc( j, nz, nw, errmsg, errflg )
+        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 ! mabs = 1:  jpl 1997 recommendation
 ! mabs = 2:  jpl 2011 recommendation, with T dependence
@@ -2546,7 +2553,7 @@
 
         temp(1:nz) = min(max(tlev(1:nz),210._rk),300._rk)
         temp(1:nz) = temp(1:nz) - 295._rk
-        DO iw = 1, nw
+        DO iw = 1, nw-1
 ! compute temperature correction coefficients:
            tcoeff = 0._rk
            IF(wc(iw) .GT. 194._rk .AND. wc(iw) .LT. 250._rk) THEN 
@@ -2615,15 +2622,15 @@
 
       if( initialize ) then
         CALL readit
-        ydel(1:nw) = yg1(1:nw) - yg2(1:nw)
+        ydel(1:nw-1) = yg1(1:nw-1) - yg2(1:nw-1)
       else
-        call check_alloc( j, nz, nw, errmsg, errflg )
+        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 !** quantum yield assumed to be unity
 
         t(1:nz) = MAX(210._rk,MIN(tlev(1:nz),295._rk))
         slope(1:nz) = (t(1:nz) - 210._rk)*tfac1
-        DO iw = 1, nw
+        DO iw = 1, nw-1
           xsqy_tab(j)%sq(1:nz,iw) = yg2(iw) + slope(1:nz)*ydel(iw)
         ENDDO
       endif
@@ -2697,15 +2704,15 @@
 
       if( initialize ) then
         CALL readit
-        ydel(1:nw) = yg1(1:nw) - yg2(1:nw)
+        ydel(1:nw-1) = yg1(1:nw-1) - yg2(1:nw-1)
       else
-        call check_alloc( j, nz, nw, errmsg, errflg )
+        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 !** quantum yield assumed to be unity
 
         t(1:nz) = MAX(210._rk,MIN(tlev(1:nz),295._rk))
         slope(1:nz) = (t(1:nz) - 210._rk)*tfac1
-        DO iw = 1, nw
+        DO iw = 1, nw-1
           xsqy_tab(j)%sq(1:nz,iw) = yg2(iw) + slope(1:nz)*ydel(iw)
         ENDDO
       endif
@@ -2774,12 +2781,12 @@
       if( initialize ) then
         CALL readit
       else
-        call check_alloc( j, nz, nw, errmsg, errflg )
+        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 !*** quantum yield assumed to be unity
 
         t(1:nz) = 1.E-04_rk * (tlev(1:nz) - 298._rk)
-        DO iw = 1, nw
+        DO iw = 1, nw-1
           xsqy_tab(j)%sq(1:nz,iw) = yg(iw) * EXP((wc(iw)-184.9_rk) * t(1:nz))
         ENDDO
       endif
@@ -2839,10 +2846,10 @@
       if( initialize ) then
         CALL readit
       else
-        call check_alloc( j, nz, nw, errmsg, errflg )
+        call check_alloc( j, nz, nw-1, errmsg, errflg )
 !*** quantum yield assumed to be unity
         t(1:nz) = 1.E-04_rk * (tlev(1:nz) - 298._rk) 
-        DO iw = 1, nw
+        DO iw = 1, nw-1
           xsqy_tab(j)%sq(1:nz,iw) = yg(iw) * EXP((wc(iw)-184.9_rk) * t(1:nz))
         ENDDO
       endif
@@ -2906,15 +2913,15 @@
 
       if( initialize ) then
         CALL readit
-        ydel2(1:nw) = yg2(1:nw) - yg3(1:nw)
-        ydel1(1:nw) = yg1(1:nw) - yg2(1:nw)
+        ydel2(1:nw-1) = yg2(1:nw-1) - yg3(1:nw-1)
+        ydel1(1:nw-1) = yg1(1:nw-1) - yg2(1:nw-1)
       else
-        call check_alloc( j, nz, nw, errmsg, errflg )
+        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 !*** quantum yield assumed to be unity
 
         t(1:nz) = MIN(295._rk,MAX(tlev(1:nz),210._rk))
-        DO iw = 1, nw
+        DO iw = 1, nw-1
           where( t(1:nz) <= 250._rk )
             slope(1:nz) = (t(1:nz) - 210._rk)*tfac1
             xsqy_tab(j)%sq(1:nz,iw) = yg3(iw) + slope(1:nz)*ydel2(iw)
@@ -3002,15 +3009,15 @@
 
       if( initialize ) then
         CALL readit
-        ydel2(1:nw) = yg2(1:nw) - yg3(1:nw)
-        ydel1(1:nw) = yg1(1:nw) - yg2(1:nw)
+        ydel2(1:nw-1) = yg2(1:nw-1) - yg3(1:nw-1)
+        ydel1(1:nw-1) = yg1(1:nw-1) - yg2(1:nw-1)
       else
-        call check_alloc( j, nz, nw, errmsg, errflg )
+        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 !*** quantum yield assumed to be unity
 
         t(1:nz) = MAX(255._rk,MIN(tlev(1:nz),296._rk))
-        DO iw = 1, nw
+        DO iw = 1, nw-1
           where( t(1:nz) <= 279._rk )
             slope(1:nz) = (t(1:nz) - 255._rk)*tfac1
             xsqy_tab(j)%sq(1:nz,iw) = yg3(iw) + slope(1:nz)*ydel2(iw)
@@ -3093,11 +3100,11 @@
       if( initialize ) then
         CALL readit
       else
-        call check_alloc( j, nz, nw, errmsg, errflg )
+        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 !*** quantum yield assumed to be unity
 
-        DO iw = 1, nw
+        DO iw = 1, nw-1
           lambda = wc(iw)
 ! use parameterization only up to 220 nm, as the error bars associated with
 ! the measurements beyond 220 nm are very large (Orlando, priv.comm.)
@@ -3174,11 +3181,11 @@
       if( initialize ) then
         CALL readit
       else
-        call check_alloc( j, nz, nw, errmsg, errflg )
+        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 !*** quantum yield assumed to be unity
 
-        DO iw = 1, nw
+        DO iw = 1, nw-1
           lambda = wc(iw)
           IF (lambda .GE. 190._rk .AND. lambda .LE. 230._rk) THEN
             t(1:nz) = MIN(295._rk,MAX(tlev(1:nz),203._rk)) - TBar
@@ -3255,11 +3262,11 @@
       if( initialize ) then
         CALL readit
       else
-        call check_alloc( j, nz, nw, errmsg, errflg )
+        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 !*** quantum yield assumed to be unity
 
-        DO iw = 1, nw
+        DO iw = 1, nw-1
           lambda = wc(iw)
           IF (lambda .GE. 190._rk .AND. lambda .LE. 230._rk) THEN
             t(1:nz) = MIN(295._rk,MAX(tlev(1:nz),203._rk)) - TBar
@@ -3343,12 +3350,12 @@
 
       if( initialize ) then
         CALL readit
-        ydel4(1:nw) = yg4(1:nw) - yg5(1:nw)
-        ydel3(1:nw) = yg3(1:nw) - yg4(1:nw)
-        ydel2(1:nw) = yg2(1:nw) - yg3(1:nw)
-        ydel1(1:nw) = yg1(1:nw) - yg2(1:nw)
+        ydel4(1:nw-1) = yg4(1:nw-1) - yg5(1:nw-1)
+        ydel3(1:nw-1) = yg3(1:nw-1) - yg4(1:nw-1)
+        ydel2(1:nw-1) = yg2(1:nw-1) - yg3(1:nw-1)
+        ydel1(1:nw-1) = yg1(1:nw-1) - yg2(1:nw-1)
       else
-        call check_alloc( j, nz, nw, errmsg, errflg )
+        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 !*** quantum yield assumed to be unity
 
@@ -3357,7 +3364,7 @@
         t2(1:nz) = (t(1:nz) - 230._rk)*tfac2
         t3(1:nz) = (t(1:nz) - 250._rk)*tfac3
         t4(1:nz) = (t(1:nz) - 270._rk)*tfac4
-        DO iw = 1, nw
+        DO iw = 1, nw-1
           where( t(1:nz) <= 230._rk )
             xsqy_tab(j)%sq(1:nz,iw) = yg5(iw) + t1(1:nz)*ydel4(iw)
           elsewhere( t(1:nz) > 230._rk .and. t(1:nz) <= 250._rk )
@@ -3455,13 +3462,13 @@
 
       if( initialize ) then
         CALL readit
-        call check_alloc( ndx=j, nz=nw, nw=1, errmsg=errmsg, errflg=errflg )
-        WHERE( wc(1:nw) >= 248._rk )
-          qy(1:nw) = 1._rk
+        call check_alloc( ndx=j, nz=nw-1, nw=1, errmsg=errmsg, errflg=errflg )
+        WHERE( wc(1:nw-1) >= 248._rk )
+          qy(1:nw-1) = 1._rk
         ELSEWHERE
-          qy(1:nw) = max( (1._rk + (wc(1:nw) - 193._rk)*14._rk*tfac1)*xfac1,0._rk )
+          qy(1:nw-1) = max( (1._rk + (wc(1:nw-1) - 193._rk)*14._rk*tfac1)*xfac1,0._rk )
         ENDWHERE
-        xsqy_tab(j)%sq(1:nw,1) = qy(1:nw) * yg(1:nw)
+        xsqy_tab(j)%sq(1:nw-1,1) = qy(1:nw-1) * yg(1:nw-1)
       endif
 
       CONTAINS
@@ -3523,7 +3530,7 @@
       errflg = 0
 
       if( initialize ) then
-        DO iw = 1, nw
+        DO iw = 1, nw-1
           lambda = wc(iw)   
           IF (lambda >= 173._rk .AND. lambda <= 240._rk) THEN
             A(iw) = (((A4*lambda+A3)*lambda+A2)*lambda+A1)*lambda+A0
@@ -3531,7 +3538,7 @@
           ENDIF
         ENDDO
       else
-        call check_alloc( j, nz, nw, errmsg, errflg )
+        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 !*** cross sections according to JPL97 recommendation (identical to 94 rec.)
 !*** see file DATAJ1/ABS/N2O_jpl94.abs for detail
@@ -3539,7 +3546,7 @@
 !*** Ravishankara), so quantum yield of O(1D) is assumed to be unity
 
         t(1:nz) = MAX(194._rk,MIN(tlev(1:nz),320._rk))
-        DO iw = 1, nw
+        DO iw = 1, nw-1
           lambda = wc(iw)   
           IF (lambda >= 173._rk .AND. lambda <= 240._rk) THEN
             BT(1:nz) = (t(1:nz) - 300._rk)*EXP(B(iw))
@@ -3596,11 +3603,11 @@
           is_initialized = .true.
         endif
       else
-        call check_alloc( j, nz, nw, errmsg, errflg )
+        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
         t(1:nz) = tlev(1:nz) - 296._rk
         chnl = xsqy_tab(j)%channel
-        DO iw = 1, nw
+        DO iw = 1, nw-1
 !** quantum yields (from jpl97, same in jpl2011)
           IF( wc(iw) .LT. 308._rk) THEN
             qy1 = 0.6_rk
@@ -3689,9 +3696,9 @@
 
       if( initialize ) then
         CALL readit
-        call check_alloc( ndx=j, nz=nw, nw=1, errmsg=errmsg, errflg=errflg )
+        call check_alloc( ndx=j, nz=nw-1, nw=1, errmsg=errmsg, errflg=errflg )
         chnl = xsqy_tab(j)%channel
-        xsqy_tab(j)%sq(1:nw,1) = qyld(chnl) * yg1(1:nw)
+        xsqy_tab(j)%sq(1:nw-1,1) = qyld(chnl) * yg1(1:nw-1)
       endif
 
       CONTAINS
@@ -3743,7 +3750,7 @@
       errflg = 0
 
       if( .not. initialize ) then
-        call check_alloc( j, nz, nw, errmsg, errflg )
+        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 ! mabs = 1: Finlayson-Pitts and Pitts
 ! mabs = 2: JPL2011 formula
@@ -3757,7 +3764,7 @@
 
 !** quantum yield = 1 (Calvert and Pitts, 1966)
 
-        DO iw = 1, nw
+        DO iw = 1, nw-1
           ex1(1:nz) = 27.3_rk  * exp(-99.0_rk * alpha(1:nz) * (log(329.5_rk/wc(iw)))**2)
           ex2(1:nz) = .932_rk * exp(-91.5_rk * alpha(1:nz) * (log(406.5_rk/wc(iw)))**2)
           xsqy_tab(j)%sq(1:nz,iw) = 1.e-20_rk * sqrt(alpha(1:nz)) * (ex1(1:nz) + ex2(1:nz))
@@ -3805,8 +3812,8 @@
       if( initialize ) then
         chnl = xsqy_tab(j)%channel
         CALL readit
-        call check_alloc( ndx=j, nz=nw, nw=1, errmsg=errmsg, errflg=errflg )
-        xsqy_tab(j)%sq(1:nw,1) = yg(1:nw) * qyld(chnl)
+        call check_alloc( ndx=j, nz=nw-1, nw=1, errmsg=errmsg, errflg=errflg )
+        xsqy_tab(j)%sq(1:nw-1,1) = yg(1:nw-1) * qyld(chnl)
       endif
 
       CONTAINS
@@ -3861,7 +3868,7 @@
       if( initialize ) then
         CALL readit
       else
-        call check_alloc( j, nz, nw, errmsg, errflg )
+        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 ! mabs = 1: Schneider and moortgat
 ! mabs = 2: jpl 2011
@@ -3873,7 +3880,7 @@
 ! J. Photochem. Photobiol A: Chemistry, 110 1-10, 1997.
 ! depends on pressure and wavelength, set upper limit to 1.0
 
-        DO iw = 1, nw
+        DO iw = 1, nw - 1
           qy(1:nz) = exp(-0.055_rk*(wc(iw) - 308._rk)) &
                    / (5.5_rk + 9.2e-19_rk*airden(1:nz))
           qy(1:nz) = min(qy(1:nz), 1._rk)
@@ -3934,12 +3941,12 @@
       if( initialize ) then
         CALL readit
       else
-        call check_alloc( j, nz, nw, errmsg, errflg )
+        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 ! quantum yield  = 1
 
         t(1:nz) = tlev(1:nz) - 298._rk
-        DO iw = 1, nw
+        DO iw = 1, nw - 1
           xsqy_tab(j)%sq(1:nz,iw) = yg1(iw)*exp(yg2(iw)*t(1:nz))
         ENDDO
       endif
@@ -4025,12 +4032,12 @@
       if( initialize ) then
         CALL readit
       else
-        call check_alloc( j, nz, nw, errmsg, errflg )
+        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 ! quantum yield  = 1
 
         t(1:nz) = tlev(1:nz) - 298._rk
-        DO iw = 1, nw
+        DO iw = 1, nw - 1
           xsqy_tab(j)%sq(1:nz,iw) = yg1(iw)*exp(yg2(iw)*t(1:nz))
         ENDDO
       endif
@@ -4106,12 +4113,12 @@
       errflg = 0
 
       if( initialize ) then
-        call check_alloc( ndx=j, nz=nw, nw=1, errmsg=errmsg, errflg=errflg )
+        call check_alloc( ndx=j, nz=nw-1, nw=1, errmsg=errmsg, errflg=errflg )
 ! quantum yield  = 1
-        WHERE( wc(1:nw) >= 270._rk .AND. wc(1:nw) <= 306._rk )
-          xsqy_tab(j)%sq(1:nw,1) = EXP(c + wc(1:nw)*(b + wc(1:nw)*a))
+        WHERE( wc(1:nw-1) >= 270._rk .AND. wc(1:nw-1) <= 306._rk )
+          xsqy_tab(j)%sq(1:nw-1,1) = EXP(c + wc(1:nw-1)*(b + wc(1:nw-1)*a))
         ELSEWHERE
-          xsqy_tab(j)%sq(1:nw,1) = 0._rk
+          xsqy_tab(j)%sq(1:nw-1,1) = 0._rk
         ENDWHERE
       endif
 
@@ -4145,12 +4152,12 @@
       errflg = 0
 
       if( initialize ) then
-        call check_alloc( ndx=j, nz=nw, nw=1, errmsg=errmsg, errflg=errflg )
+        call check_alloc( ndx=j, nz=nw-1, nw=1, errmsg=errmsg, errflg=errflg )
 ! quantum yield  = 1
-        WHERE( wc(1:nw) >= 284._rk .AND. wc(1:nw) <= 335._rk )
-          xsqy_tab(j)%sq(1:nw,1) = EXP(c + wc(1:nw)*(b + wc(1:nw)*a))
+        WHERE( wc(1:nw-1) >= 284._rk .AND. wc(1:nw-1) <= 335._rk )
+          xsqy_tab(j)%sq(1:nw-1,1) = EXP(c + wc(1:nw-1)*(b + wc(1:nw-1)*a))
         ELSEWHERE
-          xsqy_tab(j)%sq(1:nw,1) = 0._rk
+          xsqy_tab(j)%sq(1:nw-1,1) = 0._rk
         ENDWHERE
       endif
 
@@ -4184,12 +4191,12 @@
       errflg = 0
 
       if( initialize ) then
-        call check_alloc( ndx=j, nz=nw, nw=1, errmsg=errmsg, errflg=errflg )
+        call check_alloc( ndx=j, nz=nw-1, nw=1, errmsg=errmsg, errflg=errflg )
 ! quantum yield  = 1
-        WHERE( wc(1:nw) >= 270._rk .AND. wc(1:nw) <= 330._rk )
-          xsqy_tab(j)%sq(1:nw,1) = EXP(c + wc(1:nw)*(b + wc(1:nw)*a))
+        WHERE( wc(1:nw-1) >= 270._rk .AND. wc(1:nw-1) <= 330._rk )
+          xsqy_tab(j)%sq(1:nw-1,1) = EXP(c + wc(1:nw-1)*(b + wc(1:nw-1)*a))
         ELSEWHERE
-          xsqy_tab(j)%sq(1:nw,1) = 0._rk
+          xsqy_tab(j)%sq(1:nw-1,1) = 0._rk
         ENDWHERE
       endif
 
@@ -4234,9 +4241,9 @@
       errflg = 0
 
       if( initialize ) then
-        call check_alloc( ndx=j, nz=nw, nw=1, errmsg=errmsg, errflg=errflg )
+        call check_alloc( ndx=j, nz=nw-1, nw=1, errmsg=errmsg, errflg=errflg )
         CALL readit
-        xsqy_tab(j)%sq(1:nw,1) = yg(1:nw) * qy
+        xsqy_tab(j)%sq(1:nw-1,1) = yg(1:nw-1) * qy
       endif
 
       CONTAINS
@@ -4283,14 +4290,14 @@
       errflg = 0
 
       if( initialize ) then
-        call check_alloc( ndx=j, nz=nw, nw=1, errmsg=errmsg, errflg=errflg )
-        xsqy_tab(j)%sq(1:nw,1) = 0._rk
-        WHERE( wc(1:nw) >= 250._rk .and. wc(1:nw) <= 550._rk )
-          xfac1(1:nw) = 1._rk/wc(1:nw)
-          sig(1:nw) = 24.77_rk * exp( -109.80_rk*(LOG(284.01_rk*xfac1(1:nw)))**2 ) & 
-                + 12.22_rk * exp(  -93.63_rk*(LOG(350.57_rk*xfac1(1:nw)))**2 ) & 
-                + 2.283_rk * exp(- 242.40_rk*(LOG(457.38_rk*xfac1(1:nw)))**2 )
-          xsqy_tab(j)%sq(1:nw,1) = sig(1:nw) * 1.e-20_rk
+        call check_alloc( ndx=j, nz=nw-1, nw=1, errmsg=errmsg, errflg=errflg )
+        xsqy_tab(j)%sq(1:nw-1,1) = 0._rk
+        WHERE( wc(1:nw-1) >= 250._rk .and. wc(1:nw-1) <= 550._rk )
+          xfac1(1:nw-1) = 1._rk/wc(1:nw-1)
+          sig(1:nw-1) = 24.77_rk * exp( -109.80_rk*(LOG(284.01_rk*xfac1(1:nw-1)))**2 ) & 
+                + 12.22_rk * exp(  -93.63_rk*(LOG(350.57_rk*xfac1(1:nw-1)))**2 ) & 
+                + 2.283_rk * exp(- 242.40_rk*(LOG(457.38_rk*xfac1(1:nw-1)))**2 )
+          xsqy_tab(j)%sq(1:nw-1,1) = sig(1:nw-1) * 1.e-20_rk
         ENDWHERE
       endif
 
@@ -4326,7 +4333,7 @@
       errflg = 0
 
       if( initialize ) then
-        call check_alloc( ndx=j, nz=nw, nw=1, errmsg=errmsg, errflg=errflg )
+        call check_alloc( ndx=j, nz=nw-1, nw=1, errmsg=errmsg, errflg=errflg )
         OPEN(UNIT=kin,FILE=trim(input_data_root)//'/DATAJ1/ABS/BrO.jpl03',STATUS='old')
         DO i = 1, 14
           READ(kin,*)
@@ -4342,7 +4349,7 @@
         x(n) = dum
 ! use bin-to-bin interpolation
         CALL inter4(nw,wl,yg,n,x,y,1, errmsg, errflg)
-        xsqy_tab(j)%sq(1:nw,1) = yg(1:nw)
+        xsqy_tab(j)%sq(1:nw-1,1) = yg(1:nw-1)
       endif
 
       END SUBROUTINE r114
@@ -4400,15 +4407,15 @@
           is_initialized = .true.
         endif
         if( chnl > 1 ) then
-          call check_alloc( ndx=j, nz=nw, nw=1, errmsg=errmsg, errflg=errflg )
-          xsqy_tab(j)%sq(1:nw,1) = qyld(chnl)*yg2(1:nw)
+          call check_alloc( ndx=j, nz=nw-1, nw=1, errmsg=errmsg, errflg=errflg )
+          xsqy_tab(j)%sq(1:nw-1,1) = qyld(chnl)*yg2(1:nw-1)
         endif
       else
         if( chnl == 1 ) then
-          call check_alloc( j, nz, nw, errmsg, errflg )
+          call check_alloc( j, nz, nw-1, errmsg, errflg )
 
           qy1(1:nz) = exp(-2400._rk/tlev(1:nz) + 3.6_rk) ! Chu & Anastasio, 2003
-          DO iw = 1, nw
+          DO iw = 1, nw-1
             xsqy_tab(j)%sq(1:nz,iw) = qy1(1:nz)*yg2(iw)
           ENDDO
         endif
@@ -4476,7 +4483,7 @@
       if( initialize ) then
         CALL readit
       else
-        call check_alloc( j, nz, nw, errmsg, errflg )
+        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 ! Quantum Yields from 
 ! Raber, W.H. (1992) PhD Thesis, Johannes Gutenberg-Universitaet, Mainz, Germany.
@@ -4487,7 +4494,7 @@
 
         ptorr(1:nz) = 760._rk*airden(1:nz)/2.69e19_rk
         qy(1:nz)    = min( 1._rk/(0.96_rk + 2.22E-3_rk*ptorr(1:nz)),1._rk )
-        DO iw = 1, nw
+        DO iw = 1, nw-1
           xsqy_tab(j)%sq(1:nz,iw) = yg(iw) * qy(1:nz)
         ENDDO
       endif
@@ -4557,11 +4564,11 @@
           is_initialized = .true.
         endif
       else
-        call check_alloc( j, nz, nw, errmsg, errflg )
+        call check_alloc( j, nz, nw-1, errmsg, errflg )
     
         chnl = xsqy_tab(j)%channel
         t(1:nz) = tlev(1:nz) - 298._rk
-        DO iw = 1, nw
+        DO iw = 1, nw-1
           sig(1:nz) = yg(iw) * EXP(yg2(iw)*t(1:nz))
           xsqy_tab(j)%sq(1:nz,iw) = qyld(chnl) * sig(1:nz)
         ENDDO 
@@ -4633,11 +4640,11 @@
       if( initialize ) then
         CALL readit
       else
-        call check_alloc( j, nz, nw, errmsg, errflg )
+        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 ! quantum yields are pressure dependent between air number densities
 ! of 8e17 and 2.6e19, Gardner et al.:
-        DO iw = 1, nw
+        DO iw = 1, nw-1
           where( airden(1:nz) > 2.6e19_rk )
             qy(1:nz) = 0.004_rk
           elsewhere( airden(1:nz) > 8.e17_rk .and. airden(1:nz) <= 2.6e19_rk )
@@ -4720,7 +4727,7 @@
           is_initialized = .true.
         endif
       else
-        call check_alloc( j, nz, nw, errmsg, errflg )
+        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
         DO i = 1, nz
           tx = tlev(i)
@@ -4728,7 +4735,7 @@
           m1 = 1 + INT(.1_rk*(tx - 190._rk))
           m1 = MIN(MAX(1 ,m1),11)
           m2 = m1 + 1
-          DO iw = 1, nw
+          DO iw = 1, nw-1
             yy = ygt(iw,m1) + (ygt(iw,m2) - ygt(iw,m1)) &
                  * (tx - tmp(m1))/(tmp(m2) - tmp(m1))
 ! threshold for O(1D) productionis 263.4 nm:
@@ -4776,7 +4783,7 @@
          y1(1:nn) = y(1:nn,m)
          CALL add_pnts_inter2(x1,y1,yg,kdata,nn, &
                            nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
-         ygt(1:nw,m) = yg(1:nw)
+         ygt(1:nw-1,m) = yg(1:nw-1)
       ENDDO
 
       END SUBROUTINE readit
@@ -4822,10 +4829,10 @@
       errflg = 0
 
       if( initialize ) then
-        call check_alloc( ndx=j, nz=nw, nw=1, errmsg=errmsg, errflg=errflg )
+        call check_alloc( ndx=j, nz=nw-1, nw=1, errmsg=errmsg, errflg=errflg )
         CALL readit
         chnl = xsqy_tab(j)%channel
-        xsqy_tab(j)%sq(1:nw,1) = qyld(chnl) * yg(1:nw)
+        xsqy_tab(j)%sq(1:nw-1,1) = qyld(chnl) * yg(1:nw-1)
       endif
 
       CONTAINS
@@ -4882,9 +4889,9 @@
       if( initialize ) then
         CALL readit
       else
-        call check_alloc( j, nz, nw, errmsg, errflg )
+        call check_alloc( j, nz, nw-1, errmsg, errflg )
 ! quantum yields assumed unity
-        DO iw = 1, nw
+        DO iw = 1, nw-1
           where( tlev(1:nz) .le. 223._rk )
             xsqy_tab(j)%sq(1:nz,iw) = yg223(iw)
           elsewhere (tlev(1:nz) .gt. 223._rk .and. tlev(1:nz) .le. 243._rk )
@@ -4999,9 +5006,9 @@
       if( initialize ) then
         CALL readit
       else
-        call check_alloc( j, nz, nw, errmsg, errflg )
+        call check_alloc( j, nz, nw-1, errmsg, errflg )
 ! quantum yields assumed unity
-        DO iw = 1, nw
+        DO iw = 1, nw-1
           where(tlev(1:nz) .le. 204._rk )
             xsqy_tab(j)%sq(1:nz,iw) = yg204(iw)
           elsewhere (tlev(1:nz) .gt. 204._rk .and. tlev(1:nz) .le. 296._rk )
@@ -5109,11 +5116,11 @@
           is_initialized = .true.
         endif
       else
-        call check_alloc( j, nz, nw, errmsg, errflg )
+        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
         t(1:nz)  = tlev(1:nz) - 298._rk
         t1(1:nz) = (300._rk - tlev(1:nz))/80._rk
-        DO iw = 1, nw
+        DO iw = 1, nw - 1
 ! correct cross section for temperature dependence:
           sig(1:nz) = yg1(iw) + yg2(iw) * t(1:nz)
 ! assign room temperature quantum yields for radical and molecular channels
@@ -5224,11 +5231,11 @@
       if( initialize ) then
         CALL readit
       else
-        call check_alloc( j, nz, nw, errmsg, errflg )
+        call check_alloc( j, nz, nw-1, errmsg, errflg )
       
 !** quantum yield assumed to be unity
         temp(1:nz) = min(max(tlev(1:nz),210._rk),300._rk) - 295._rk
-        DO iw = 1, nw
+        DO iw = 1, nw-1
 ! compute temperature correction coefficients:
           tcoeff = 0._rk
           w1 = wc(iw)
@@ -5294,10 +5301,10 @@
       if( initialize ) then
         CALL readit
       else
-        call check_alloc( j, nz, nw, errmsg, errflg )
+        call check_alloc( j, nz, nw-1, errmsg, errflg )
 ! quantum yield = 1
         t(1:nz) = tlev(1:nz) - 298._rk
-        DO iw = 1, nw
+        DO iw = 1, nw - 1
           xsqy_tab(j)%sq(1:nz,iw) = yg1(iw) * exp(yg2(iw) * t(1:nz))
         ENDDO
       endif
@@ -5361,9 +5368,9 @@
       errflg = 0
 
       if( initialize ) then
-        call check_alloc( ndx=j, nz=nw, nw=1, errmsg=errmsg, errflg=errflg )
+        call check_alloc( ndx=j, nz=nw-1, nw=1, errmsg=errmsg, errflg=errflg )
         CALL readit
-        xsqy_tab(j)%sq(1:nw,1) = yg1(1:nw) * yg2(1:nw)
+        xsqy_tab(j)%sq(1:nw-1,1) = yg1(1:nw-1) * yg2(1:nw-1)
       endif
 
       CONTAINS
@@ -5401,7 +5408,7 @@
       real(rk), intent(in)    :: xin(kdata)
       real(rk), intent(in)    :: yin(kdata)
       real(rk), intent(in)    :: yends(2)
-      real(rk), intent(inout) :: yout(nw)
+      real(rk), intent(inout) :: yout(nw-1)
       character(len=*), intent(in) :: jlabel
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
@@ -5840,7 +5847,6 @@
       integer,          intent(out) :: errflg
 
       integer :: astat
-      real(rk) :: xnan
 
       errmsg = ' '
       errflg = 0
@@ -5853,7 +5859,7 @@
       else
         astat = 0
       endif
-      xsqy_tab(ndx)%sq = IEEE_VALUE(xnan,IEEE_QUIET_NAN)
+      xsqy_tab(ndx)%sq = xnan
       
       if( astat /= 0 ) then
          write(errmsg,'(''check_alloc: failed to alloc sq; error = '',i4)') astat

@@ -66,7 +66,7 @@
       SUBROUTINE rdxs_init( nw, wl, errmsg, errflg )
 
       integer, intent(in) :: nw
-      real(rk), intent(in)    :: wl(nw)
+      real(rk), intent(in) :: wl(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
 
@@ -188,7 +188,8 @@
 
       INTEGER :: iw
       REAL(rk)    :: factor
-
+      xs = 0._rk
+      
 !***** option 1:
 ! assign according to wavelength range:
 !  175.439 - 185.185  1985WMO (203, 273 K)
@@ -990,8 +991,8 @@
 
 ! Input
 
-      INTEGER, intent(in) :: nw
-      REAL(rk), intent(in)    :: wl(nw)
+      INTEGER, intent(in)  :: nw
+      REAL(rk), intent(in) :: wl(:)
 
 ! Output O2 xsect, temporary, will be over-written in Lyman-alpha and 
 !   Schumann-Runge wavelength bands.
@@ -1118,8 +1119,8 @@
 
 ! input:
 
-      INTEGER, intent(in) :: nw
-      REAL(rk), intent(in)    :: wl(nw)
+      INTEGER, intent(in)  :: nw
+      REAL(rk), intent(in) :: wl(:)
 
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
@@ -1213,25 +1214,26 @@
 !=  specified wavelength working grid.                                       =*
 !-----------------------------------------------------------------------------*
 
-      INTEGER, parameter :: kdata = 1000
-
 ! input: (altitude working grid)
-      INTEGER, intent(in) :: nw
-      REAL(rk), intent(in)    :: wl(nw)
+      INTEGER, intent(in)  :: nw
+      REAL(rk), intent(in) :: wl(:)
 
 ! output:
 
-      REAL(rk), intent(inout) :: so2xs(nw)
+      REAL(rk), intent(inout) :: so2xs(:)
 
       character(len=*), intent(out)   :: errmsg
       integer,          intent(out)   :: errflg
 
 !! local:
+      INTEGER, parameter :: kdata = 1000
+
       REAL(rk) x1(kdata)
       REAL(rk) y1(kdata)
       INTEGER i, n
       CHARACTER(len=40)  :: fil
 
+      
       errmsg = ' '
       errflg = 0
 !************ absorption cross sections:

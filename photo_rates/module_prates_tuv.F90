@@ -75,7 +75,7 @@ contains
           endif
        end do
     else
-       call rxn_init( nwave, wl, errmsg, errflg )
+       call rxn_init( nwave+1, wl, errmsg, errflg )
        allocate( rxn_ndx(nj) )
        rxn_ndx(1:nj) = -1
        do j = 1,nj
@@ -139,7 +139,7 @@ contains
           do n = 1,nj
              jndx = rxn_ndx(n)
              if( jndx /= -1 ) then
-                call the_subs(jndx)%xsqy_sub(nwave,wl,wc,nlevs,dummy,dummy,jndx, errmsg, errflg )
+                call the_subs(jndx)%xsqy_sub(nwave+1,wl,wc,nlevs,dummy,dummy,jndx, errmsg, errflg )
              endif
           enddo
           call set_initialization( status=.false. )
@@ -161,7 +161,7 @@ contains
              jndx = rxn_ndx(n)
              if( jndx /= -1 ) then
                 if( xsqy_table(jndx)%tpflag /= 0 ) then
-                   call the_subs(jndx)%xsqy_sub(nwave,wl,wc,nlevs,tlev,dens_air,jndx, errmsg, errflg)
+                   call the_subs(jndx)%xsqy_sub(nwave+1,wl,wc,nlevs,tlev,dens_air,jndx, errmsg, errflg)
                 endif
              endif
           endif
