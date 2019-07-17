@@ -5,6 +5,8 @@ module  module_prates_tuv
   use wavelength_grid,only: nwave, wl, wc
   use params_mod, only : hc
   
+  USE,INTRINSIC :: IEEE_ARITHMETIC
+
   implicit none
 
   private
@@ -12,13 +14,13 @@ module  module_prates_tuv
   public :: calc_tuv_prates
   public :: rxn_ndx
   public :: read_etf
-  
+  public :: update_etf
+
   integer :: nconc, ntemp
 
   real(rk), allocatable :: xsqy_tab(:,:,:,:)
   real(rk), allocatable :: dw(:)
   real(rk), allocatable :: w_fac(:)
-  real(rk), allocatable :: etfl(:)
   real(rk), allocatable :: temp_tab(:)
   real(rk), allocatable :: conc_tab(:)
   real(rk), allocatable :: del_temp_tab(:)
@@ -33,7 +35,9 @@ module  module_prates_tuv
   integer, protected, allocatable :: rxn_ndx(:)
 
   integer, parameter :: nlambda_start = 1
-  real(rk)    :: esfact = 1.0_rk
+  real(rk) :: esfact = 1.0_rk
+  real(rk) :: xnan
+
 contains
 
   !------------------------------------------------------------------------------
@@ -54,6 +58,8 @@ contains
     nj = size(jnames)
     allocate( tuv_jname(nj) )
     tuv_jname(:) = jnames(:)
+
+    xnan = IEEE_VALUE(xnan,IEEE_QUIET_NAN)
     
     if( .not. is_full_tuv ) then
        call read_xsqy_tables(xsqy_filepath, errmsg, errflg)
@@ -97,8 +103,6 @@ contains
   !------------------------------------------------------------------------------
   subroutine calc_tuv_prates(kts,kte,nlevs, tlev, dens_air, rad_fld, srb_o2_xs, tuv_prate, errmsg, errflg)
 
-    USE,INTRINSIC :: IEEE_ARITHMETIC
-
     ! Args
     integer, intent(in) :: kts,kte,nlevs
     real(rk), intent(in)    :: tlev(kts:kte)     ! K
@@ -119,9 +123,7 @@ contains
     integer :: k
     real(rk) :: dummy(nlevs)
     logical :: rxn_initialized
-    real(rk) :: xnan
 
-    xnan =  IEEE_VALUE(xnan,IEEE_QUIET_NAN)
     tuv_prate = xnan
     rad_fld_tpose = xnan
 
@@ -204,6 +206,13 @@ contains
 
   end subroutine calc_tuv_prates
 
+  subroutine update_etf( etf_in )
+    real(rk), intent(in) :: etf_in(nwave) ! watts/m2/nm ??
+    
+    w_fac(:nwave) = dw(:nwave)*etf_in(:nwave)*wc(:nwave)*1.e-13_rk/hc
+
+  end subroutine update_etf
+  
   subroutine read_etf(filepath, errmsg, errflg )
     !---------------------------------------------------------------------
     !	... read in ETF
@@ -225,6 +234,8 @@ contains
     integer :: ncid, dimid, varid
     character(len=64) :: varname
 
+    real(rk) :: etfl(nwave)
+
     !---------------------------------------------------------------------
     !	... open file
     !---------------------------------------------------------------------
@@ -238,12 +249,15 @@ contains
     !---------------------------------------------------------------------
     !	... allocate module arrays
     !---------------------------------------------------------------------
-    allocate( dw(nwave), w_fac(nwave), etfl(nwave), stat=astat )
+    allocate( dw(nwave), w_fac(nwave), stat=astat )
     if( astat /= 0 ) then
        errmsg = 'read_etf: failed to allocate'
        errflg = astat
        return
     endif
+
+    dw(:nwave) = wl(2:nwave+1) - wl(1:nwave)
+    w_fac(:nwave) = xnan
 
     !---------------------------------------------------------------------
     !	... read arrays
@@ -255,15 +269,16 @@ contains
        return
     end if
 
-    ret = nf90_get_var( ncid, varid, etfl )
-    if( ret /= nf90_noerr ) then
-       errflg = 1
-       errmsg = 'read_etf: failed to read etfl variable'
-       return
-    end if
+    if (varid>0) then
+       ret = nf90_get_var( ncid, varid, etfl )
+       if( ret /= nf90_noerr ) then
+          errflg = 1
+          errmsg = 'read_etf: failed to read etfl variable'
+          return
+       end if
 
-    dw(:nwave)    = wl(2:nwave+1) - wl(1:nwave)
-    w_fac(:nwave) = dw(:nwave)*etfl(:nwave)*1.e-13_rk*wc(:nwave)/hc
+       w_fac(:nwave) = dw(:nwave)*etfl(:nwave)*1.e-13_rk*wc(:nwave)/hc
+    end if
 
     !---------------------------------------------------------------------
     !	... close file
