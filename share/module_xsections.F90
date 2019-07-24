@@ -27,9 +27,8 @@
 
       module module_xsections
 
-      USE,INTRINSIC :: IEEE_ARITHMETIC
       use phot_kind_mod, only: rk => kind_phot
-      use params_mod, only: deltax, kin, input_data_root
+      use params_mod, only: deltax, kin, input_data_root, qnan
       use  numer_mod, only: addpnt, inter2
       
       IMPLICIT NONE
@@ -59,8 +58,6 @@
       real(rk), protected, allocatable :: o2_xs(:)
       real(rk), protected, allocatable :: so2_xs(:)
 
-      real(rk) :: xnan
-
     CONTAINS
 
       SUBROUTINE rdxs_init( nw, wl, errmsg, errflg )
@@ -75,47 +72,45 @@
       errmsg = ' '
       errflg = 0
 
-      xnan =  IEEE_VALUE(xnan,IEEE_QUIET_NAN)
-
       istat = 0
       if( .not. allocated( rei218 ) ) then
          allocate( rei218(nw),rei228(nw),rei243(nw),rei295(nw),stat=astat )
          istat = istat + astat
-         rei218 = xnan; rei228=xnan; rei243=xnan; rei295=xnan
+         rei218 = qnan; rei228=qnan; rei243=qnan; rei295=qnan
       endif
       if( .not. allocated( wmo203 ) ) then
          allocate( wmo203(nw),wmo273(nw),stat=astat )
-         wmo203 = xnan; wmo273=xnan
+         wmo203 = qnan; wmo273=qnan
          istat = istat + astat
       endif
       if( .not. allocated( jpl218 ) ) then
          allocate( jpl218(nw),jpl295(nw),stat=astat )
-         jpl218=xnan; jpl295=xnan
+         jpl218=qnan; jpl295=qnan
          istat = istat + astat
       endif
       if( .not. allocated( mol226 ) ) then
          allocate( mol226(nw),mol263(nw),mol298(nw),stat=astat )
-         mol226=xnan; mol263=xnan; mol298=xnan
+         mol226=qnan; mol263=qnan; mol298=qnan
          istat = istat + astat
       endif
       if( .not. allocated( c0 ) ) then
          allocate( c0(nw),c1(nw),c2(nw),stat=astat )
-         c0=xnan
+         c0=qnan; c1=qnan; c2=qnan
          istat = istat + astat
       endif
       if( .not. allocated( no2xs_a ) ) then
          allocate( no2xs_a(nw),no2xs_b(nw),stat=astat )
-         no2xs_a=xnan
+         no2xs_a=qnan; no2xs_b=qnan
          istat = istat + astat
       endif
       if (.not. allocated(o2_xs) ) then
          allocate(o2_xs(nw))
-         o2_xs = xnan
+         o2_xs = qnan
          istat = istat + astat
       endif
       if (.not. allocated(so2_xs) ) then
          allocate(so2_xs(nw))
-         o2_xs = xnan
+         o2_xs = qnan
          istat = istat + astat
       endif
       if( istat /= 0 ) then

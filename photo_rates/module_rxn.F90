@@ -6,10 +6,8 @@
 !=============================================================================*
       module module_rxn
 
-      USE,INTRINSIC :: IEEE_ARITHMETIC
-
       use phot_kind_mod, only: rk => kind_phot
-      use params_mod, only: largest, deltax, input_data_root, kin
+      use params_mod, only: largest, deltax, input_data_root, kin, qnan
       use  numer_mod, only: addpnt, inter2, inter4
       
       implicit none
@@ -83,8 +81,6 @@
       end interface
 
       type(xsqy_subs), allocatable :: the_subs(:)
-
-      real(rk) :: xnan
 
       CONTAINS
 
@@ -183,8 +179,6 @@
 
       errmsg = ' '
       errflg = 0
-
-      xnan = IEEE_VALUE(xnan,IEEE_QUIET_NAN)
 
       call set_initialization( status=.true. )
 
@@ -1228,8 +1222,8 @@
 
       errmsg = ' '
       errflg = 0
-      xs = xnan
-      qy1d = xnan
+      xs = qnan
+      qy1d = qnan
 
       if( .not. initialize ) then
         call check_alloc( j, nz, nw-1, errmsg, errflg )
@@ -1312,8 +1306,8 @@
  !*************** NO2 photodissociation
 
       if( initialize ) then
-         yg1 = xnan 
-         yg2 = xnan
+         yg1 = qnan 
+         yg2 = qnan
         CALL readit
         ydel(1:nw-1) = yg1(1:nw-1) - yg2(1:nw-1)
       else
@@ -5859,7 +5853,7 @@
       else
         astat = 0
       endif
-      xsqy_tab(ndx)%sq = xnan
+      xsqy_tab(ndx)%sq = qnan
       
       if( astat /= 0 ) then
          write(errmsg,'(''check_alloc: failed to alloc sq; error = '',i4)') astat

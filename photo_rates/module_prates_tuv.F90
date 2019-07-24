@@ -3,10 +3,8 @@ module  module_prates_tuv
   use module_rxn, only : xsqy_table => xsqy_tab, the_subs, npht_tab, rxn_init
   use module_rxn, only : get_initialization, set_initialization
   use wavelength_grid,only: nwave, wl, wc
-  use params_mod, only : hc
+  use params_mod, only : hc, qnan
   
-  USE,INTRINSIC :: IEEE_ARITHMETIC
-
   implicit none
 
   private
@@ -20,7 +18,7 @@ module  module_prates_tuv
 
   real(rk), allocatable :: xsqy_tab(:,:,:,:)
   real(rk), allocatable :: dw(:)
-  real(rk), allocatable :: w_fac(:)
+  real(rk), allocatable :: photon_flux(:) ! /cm2/sec
   real(rk), allocatable :: temp_tab(:)
   real(rk), allocatable :: conc_tab(:)
   real(rk), allocatable :: del_temp_tab(:)
@@ -36,7 +34,6 @@ module  module_prates_tuv
 
   integer, parameter :: nlambda_start = 1
   real(rk) :: esfact = 1.0_rk
-  real(rk) :: xnan
 
 contains
 
@@ -58,8 +55,6 @@ contains
     nj = size(jnames)
     allocate( tuv_jname(nj) )
     tuv_jname(:) = jnames(:)
-
-    xnan = IEEE_VALUE(xnan,IEEE_QUIET_NAN)
     
     if( .not. is_full_tuv ) then
        call read_xsqy_tables(xsqy_filepath, errmsg, errflg)
@@ -124,8 +119,8 @@ contains
     real(rk) :: dummy(nlevs)
     logical :: rxn_initialized
 
-    tuv_prate = xnan
-    rad_fld_tpose = xnan
+    tuv_prate = qnan
+    rad_fld_tpose = qnan
 
     if( .not. is_full_tuv ) then
        if( any( .not. xsqy_is_zdep(:) ) ) then
@@ -149,8 +144,8 @@ contains
     endif
 
     rate_loop: do n = 1,nj
-       xsect = xnan
-       xsqy = xnan
+       xsect = qnan
+       xsqy = qnan
        !---------------------------------------------------------------------
        ! set cross-section x quantum yields
        !---------------------------------------------------------------------
@@ -177,27 +172,27 @@ contains
        if( .not. is_full_tuv ) then
           if( xsqy_is_zdep(n) ) then
              do k = kts,kte
-                xsect(nlambda_start:nwave) = xsqy(nlambda_start:nwave,k)*w_fac(nlambda_start:nwave)*esfact
+                xsect(nlambda_start:nwave) = xsqy(nlambda_start:nwave,k)*photon_flux(nlambda_start:nwave)*esfact
                 tuv_prate(k,n) = dot_product( rad_fld(nlambda_start:nwave,k),xsect(nlambda_start:nwave) )
              end do
           else
-             xsect(nlambda_start:nwave) = xsqy_tab(nlambda_start:nwave,1,1,n)*w_fac(nlambda_start:nwave)*esfact
+             xsect(nlambda_start:nwave) = xsqy_tab(nlambda_start:nwave,1,1,n)*photon_flux(nlambda_start:nwave)*esfact
              tuv_prate(:,n) = matmul( rad_fld_tpose(:,nlambda_start:nwave),xsect(nlambda_start:nwave) )
           endif
        else
           if( n /= j_o2_ndx ) then
              if( xsqy_table(jndx)%tpflag > 0 ) then
                 do k = kts,kte
-                   xsect(nlambda_start:nwave) = xsqy_table(jndx)%sq(k,nlambda_start:nwave)*w_fac(nlambda_start:nwave)*esfact
+                   xsect(nlambda_start:nwave) = xsqy_table(jndx)%sq(k,nlambda_start:nwave)*photon_flux(nlambda_start:nwave)*esfact
                    tuv_prate(k,n) = dot_product( rad_fld(nlambda_start:nwave,k),xsect(nlambda_start:nwave) )
                 end do
              else                
-                xsect(nlambda_start:nwave) = xsqy_table(jndx)%sq(nlambda_start:nwave,1)*w_fac(nlambda_start:nwave)*esfact
+                xsect(nlambda_start:nwave) = xsqy_table(jndx)%sq(nlambda_start:nwave,1)*photon_flux(nlambda_start:nwave)*esfact
                 tuv_prate(:,n) = matmul( rad_fld_tpose(:,nlambda_start:nwave),xsect(nlambda_start:nwave) )
              endif
           else
              do k = kts,kte
-                xsect(nlambda_start:nwave) = srb_o2_xs(nlambda_start:nwave,k)*w_fac(nlambda_start:nwave)*esfact
+                xsect(nlambda_start:nwave) = srb_o2_xs(nlambda_start:nwave,k)*photon_flux(nlambda_start:nwave)*esfact
                 tuv_prate(k,n) = dot_product( rad_fld(nlambda_start:nwave,k),xsect(nlambda_start:nwave) )
              end do
           endif
@@ -206,10 +201,12 @@ contains
 
   end subroutine calc_tuv_prates
 
+  ! update extraterrestrial photon flux
   subroutine update_etf( etf_in )
-    real(rk), intent(in) :: etf_in(nwave) ! watts/m2/nm ??
-    
-    w_fac(:nwave) = dw(:nwave)*etf_in(:nwave)*wc(:nwave)*1.e-13_rk/hc
+    real(rk), intent(in) :: etf_in(nwave) ! watts/m2/nm
+
+    ! nm * (watts/m2/nm) * nw * 1.e-13/(watts m sec) --> /cm2/sec
+    photon_flux(:nwave) = dw(:nwave)*etf_in(:nwave)*wc(:nwave)*1.e-13_rk/hc
 
   end subroutine update_etf
   
@@ -249,7 +246,7 @@ contains
     !---------------------------------------------------------------------
     !	... allocate module arrays
     !---------------------------------------------------------------------
-    allocate( dw(nwave), w_fac(nwave), stat=astat )
+    allocate( dw(nwave), photon_flux(nwave), stat=astat )
     if( astat /= 0 ) then
        errmsg = 'read_etf: failed to allocate'
        errflg = astat
@@ -257,7 +254,7 @@ contains
     endif
 
     dw(:nwave) = wl(2:nwave+1) - wl(1:nwave)
-    w_fac(:nwave) = xnan
+    photon_flux(:nwave) = qnan
 
     !---------------------------------------------------------------------
     !	... read arrays
@@ -277,7 +274,7 @@ contains
           return
        end if
 
-       w_fac(:nwave) = dw(:nwave)*etfl(:nwave)*1.e-13_rk*wc(:nwave)/hc
+       photon_flux(:nwave) = dw(:nwave)*etfl(:nwave)*1.e-13_rk*wc(:nwave)/hc !  watts/m2/nm --> /cm2/sec
     end if
 
     !---------------------------------------------------------------------
