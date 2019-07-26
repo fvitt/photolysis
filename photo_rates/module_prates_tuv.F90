@@ -26,7 +26,7 @@ module  module_prates_tuv
   character(len=32), allocatable :: tuv_jname(:)
 
   integer :: nj 
-  integer :: j_o2_ndx = 1
+  integer :: j_o2_ndx = -1
   logical :: is_full_tuv = .true.
 
   logical, allocatable :: xsqy_is_zdep(:)
@@ -67,7 +67,14 @@ contains
     endif
 
     tuv_jname(:) = jnames(:)
-    
+
+    find_jo2: do n=1,nj
+       if (trim(tuv_jname(n)) == 'j_o2') then
+          j_o2_ndx = n
+          exit find_jo2
+       end if
+    end do find_jo2
+
     if( is_full_tuv ) then
 
        call rxn_init( nwave+1, wl, errmsg, errflg )
