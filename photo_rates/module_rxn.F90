@@ -44,7 +44,6 @@
         integer :: channel
         integer :: jndx
         real(rk)    :: qyld
-        real(rk), allocatable :: sq(:,:)
         character(len=50) :: label
         character(len=50) :: wrf_label
         type(xs_qy_tab), pointer :: next
@@ -64,7 +63,7 @@
       end type xsqy_subs
 
       abstract interface
-        SUBROUTINE xsqy(nw,wl,wc,nz,tlev,airden,j,errmsg,errflg)
+        SUBROUTINE xsqy(nw,wl,wc,nz,tlev,airden,j,errmsg,errflg, sq)
 
           use phot_kind_mod, only: rk => kind_phot
           
@@ -75,7 +74,8 @@
           REAL(rk), intent(in)    :: airden(:)
           character(len=*), intent(out) :: errmsg
           integer,          intent(out) :: errflg
-
+          real(rk), optional, intent(out) :: sq(:,:)
+          
           INTEGER, intent(inout) :: j
         end SUBROUTINE xsqy
       end interface
@@ -84,7 +84,7 @@
 
       CONTAINS
 
-      SUBROUTINE no_z_dep(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE no_z_dep(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !  generic routine
 !-----------------------------------------------------------------------------*
@@ -102,6 +102,7 @@
 
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
       
       integer, PARAMETER :: kdata=500
 
@@ -109,19 +110,21 @@
       REAL(rk) :: x1(kdata)
       REAL(rk) :: y1(kdata)
       REAL(rk) :: yg(kw)
+      real(rk), save :: xsq(kw,kdata)
 
       errmsg = ' '
       errflg = 0
 
       if( initialize ) then
         CALL readit
-        call check_alloc( ndx=j, nz=nw-1, nw=1, errmsg=errmsg, errflg=errflg )
         if( xsqy_tab(j)%qyld == 1._rk ) then
 !*** quantum yield assumed to be unity
-          xsqy_tab(j)%sq(1:nw-1,1) = yg(1:nw-1)
+          xsq(1:nw-1,j) = yg(1:nw-1)
         else
-          xsqy_tab(j)%sq(1:nw-1,1) = xsqy_tab(j)%qyld * yg(1:nw-1)
+          xsq(1:nw-1,j) = xsqy_tab(j)%qyld * yg(1:nw-1)
         endif
+      else
+        sq(1:nw-1,1) = xsq(1:nw-1,j)
       endif
 
       CONTAINS 
@@ -1181,7 +1184,7 @@
 !=           reaction defined                                                =*
 !-----------------------------------------------------------------------------*
 
-      SUBROUTINE r01(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r01(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide the product of (cross section) x (quantum yield) for the two     =*
@@ -1211,6 +1214,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
       INTEGER, intent(inout) :: j
 
@@ -1226,7 +1230,6 @@
       qy1d = qnan
 
       if( .not. initialize ) then
-        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 ! call cross section read/interpolate routine
 ! cross sections from WMO 1985 Ozone Assessment
@@ -1256,7 +1259,7 @@
           if( xsqy_tab(j)%channel == 2 ) then
             qy1d(1:nz) = (1._rk - qy1d(1:nz))
           endif
-          xsqy_tab(j)%sq(1:nz,iw) = qy1d(1:nz)*xs(1:nz,iw)
+          sq(1:nz,iw) = qy1d(1:nz)*xs(1:nz,iw)
         END DO
       endif
 
@@ -1264,7 +1267,7 @@
 
 !=============================================================================*
 
-      SUBROUTINE r02(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r02(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide the product (cross section) x (quantum yield) for NO2            =*
@@ -1285,6 +1288,7 @@
 
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
 ! data arrays
       INTEGER, parameter :: kdata = 200
@@ -1311,7 +1315,6 @@
         CALL readit
         ydel(1:nw-1) = yg1(1:nw-1) - yg2(1:nw-1)
       else
-        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 ! options for NO2 cross section:
 ! 1 = Davidson et al. (1988), indepedent of T
@@ -1335,7 +1338,7 @@
         t(1:nz) = .02_rk*(tlev(1:nz) - 298._rk)
         DO iw = 1, nw - 1
           qy(1:nz) = yg1(iw) + ydel(iw)*t(1:nz)
-          xsqy_tab(j)%sq(1:nz,iw) = no2xs(1:nz,iw)*max( qy(1:nz),0._rk )
+          sq(1:nz,iw) = no2xs(1:nz,iw)*max( qy(1:nz),0._rk )
         ENDDO
       endif
 
@@ -1363,7 +1366,7 @@
 
 !=============================================================================*
 
-      SUBROUTINE r03(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r03(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
@@ -1383,6 +1386,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
 ! data arrays
       INTEGER, PARAMETER :: kdata=350
@@ -1420,7 +1424,6 @@
           is_initialized = .true.
         endif
       else
-        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 ! mabs = 3:  JPL11
 !     mabs = 3
@@ -1442,7 +1445,7 @@
           elsewhere(tlev(1:nz) > 298._rk )
             sq_wrk(1:nz) = yg_298(iw,chnl)
           endwhere
-          xsqy_tab(j)%sq(1:nz,iw) = sq_wrk(1:nz)*xsect
+          sq(1:nz,iw) = sq_wrk(1:nz)*xsect
         ENDDO
       endif
 
@@ -1498,7 +1501,7 @@
 
 !=============================================================================*
 
-      SUBROUTINE r04(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r04(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide product of (cross section) x (quantum yiels) for N2O5 photolysis =*
@@ -1518,6 +1521,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
 ! data arrays
       INTEGER, PARAMETER :: kdata = 200
@@ -1542,10 +1546,9 @@
           is_initialized = .true.
         endif
       else
-        call check_alloc( j, nz, nw-1, errmsg, errflg )
         if( xsqy_tab(j)%channel == 1 ) then
           DO iw = 1,nw-1
-            xsqy_tab(j)%sq(1:nz,iw) = 0._rk
+            sq(1:nz,iw) = 0._rk
           ENDDO
         elseif( xsqy_tab(j)%channel == 2 ) then
 ! temperature dependence only valid for 233 - 295 K.  Extend to 300.
@@ -1556,7 +1559,7 @@
 ! because they are inconsistent with the values at 300K.
 ! quantum yield = 1 for NO2 + NO3, zero for other channels
             dum(1:nz) = 1000._rk*yg2(iw)*(300._rk - t(1:nz))/(300._rk*t(1:nz))
-            xsqy_tab(j)%sq(1:nz,iw) = yg1(iw) * 10._rk**(dum(1:nz))
+            sq(1:nz,iw) = yg1(iw) * 10._rk**(dum(1:nz))
           ENDDO
         endif
       endif
@@ -1587,7 +1590,7 @@
 
 !=============================================================================*
 
-      SUBROUTINE r06(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r06(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide product of (cross section) x (quantum yield) for HNO3 photolysis =*
@@ -1604,6 +1607,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
 ! data arrays
       integer, PARAMETER :: kdata=100
@@ -1623,12 +1627,11 @@
       if( initialize ) then
         CALL readit
       else
-        call check_alloc( j, nz, nw-1, errmsg, errflg )
 ! quantum yield = 1
 ! correct for temperature dependence
         t(1:nz) = tlev(1:nz) - 298._rk
         DO iw = 1, nw - 1
-          xsqy_tab(j)%sq(1:nz,iw) = yg1(iw) * exp( yg2(iw)*t(1:nz) )
+          sq(1:nz,iw) = yg1(iw) * exp( yg2(iw)*t(1:nz) )
         ENDDO
       endif
 
@@ -1664,7 +1667,7 @@
 
 !=============================================================================*
 
-      SUBROUTINE r08(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r08(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide product of (cross section) x (quantum yield) for H2O2 photolysis =*
@@ -1682,6 +1685,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
 ! data arrays
       integer, PARAMETER :: kdata=600
@@ -1719,7 +1723,6 @@
       if( initialize ) then
         CALL readit
       else
-        call check_alloc( j, nz, nw-1, errmsg, errflg )
 ! quantum yield = 1
         t(1:nz) = MIN(MAX(tlev(1:nz),200._rk),400._rk)            
         chi(1:nz) = 1._rk/(1._rk + EXP(-1265._rk/t(1:nz)))
@@ -1734,10 +1737,10 @@
              sumB = (((B4*lambda + B3)*lambda + B2)*lambda +  &
                        B1)*lambda + B0
 
-             xsqy_tab(j)%sq(1:nz,iw) = &
+             sq(1:nz,iw) = &
                  (chi(1:nz) * sumA + (1._rk - chi(1:nz))*sumB)*1.E-21_rk
            ELSE
-             xsqy_tab(j)%sq(1:nz,iw) = yg(iw)
+             sq(1:nz,iw) = yg(iw)
            ENDIF
         ENDDO
       endif
@@ -1768,7 +1771,7 @@
 
 !=============================================================================*
 
-      SUBROUTINE r09(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r09(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide product of (cross section) x (quantum yield) for CHBr3 photolysis=*
@@ -1785,6 +1788,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
 ! data arrays
       integer, PARAMETER :: kdata=200
@@ -1805,7 +1809,6 @@
       if( initialize ) then
         CALL readit
       else
-        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 ! option:
 
@@ -1819,14 +1822,14 @@
         DO iw = 1, nw - 1
           IF (wc(iw) .GT. 290._rk .AND. wc(iw) .LT. 340._rk ) then
             where( tlev(1:nz) > 210._rk .AND. tlev(1:nz) < 300._rk )
-              xsqy_tab(j)%sq(1:nz,iw) = &
+              sq(1:nz,iw) = &
                    EXP( (.06183_rk - .000241_rk*wc(iw))*t(1:nz) &
                              - (2.376_rk + 0.14757_rk*wc(iw)) )
             elsewhere
-              xsqy_tab(j)%sq(1:nz,iw) = yg(iw)
+              sq(1:nz,iw) = yg(iw)
             endwhere
           ELSE
-            xsqy_tab(j)%sq(1:nz,iw) = yg(iw)
+            sq(1:nz,iw) = yg(iw)
           ENDIF
         ENDDO
       endif
@@ -1853,7 +1856,7 @@
 
 !=============================================================================*
 
-      SUBROUTINE r11(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r11(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide product (cross section) x (quantum yield) for CH3CHO photolysis: =*
@@ -1879,6 +1882,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
 ! data arrays
       integer, PARAMETER :: kdata=150
@@ -1905,17 +1909,8 @@
           CALL readit
           is_initialized = .true.
         endif
-        if( chnl > 1 ) then
-          call check_alloc( ndx=j, nz=nw-1, nw=1, errmsg=errmsg, errflg=errflg )
-          if( chnl == 2 ) then
-            xsqy_tab(j)%sq(1:nw-1,1) = yg(1:nw-1) * yg2(1:nw-1)
-          elseif( chnl == 3 ) then
-            xsqy_tab(j)%sq(1:nw-1,1) = yg(1:nw-1) * yg3(1:nw-1)
-          endif
-        endif
       else
-        if( xsqy_tab(j)%channel == 1 ) then
-          call check_alloc( j, nz, nw-1, errmsg, errflg )
+        if( chnl == 1 ) then
 !     mabs = 5
 !     myld = 1
           DO iw = 1, nw - 1
@@ -1939,8 +1934,12 @@
 
             qy1(1:nz) = qy1_n0 * (1._rk + x) / (1._rk + x * airden(1:nz)/2.465E19_rk)
             qy1(1:nz) = MIN( 1._rk,MAX(0._rk,qy1(1:nz)) )
-            xsqy_tab(j)%sq(1:nz,iw) = sig * qy1(1:nz)
+            sq(1:nz,iw) = sig * qy1(1:nz)
           ENDDO
+        elseif( chnl == 2 ) then
+          sq(1:nw-1,1) = yg(1:nw-1) * yg2(1:nw-1)
+        elseif( chnl == 3 ) then
+          sq(1:nw-1,1) = yg(1:nw-1) * yg3(1:nw-1)
         endif
       endif
 
@@ -1981,7 +1980,7 @@
 
 !=============================================================================*
 
-      SUBROUTINE r12(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r12(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide the product (cross section) x (quantum yield) for C2H5CHO        =*
@@ -2002,6 +2001,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
       integer, PARAMETER :: kdata=150
 
@@ -2020,7 +2020,6 @@
       if( initialize ) then
         CALL readit
       else
-        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 ! Absorption:
 ! 1:  IUPAC-97 data, from Martinez et al.
@@ -2036,11 +2035,11 @@
 ! quantum yields:
 ! use Stern-Volmer pressure dependence:
           IF (yg1(iw) .LT. pzero) THEN
-            xsqy_tab(j)%sq(1:nz,iw) = 0._rk
+            sq(1:nz,iw) = 0._rk
           ELSE
             qy1(1:nz) = 1._rk/(1._rk + (1._rk/yg1(iw) - 1._rk)*airden(1:nz)/2.45e19_rk)
             qy1(1:nz) = MIN(qy1(1:nz),1._rk)
-            xsqy_tab(j)%sq(1:nz,iw) = yg(iw) * qy1(1:nz)
+            sq(1:nz,iw) = yg(iw) * qy1(1:nz)
           ENDIF
         ENDDO
       endif
@@ -2075,7 +2074,7 @@
 
 !=============================================================================*
 
-      SUBROUTINE r13(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r13(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide the product (cross section) x (quantum yield) for CHOCHO         =*
@@ -2098,6 +2097,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
 ! data arrays
       integer, PARAMETER :: kdata=500
@@ -2120,13 +2120,13 @@
           CALL readit
           is_initialized = .true.
         endif
-        call check_alloc( ndx=j, nz=nw-1, nw=1, errmsg=errmsg, errflg=errflg )
+      else
         if( xsqy_tab(j)%channel == 1 ) then
-          xsqy_tab(j)%sq(1:nw-1,1) = yg(1:nw-1) * yg1(1:nw-1)
+          sq(1:nw-1,1) = yg(1:nw-1) * yg1(1:nw-1)
         elseif( xsqy_tab(j)%channel == 2 ) then
-          xsqy_tab(j)%sq(1:nw-1,1) = yg(1:nw-1) * yg2(1:nw-1)
+          sq(1:nw-1,1) = yg(1:nw-1) * yg2(1:nw-1)
         elseif( xsqy_tab(j)%channel == 3 ) then
-          xsqy_tab(j)%sq(1:nw-1,1) = yg(1:nw-1) * yg3(1:nw-1)
+          sq(1:nw-1,1) = yg(1:nw-1) * yg3(1:nw-1)
         endif
       endif
 
@@ -2171,7 +2171,7 @@
 
 !=============================================================================*
 
-      SUBROUTINE r14(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r14(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide the product (cross section) x (quantum yield) for CH3COCHO       =*
@@ -2187,6 +2187,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
 ! data arrays
       integer, PARAMETER :: kdata=500
@@ -2207,8 +2208,7 @@
       if( initialize ) then
         CALL readit
       else
-        call check_alloc( j, nz, nw-1, errmsg, errflg )
-
+  
 !     mabs = 8
 !     myld = 5
 
@@ -2228,13 +2228,13 @@
 ! in N2, Chen et al:
           IF(phi0 .GT. 0._rk) THEN
             IF (wc(iw) .GE. 380._rk .AND. wc(iw) .LE. 440._rk) THEN
-              xsqy_tab(j)%sq(1:nz,iw) = sig * phi0 &
+              sq(1:nz,iw) = sig * phi0 &
                   / (phi0 + kq * airden(1:nz) * 760._rk/2.456E19_rk)
             ELSE
-              xsqy_tab(j)%sq(1:nz,iw) = sig * phi0
+              sq(1:nz,iw) = sig * phi0
             ENDIF
           ELSE
-            xsqy_tab(j)%sq(1:nz,iw) = 0._rk
+            sq(1:nz,iw) = 0._rk
           ENDIF
         ENDDO
       endif
@@ -2256,7 +2256,7 @@
 
 !=============================================================================*
 
-      SUBROUTINE r15(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r15(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide product (cross section) x (quantum yield) for CH3COCH3 photolysis=*
@@ -2271,6 +2271,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
       integer, PARAMETER :: kdata=150
 
@@ -2291,7 +2292,6 @@
       if( initialize ) then
         CALL readit
       else
-        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 !     mabs = 4
 !     myld = 4
@@ -2300,7 +2300,7 @@
         DO iw = 1, nw - 1
           sig(1:nz) = yg(iw) * (1._rk + t(1:nz)*(yg2(iw) + t(1:nz)*yg3(iw)))
           CALL qyacet(nz, wc(iw), tlev, airden, fac)
-          xsqy_tab(j)%sq(1:nz,iw) = sig(1:nz)*min(max(0._rk,fac(1:nz)),1._rk)
+          sq(1:nz,iw) = sig(1:nz)*min(max(0._rk,fac(1:nz)),1._rk)
         ENDDO
       endif
 
@@ -2334,7 +2334,7 @@
 
 !=============================================================================*
 
-      SUBROUTINE r17(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r17(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide product (cross section) x (quantum yield) for CH3ONO2            =*
@@ -2350,6 +2350,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
       integer, PARAMETER :: kdata = 100
 
@@ -2368,14 +2369,13 @@
       if( initialize ) then
         CALL readit
       else
-        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 !     mabs = 9
 ! quantum yield = 1
 
         T(1:nz) = tlev(1:nz) - 298._rk
         DO iw = 1, nw - 1
-          xsqy_tab(j)%sq(1:nz,iw) = yg(iw) * exp( yg1(iw) * T(1:nz) )
+          sq(1:nz,iw) = yg(iw) * exp( yg1(iw) * T(1:nz) )
         ENDDO
       endif
 
@@ -2404,7 +2404,7 @@
 
 !=============================================================================*
 
-      SUBROUTINE r18(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r18(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide product (cross section) x (quantum yield) for PAN photolysis:    =*
@@ -2422,6 +2422,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
 ! data arrays
       integer, PARAMETER :: kdata=100
@@ -2453,13 +2454,11 @@
           is_initialized = .true.
         endif
       else
-        call check_alloc( j, nz, nw-1, errmsg, errflg )
-
         chnl = xsqy_tab(j)%channel
         T(1:nz) = tlev(1:nz) - 298._rk
         DO iw = 1, nw-1
           sig(1:nz) = yg(iw) * EXP( yg2(iw)*T(1:nz) )
-          xsqy_tab(j)%sq(1:nz,iw) = qyld(chnl) * sig(1:nz)
+          sq(1:nz,iw) = qyld(chnl) * sig(1:nz)
         ENDDO 
       endif
 
@@ -2491,7 +2490,7 @@
 
 !=============================================================================*
 
-      SUBROUTINE r20(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r20(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide product (cross section) x (quantum yield) for CCl4 photolysis:   =*
@@ -2508,6 +2507,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
 ! data arrays
       integer, PARAMETER :: kdata=100
@@ -2534,7 +2534,6 @@
       if( initialize ) then
         CALL readit
       else
-        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 ! mabs = 1:  jpl 1997 recommendation
 ! mabs = 2:  jpl 2011 recommendation, with T dependence
@@ -2554,7 +2553,7 @@
              w1 = wc(iw)
              tcoeff = b0 + w1*(b1 + w1*(b2 + w1*(b3 + w1*b4)))
            ENDIF
-           xsqy_tab(j)%sq(1:nz,iw) = yg(iw) * 10._rk**(tcoeff*temp(1:nz))
+           sq(1:nz,iw) = yg(iw) * 10._rk**(tcoeff*temp(1:nz))
         ENDDO
       endif
 
@@ -2577,7 +2576,7 @@
 
 !=============================================================================*
 
-      SUBROUTINE r23(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r23(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide product (cross section) x (quantum yield) for CFC-113 photolysis:=*
@@ -2595,6 +2594,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
 ! data arrays
       integer, PARAMETER :: kdata=100
@@ -2618,14 +2618,13 @@
         CALL readit
         ydel(1:nw-1) = yg1(1:nw-1) - yg2(1:nw-1)
       else
-        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 !** quantum yield assumed to be unity
 
         t(1:nz) = MAX(210._rk,MIN(tlev(1:nz),295._rk))
         slope(1:nz) = (t(1:nz) - 210._rk)*tfac1
         DO iw = 1, nw-1
-          xsqy_tab(j)%sq(1:nz,iw) = yg2(iw) + slope(1:nz)*ydel(iw)
+          sq(1:nz,iw) = yg2(iw) + slope(1:nz)*ydel(iw)
         ENDDO
       endif
 
@@ -2659,7 +2658,7 @@
 
 !=============================================================================*
 
-      SUBROUTINE r24(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r24(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide product (cross section) x (quantum yield) for CFC-144 photolysis:=*
@@ -2677,6 +2676,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
 ! data arrays
       integer, PARAMETER :: kdata=100
@@ -2700,14 +2700,13 @@
         CALL readit
         ydel(1:nw-1) = yg1(1:nw-1) - yg2(1:nw-1)
       else
-        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 !** quantum yield assumed to be unity
 
         t(1:nz) = MAX(210._rk,MIN(tlev(1:nz),295._rk))
         slope(1:nz) = (t(1:nz) - 210._rk)*tfac1
         DO iw = 1, nw-1
-          xsqy_tab(j)%sq(1:nz,iw) = yg2(iw) + slope(1:nz)*ydel(iw)
+          sq(1:nz,iw) = yg2(iw) + slope(1:nz)*ydel(iw)
         ENDDO
       endif
 
@@ -2741,7 +2740,7 @@
 
 !=============================================================================*
 
-      SUBROUTINE r26(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r26(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide product (cross section) x (quantum yield) for CFC-11  photolysis =*
@@ -2758,6 +2757,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
       integer, PARAMETER :: kdata=100
 
@@ -2775,13 +2775,12 @@
       if( initialize ) then
         CALL readit
       else
-        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 !*** quantum yield assumed to be unity
 
         t(1:nz) = 1.E-04_rk * (tlev(1:nz) - 298._rk)
         DO iw = 1, nw-1
-          xsqy_tab(j)%sq(1:nz,iw) = yg(iw) * EXP((wc(iw)-184.9_rk) * t(1:nz))
+          sq(1:nz,iw) = yg(iw) * EXP((wc(iw)-184.9_rk) * t(1:nz))
         ENDDO
       endif
 
@@ -2805,7 +2804,7 @@
 
 !=============================================================================*
 
-      SUBROUTINE r27(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r27(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide product (cross section) x (quantum yield) for CFC-12  photolysis:=*
@@ -2822,6 +2821,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
 ! data arrays
       integer, PARAMETER :: kdata=100
@@ -2840,11 +2840,10 @@
       if( initialize ) then
         CALL readit
       else
-        call check_alloc( j, nz, nw-1, errmsg, errflg )
 !*** quantum yield assumed to be unity
         t(1:nz) = 1.E-04_rk * (tlev(1:nz) - 298._rk) 
         DO iw = 1, nw-1
-          xsqy_tab(j)%sq(1:nz,iw) = yg(iw) * EXP((wc(iw)-184.9_rk) * t(1:nz))
+          sq(1:nz,iw) = yg(iw) * EXP((wc(iw)-184.9_rk) * t(1:nz))
         ENDDO
       endif
 
@@ -2867,7 +2866,7 @@
 
 !=============================================================================*
 
-      SUBROUTINE r29(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r29(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide product (cross section) x (quantum yield) for CH3CCl3 photolysis =*
@@ -2885,6 +2884,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
 ! data arrays
       integer, PARAMETER :: kdata=100
@@ -2910,7 +2910,6 @@
         ydel2(1:nw-1) = yg2(1:nw-1) - yg3(1:nw-1)
         ydel1(1:nw-1) = yg1(1:nw-1) - yg2(1:nw-1)
       else
-        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 !*** quantum yield assumed to be unity
 
@@ -2918,10 +2917,10 @@
         DO iw = 1, nw-1
           where( t(1:nz) <= 250._rk )
             slope(1:nz) = (t(1:nz) - 210._rk)*tfac1
-            xsqy_tab(j)%sq(1:nz,iw) = yg3(iw) + slope(1:nz)*ydel2(iw)
+            sq(1:nz,iw) = yg3(iw) + slope(1:nz)*ydel2(iw)
           elsewhere
             slope(1:nz) = (t(1:nz) - 250._rk)*tfac2
-            xsqy_tab(j)%sq(1:nz,iw) = yg2(iw) + slope(1:nz)*ydel1(iw)
+            sq(1:nz,iw) = yg2(iw) + slope(1:nz)*ydel1(iw)
           endwhere
         ENDDO
       endif
@@ -2962,7 +2961,7 @@
 
 !=============================================================================*
 
-      SUBROUTINE r30(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r30(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide product (cross section) x (quantum yield) for CH3Cl photolysis:  =*
@@ -2980,6 +2979,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
 ! data arrays
       integer, PARAMETER :: kdata=100
@@ -3006,7 +3006,6 @@
         ydel2(1:nw-1) = yg2(1:nw-1) - yg3(1:nw-1)
         ydel1(1:nw-1) = yg1(1:nw-1) - yg2(1:nw-1)
       else
-        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 !*** quantum yield assumed to be unity
 
@@ -3014,10 +3013,10 @@
         DO iw = 1, nw-1
           where( t(1:nz) <= 279._rk )
             slope(1:nz) = (t(1:nz) - 255._rk)*tfac1
-            xsqy_tab(j)%sq(1:nz,iw) = yg3(iw) + slope(1:nz)*ydel2(iw)
+            sq(1:nz,iw) = yg3(iw) + slope(1:nz)*ydel2(iw)
           elsewhere
             slope(1:nz) = (t(1:nz) - 279._rk)*tfac2
-            xsqy_tab(j)%sq(1:nz,iw) = yg2(iw) + slope(1:nz)*ydel1(iw)
+            sq(1:nz,iw) = yg2(iw) + slope(1:nz)*ydel1(iw)
           endwhere
         ENDDO
       endif
@@ -3058,7 +3057,7 @@
 
 !=============================================================================*
 
-      SUBROUTINE r32(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r32(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide product (cross section) x (quantum yield) for HCFC-123 photolysis=*
@@ -3075,6 +3074,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
 ! local
       real(rk), parameter :: LBar = 206.214_rk
@@ -3094,7 +3094,6 @@
       if( initialize ) then
         CALL readit
       else
-        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 !*** quantum yield assumed to be unity
 
@@ -3109,9 +3108,9 @@
               sum(1:nz) = (coeff(i,1) + t(1:nz)*(coeff(i,2) + t(1:nz)*coeff(i,3))) &
                           * (lambda-LBar)**(i-1) + sum(1:nz)
             ENDDO 
-            xsqy_tab(j)%sq(1:nz,iw) = EXP(sum(1:nz))
+            sq(1:nz,iw) = EXP(sum(1:nz))
           ELSE
-            xsqy_tab(j)%sq(1:nz,iw) = 0._rk
+            sq(1:nz,iw) = 0._rk
           ENDIF
         ENDDO
       endif
@@ -3139,7 +3138,7 @@
 
 !=============================================================================*
 
-      SUBROUTINE r33(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r33(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide product (cross section) x (quantum yield) for HCFC-124 photolysis=*
@@ -3156,6 +3155,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
 ! local
       real(rk), parameter :: LBar = 206.214_rk
@@ -3175,7 +3175,6 @@
       if( initialize ) then
         CALL readit
       else
-        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 !*** quantum yield assumed to be unity
 
@@ -3188,9 +3187,9 @@
               sum(1:nz) = (coeff(i,1) + t(1:nz)*(coeff(i,2) + t(1:nz)*coeff(i,3))) &
                           * (lambda-LBar)**(i-1) + sum(1:nz)
             ENDDO 
-            xsqy_tab(j)%sq(1:nz,iw) = EXP(sum(1:nz))
+            sq(1:nz,iw) = EXP(sum(1:nz))
           ELSE
-            xsqy_tab(j)%sq(1:nz,iw) = 0._rk
+            sq(1:nz,iw) = 0._rk
           ENDIF
         ENDDO
       endif
@@ -3219,7 +3218,7 @@
 
 !=============================================================================*
 
-      SUBROUTINE r35(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r35(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide product (cross section) x (quantum yield) for HCFC-142b          =*
@@ -3237,6 +3236,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
 ! local
       real(rk), parameter :: LBar = 206.214_rk
@@ -3256,7 +3256,6 @@
       if( initialize ) then
         CALL readit
       else
-        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 !*** quantum yield assumed to be unity
 
@@ -3271,9 +3270,9 @@
             ENDDO 
 ! offeset exponent by 40 (exp(-40.) = 4.248e-18) to prevent exp. underflow errors
 ! on some machines.
-            xsqy_tab(j)%sq(1:nz,iw) = 4.248e-18_rk * EXP(sum(1:nz) + 40._rk)
+            sq(1:nz,iw) = 4.248e-18_rk * EXP(sum(1:nz) + 40._rk)
           ELSE
-            xsqy_tab(j)%sq(1:nz,iw) = 0._rk
+            sq(1:nz,iw) = 0._rk
           ENDIF
         ENDDO
       endif
@@ -3302,7 +3301,7 @@
 
 !=============================================================================*
 
-      SUBROUTINE r38(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r38(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide product (cross section) x (quantum yield) for HCFC-22 photolysis =*
@@ -3320,6 +3319,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
 ! data arrays
       integer, PARAMETER :: kdata=100
@@ -3349,7 +3349,6 @@
         ydel2(1:nw-1) = yg2(1:nw-1) - yg3(1:nw-1)
         ydel1(1:nw-1) = yg1(1:nw-1) - yg2(1:nw-1)
       else
-        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 !*** quantum yield assumed to be unity
 
@@ -3360,13 +3359,13 @@
         t4(1:nz) = (t(1:nz) - 270._rk)*tfac4
         DO iw = 1, nw-1
           where( t(1:nz) <= 230._rk )
-            xsqy_tab(j)%sq(1:nz,iw) = yg5(iw) + t1(1:nz)*ydel4(iw)
+            sq(1:nz,iw) = yg5(iw) + t1(1:nz)*ydel4(iw)
           elsewhere( t(1:nz) > 230._rk .and. t(1:nz) <= 250._rk )
-            xsqy_tab(j)%sq(1:nz,iw) = yg4(iw) + t2(1:nz)*ydel3(iw)
+            sq(1:nz,iw) = yg4(iw) + t2(1:nz)*ydel3(iw)
           elsewhere( t(1:nz) > 250._rk .and. t(1:nz) <= 270._rk )
-            xsqy_tab(j)%sq(1:nz,iw) = yg3(iw) + t3(1:nz)*ydel2(iw)
+            sq(1:nz,iw) = yg3(iw) + t3(1:nz)*ydel2(iw)
           elsewhere
-            xsqy_tab(j)%sq(1:nz,iw) = yg2(iw) + t4(1:nz)*ydel1(iw)
+            sq(1:nz,iw) = yg2(iw) + t4(1:nz)*ydel1(iw)
           endwhere
         ENDDO
       endif
@@ -3418,7 +3417,7 @@
 
 !=============================================================================*
 
-      SUBROUTINE r39(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r39(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide product (cross section) x (quantum yield) for HO2 photolysis:    =*
@@ -3436,6 +3435,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
 ! data arrays
       integer, PARAMETER :: kdata=100
@@ -3447,8 +3447,8 @@
       real(rk), parameter :: tfac1 = 1._rk/(248._rk - 193._rk)
       real(rk), parameter :: xfac1 = 1._rk/15._rk
 
-      REAL(rk) :: yg(kw)
-      REAL(rk) :: qy(nw)
+      REAL(rk), save :: yg(kw)
+      REAL(rk), save :: qy(kw)
       INTEGER :: n
 
       errmsg = ' '
@@ -3456,13 +3456,13 @@
 
       if( initialize ) then
         CALL readit
-        call check_alloc( ndx=j, nz=nw-1, nw=1, errmsg=errmsg, errflg=errflg )
         WHERE( wc(1:nw-1) >= 248._rk )
           qy(1:nw-1) = 1._rk
         ELSEWHERE
           qy(1:nw-1) = max( (1._rk + (wc(1:nw-1) - 193._rk)*14._rk*tfac1)*xfac1,0._rk )
         ENDWHERE
-        xsqy_tab(j)%sq(1:nw-1,1) = qy(1:nw-1) * yg(1:nw-1)
+      else
+        sq(1:nw-1,1) = qy(1:nw-1) * yg(1:nw-1)
       endif
 
       CONTAINS
@@ -3484,7 +3484,7 @@
 
 !=============================================================================*
 
-      SUBROUTINE r44(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r44(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide product (cross section) x (quantum yield) for N2O photolysis:    =*
@@ -3501,6 +3501,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
 ! local
       real(rk), parameter :: A0 = 68.21023_rk                
@@ -3532,7 +3533,6 @@
           ENDIF
         ENDDO
       else
-        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 !*** cross sections according to JPL97 recommendation (identical to 94 rec.)
 !*** see file DATAJ1/ABS/N2O_jpl94.abs for detail
@@ -3544,9 +3544,9 @@
           lambda = wc(iw)   
           IF (lambda >= 173._rk .AND. lambda <= 240._rk) THEN
             BT(1:nz) = (t(1:nz) - 300._rk)*EXP(B(iw))
-            xsqy_tab(j)%sq(1:nz,iw) = EXP(A(iw)+BT(1:nz))
+            sq(1:nz,iw) = EXP(A(iw)+BT(1:nz))
           ELSE
-            xsqy_tab(j)%sq(1:nz,iw) = 0._rk
+            sq(1:nz,iw) = 0._rk
           ENDIF
         ENDDO
       endif
@@ -3555,7 +3555,7 @@
 
 !=============================================================================*
 
-      SUBROUTINE r45(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r45(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide product (cross section) x (quantum yield) for ClONO2 photolysis: =*
@@ -3573,6 +3573,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
 ! data arrays
       integer, PARAMETER :: kdata=150
@@ -3597,7 +3598,6 @@
           is_initialized = .true.
         endif
       else
-        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
         t(1:nz) = tlev(1:nz) - 296._rk
         chnl = xsqy_tab(j)%channel
@@ -3616,7 +3616,7 @@
 ! compute T-dependent cross section
           xs(1:nz) = yg1(iw) * (1._rk + t(1:nz) &
                    * (yg2(iw) + t(1:nz)*yg3(iw)))
-          xsqy_tab(j)%sq(1:nz,iw) = qy1 * xs(1:nz)
+          sq(1:nz,iw) = qy1 * xs(1:nz)
         ENDDO
       endif
 
@@ -3653,7 +3653,7 @@
 
 !=============================================================================*
 
-      SUBROUTINE r46(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r46(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide product (cross section) x (quantum yield) for BrONO2 photolysis: =*
@@ -3671,6 +3671,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
 ! data arrays
       integer, PARAMETER :: kdata=100
@@ -3681,18 +3682,22 @@
 ! local
       REAL(rk), parameter :: qyld(2) = (/ .15_rk,.85_rk /)
 
-      REAL(rk)    :: yg1(kw)
+      REAL(rk), save :: yg1(kw)
       INTEGER :: n
       INTEGER :: chnl
+      LOGICAL, save :: is_initialized = .false.
 
       errmsg = ' '
       errflg = 0
 
       if( initialize ) then
-        CALL readit
-        call check_alloc( ndx=j, nz=nw-1, nw=1, errmsg=errmsg, errflg=errflg )
+        if( .not. is_initialized ) then
+          CALL readit
+          is_initialized = .true.
+        endif
+      else
         chnl = xsqy_tab(j)%channel
-        xsqy_tab(j)%sq(1:nw-1,1) = qyld(chnl) * yg1(1:nw-1)
+        sq(1:nw-1,1) = qyld(chnl) * yg1(1:nw-1)
       endif
 
       CONTAINS
@@ -3714,7 +3719,7 @@
 
 !=============================================================================*
 
-      SUBROUTINE r47(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r47(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide product (cross section) x (quantum yield) for Cl2 photolysis:    =*
@@ -3732,6 +3737,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
 ! local
       real(rk) :: ex1(nz), ex2(nz)
@@ -3744,7 +3750,6 @@
       errflg = 0
 
       if( .not. initialize ) then
-        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 ! mabs = 1: Finlayson-Pitts and Pitts
 ! mabs = 2: JPL2011 formula
@@ -3761,7 +3766,7 @@
         DO iw = 1, nw-1
           ex1(1:nz) = 27.3_rk  * exp(-99.0_rk * alpha(1:nz) * (log(329.5_rk/wc(iw)))**2)
           ex2(1:nz) = .932_rk * exp(-91.5_rk * alpha(1:nz) * (log(406.5_rk/wc(iw)))**2)
-          xsqy_tab(j)%sq(1:nz,iw) = 1.e-20_rk * sqrt(alpha(1:nz)) * (ex1(1:nz) + ex2(1:nz))
+          sq(1:nz,iw) = 1.e-20_rk * sqrt(alpha(1:nz)) * (ex1(1:nz) + ex2(1:nz))
         ENDDO
       endif
 
@@ -3769,7 +3774,7 @@
 
 !=============================================================================*
 
-      SUBROUTINE r101(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r101(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide the product (cross section) x (quantum yield) for CH2(OH)CHO     =*
@@ -3787,6 +3792,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
 ! data arrays
       integer, PARAMETER :: kdata=100
@@ -3797,17 +3803,21 @@
 ! local
       real(rk), parameter :: qyld(3) = (/ .83_rk, .10_rk, .07_rk /)
 
-      REAL(rk)    :: yg(kw)
+      REAL(rk),save :: yg(kw)
       INTEGER :: chnl
+      LOGICAL, save :: is_initialized = .false.
 
       errmsg = ' '
       errflg = 0
 
       if( initialize ) then
+        if( .not. is_initialized ) then
+          CALL readit
+          is_initialized = .true.
+        endif
+      else
         chnl = xsqy_tab(j)%channel
-        CALL readit
-        call check_alloc( ndx=j, nz=nw-1, nw=1, errmsg=errmsg, errflg=errflg )
-        xsqy_tab(j)%sq(1:nw-1,1) = yg(1:nw-1) * qyld(chnl)
+        sq(1:nw-1,1) = yg(1:nw-1) * qyld(chnl)
       endif
 
       CONTAINS
@@ -3828,7 +3838,7 @@
 
 !=============================================================================*
 
-      SUBROUTINE r103(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r103(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide the product (cross section) x (quantum yield) for CH3COCHCH2     =*
@@ -3844,6 +3854,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
 ! data arrays
       integer, PARAMETER :: kdata=150
@@ -3862,7 +3873,6 @@
       if( initialize ) then
         CALL readit
       else
-        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 ! mabs = 1: Schneider and moortgat
 ! mabs = 2: jpl 2011
@@ -3878,7 +3888,7 @@
           qy(1:nz) = exp(-0.055_rk*(wc(iw) - 308._rk)) &
                    / (5.5_rk + 9.2e-19_rk*airden(1:nz))
           qy(1:nz) = min(qy(1:nz), 1._rk)
-          xsqy_tab(j)%sq(1:nz,iw) = yg(iw) * qy(1:nz)
+          sq(1:nz,iw) = yg(iw) * qy(1:nz)
         ENDDO
       endif
 
@@ -3900,7 +3910,7 @@
 
 !=============================================================================*
 
-      SUBROUTINE r106(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r106(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide the product (cross section) x (quantum yield) for CH3CH2ONO2     =*
@@ -3916,6 +3926,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
 ! data arrays
       integer, PARAMETER :: kdata=100
@@ -3935,13 +3946,12 @@
       if( initialize ) then
         CALL readit
       else
-        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 ! quantum yield  = 1
 
         t(1:nz) = tlev(1:nz) - 298._rk
         DO iw = 1, nw - 1
-          xsqy_tab(j)%sq(1:nz,iw) = yg1(iw)*exp(yg2(iw)*t(1:nz))
+          sq(1:nz,iw) = yg1(iw)*exp(yg2(iw)*t(1:nz))
         ENDDO
       endif
 
@@ -3991,7 +4001,7 @@
 
 !=============================================================================*
 
-      SUBROUTINE r107(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r107(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide the product (cross section) x (quantum yield) for CH3CHONO2CH3   =*
@@ -4007,6 +4017,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
 ! data arrays
       integer, PARAMETER :: kdata=100
@@ -4026,13 +4037,12 @@
       if( initialize ) then
         CALL readit
       else
-        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 ! quantum yield  = 1
 
         t(1:nz) = tlev(1:nz) - 298._rk
         DO iw = 1, nw - 1
-          xsqy_tab(j)%sq(1:nz,iw) = yg1(iw)*exp(yg2(iw)*t(1:nz))
+          sq(1:nz,iw) = yg1(iw)*exp(yg2(iw)*t(1:nz))
         ENDDO
       endif
 
@@ -4081,7 +4091,7 @@
 
 !=============================================================================*
 
-      SUBROUTINE r108(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r108(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide the product (cross section) x (quantum yield) for                =*
@@ -4096,31 +4106,34 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
 ! local
 ! coefficients from Roberts and Fajer 1989, over 270-306 nm
       real(rk), parameter ::a = -2.359E-3_rk
       real(rk), parameter ::b = 1.2478_rk
       real(rk), parameter ::c = -210.4_rk
-
+      real(rk), save :: xsq(kw)
+      
       errmsg = ' '
       errflg = 0
 
       if( initialize ) then
-        call check_alloc( ndx=j, nz=nw-1, nw=1, errmsg=errmsg, errflg=errflg )
 ! quantum yield  = 1
         WHERE( wc(1:nw-1) >= 270._rk .AND. wc(1:nw-1) <= 306._rk )
-          xsqy_tab(j)%sq(1:nw-1,1) = EXP(c + wc(1:nw-1)*(b + wc(1:nw-1)*a))
+          xsq(1:nw-1) = EXP(c + wc(1:nw-1)*(b + wc(1:nw-1)*a))
         ELSEWHERE
-          xsqy_tab(j)%sq(1:nw-1,1) = 0._rk
+          xsq(1:nw-1) = 0._rk
         ENDWHERE
+      else
+        sq(1:nw-1,1) = xsq(1:nw-1)
       endif
 
       END SUBROUTINE r108
 
 !=============================================================================*
 
-      SUBROUTINE r109(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r109(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide the product (cross section) x (quantum yield) for                =*
@@ -4135,31 +4148,34 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
 ! local
 ! coefficients from Roberts and Fajer 1989, over 284-335 nm
       real(rk), parameter :: a = -1.365E-3_rk
       real(rk), parameter :: b = 0.7834_rk
       real(rk), parameter :: c = -156.8_rk
+      real(rk), save :: xsq(kw)
 
       errmsg = ' '
       errflg = 0
 
       if( initialize ) then
-        call check_alloc( ndx=j, nz=nw-1, nw=1, errmsg=errmsg, errflg=errflg )
 ! quantum yield  = 1
         WHERE( wc(1:nw-1) >= 284._rk .AND. wc(1:nw-1) <= 335._rk )
-          xsqy_tab(j)%sq(1:nw-1,1) = EXP(c + wc(1:nw-1)*(b + wc(1:nw-1)*a))
+          xsq(1:nw-1) = EXP(c + wc(1:nw-1)*(b + wc(1:nw-1)*a))
         ELSEWHERE
-          xsqy_tab(j)%sq(1:nw-1,1) = 0._rk
+          xsq(1:nw-1) = 0._rk
         ENDWHERE
+      else
+        sq(1:nw-1,1) = xsq(1:nw-1)
       endif
 
       END SUBROUTINE r109
 
 !=============================================================================*
 
-      SUBROUTINE r110(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r110(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide the product (cross section) x (quantum yield) for                =*
@@ -4174,31 +4190,34 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
 ! local
 ! coefficients from Roberts and Fajer 1989, over 270-330 nm
       real(rk), parameter ::a = -0.993E-3_rk
       real(rk), parameter ::b = 0.5307_rk
       real(rk), parameter ::c = -115.5_rk
+      real(rk), save :: xsq(kw)
 
       errmsg = ' '
       errflg = 0
 
       if( initialize ) then
-        call check_alloc( ndx=j, nz=nw-1, nw=1, errmsg=errmsg, errflg=errflg )
 ! quantum yield  = 1
         WHERE( wc(1:nw-1) >= 270._rk .AND. wc(1:nw-1) <= 330._rk )
-          xsqy_tab(j)%sq(1:nw-1,1) = EXP(c + wc(1:nw-1)*(b + wc(1:nw-1)*a))
+          xsq(1:nw-1) = EXP(c + wc(1:nw-1)*(b + wc(1:nw-1)*a))
         ELSEWHERE
-          xsqy_tab(j)%sq(1:nw-1,1) = 0._rk
+          xsq(1:nw-1) = 0._rk
         ENDWHERE
+      else
+        sq(1:nw-1,1) = xsq(1:nw-1)
       endif
 
       END SUBROUTINE r110
 
 !=============================================================================*
 
-      SUBROUTINE r112(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r112(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide the product (cross section) x (quantum yield) for hydroxyacetone =*
@@ -4219,6 +4238,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
 ! data arrays
       integer, PARAMETER :: kdata=100
@@ -4230,14 +4250,16 @@
       REAL(rk), parameter :: qy = .325_rk
 
       REAL(rk) :: yg(kw)
+      real(rk), save :: xsq(kw)
 
       errmsg = ' '
       errflg = 0
 
       if( initialize ) then
-        call check_alloc( ndx=j, nz=nw-1, nw=1, errmsg=errmsg, errflg=errflg )
         CALL readit
-        xsqy_tab(j)%sq(1:nw-1,1) = yg(1:nw-1) * qy
+        xsq(1:nw-1) = yg(1:nw-1) * qy
+      else
+        sq(1:nw-1,1) = xsq(1:nw-1)
       endif
 
       CONTAINS
@@ -4258,7 +4280,7 @@
 
 !=============================================================================*
 
-      SUBROUTINE r113(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r113(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide the product (cross section) x (quantum yield) for HOBr           =*
@@ -4275,31 +4297,34 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
 ! local
       REAL(rk)    :: sig(nw)
       REAL(rk)    :: xfac1(nw)
+      real(rk), save :: xsq(kw)
 
       errmsg = ' '
       errflg = 0
 
       if( initialize ) then
-        call check_alloc( ndx=j, nz=nw-1, nw=1, errmsg=errmsg, errflg=errflg )
-        xsqy_tab(j)%sq(1:nw-1,1) = 0._rk
+        xsq(1:nw-1) = 0._rk
         WHERE( wc(1:nw-1) >= 250._rk .and. wc(1:nw-1) <= 550._rk )
           xfac1(1:nw-1) = 1._rk/wc(1:nw-1)
           sig(1:nw-1) = 24.77_rk * exp( -109.80_rk*(LOG(284.01_rk*xfac1(1:nw-1)))**2 ) & 
                 + 12.22_rk * exp(  -93.63_rk*(LOG(350.57_rk*xfac1(1:nw-1)))**2 ) & 
                 + 2.283_rk * exp(- 242.40_rk*(LOG(457.38_rk*xfac1(1:nw-1)))**2 )
-          xsqy_tab(j)%sq(1:nw-1,1) = sig(1:nw-1) * 1.e-20_rk
+          xsq(1:nw-1) = sig(1:nw-1) * 1.e-20_rk
         ENDWHERE
+      else
+        sq(1:nw-1,1) = xsq(1:nw-1)
       endif
 
       END SUBROUTINE r113
 
 !=============================================================================*
 
-      SUBROUTINE r114(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r114(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide the product (cross section) x (quantum yield) for BrO            =*
@@ -4316,18 +4341,19 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
 ! local
       INTEGER :: i, n
       REAL(rk) :: x(20), y(20)
       REAL(rk) :: dum
       REAL(rk) :: yg(kw)
+      real(rk), save :: xsq(kw)
 
       errmsg = ' '
       errflg = 0
 
       if( initialize ) then
-        call check_alloc( ndx=j, nz=nw-1, nw=1, errmsg=errmsg, errflg=errflg )
         OPEN(UNIT=kin,FILE=trim(input_data_root)//'/DATAJ1/ABS/BrO.jpl03',STATUS='old')
         DO i = 1, 14
           READ(kin,*)
@@ -4343,14 +4369,16 @@
         x(n) = dum
 ! use bin-to-bin interpolation
         CALL inter4(nw,wl,yg,n,x,y,1, errmsg, errflg)
-        xsqy_tab(j)%sq(1:nw-1,1) = yg(1:nw-1)
+        xsq(1:nw-1) = yg(1:nw-1)
+      else
+        sq(1:nw-1,1) = xsq(1:nw-1)
       endif
 
       END SUBROUTINE r114
 
 !=============================================================================*
 
-      SUBROUTINE r118(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r118(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 != NO3-(aq) photolysis for snow simulations                                  =*
 !=        a) NO3-(aq) + hv -> NO2 + O-                                       =*
@@ -4376,6 +4404,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
 ! data arrays
       integer, PARAMETER :: kdata=50
@@ -4394,24 +4423,20 @@
       integer :: chnl
       LOGICAL, save :: is_initialized = .false.
 
-      chnl = xsqy_tab(j)%channel
       if( initialize ) then
         if( .not. is_initialized ) then
           CALL readit
           is_initialized = .true.
         endif
-        if( chnl > 1 ) then
-          call check_alloc( ndx=j, nz=nw-1, nw=1, errmsg=errmsg, errflg=errflg )
-          xsqy_tab(j)%sq(1:nw-1,1) = qyld(chnl)*yg2(1:nw-1)
-        endif
       else
+        chnl = xsqy_tab(j)%channel
         if( chnl == 1 ) then
-          call check_alloc( j, nz, nw-1, errmsg, errflg )
-
           qy1(1:nz) = exp(-2400._rk/tlev(1:nz) + 3.6_rk) ! Chu & Anastasio, 2003
           DO iw = 1, nw-1
-            xsqy_tab(j)%sq(1:nz,iw) = qy1(1:nz)*yg2(iw)
+            sq(1:nz,iw) = qy1(1:nz)*yg2(iw)
           ENDDO
+        else
+          sq(1:nw-1,1) = qyld(chnl)*yg2(1:nw-1)
         endif
       endif
 
@@ -4437,7 +4462,7 @@
 
 !=============================================================================*
 
-      SUBROUTINE r119(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r119(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide the product (cross section) x (quantum yield) for                =*
@@ -4458,6 +4483,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
 ! data arrays
       integer, PARAMETER :: kdata=100
@@ -4477,7 +4503,6 @@
       if( initialize ) then
         CALL readit
       else
-        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 ! Quantum Yields from 
 ! Raber, W.H. (1992) PhD Thesis, Johannes Gutenberg-Universitaet, Mainz, Germany.
@@ -4489,7 +4514,7 @@
         ptorr(1:nz) = 760._rk*airden(1:nz)/2.69e19_rk
         qy(1:nz)    = min( 1._rk/(0.96_rk + 2.22E-3_rk*ptorr(1:nz)),1._rk )
         DO iw = 1, nw-1
-          xsqy_tab(j)%sq(1:nz,iw) = yg(iw) * qy(1:nz)
+          sq(1:nz,iw) = yg(iw) * qy(1:nz)
         ENDDO
       endif
 
@@ -4513,7 +4538,7 @@
 
 !=============================================================================*
 
-      SUBROUTINE r120(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r120(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide product (cross section) x (quantum yield) for PPN photolysis:    =*
@@ -4531,6 +4556,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
 ! data arrays
       integer, PARAMETER :: kdata=100
@@ -4558,13 +4584,12 @@
           is_initialized = .true.
         endif
       else
-        call check_alloc( j, nz, nw-1, errmsg, errflg )
     
         chnl = xsqy_tab(j)%channel
         t(1:nz) = tlev(1:nz) - 298._rk
         DO iw = 1, nw-1
           sig(1:nz) = yg(iw) * EXP(yg2(iw)*t(1:nz))
-          xsqy_tab(j)%sq(1:nz,iw) = qyld(chnl) * sig(1:nz)
+          sq(1:nz,iw) = qyld(chnl) * sig(1:nz)
         ENDDO 
       endif
 
@@ -4596,7 +4621,7 @@
 
 !=============================================================================*
 
-      SUBROUTINE r122(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r122(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide product (cross section) x (quantum yield) for CH2=CHCHO          =*
@@ -4615,6 +4640,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
 ! data arrays
       integer, PARAMETER :: kdata=100
@@ -4634,7 +4660,6 @@
       if( initialize ) then
         CALL readit
       else
-        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
 ! quantum yields are pressure dependent between air number densities
 ! of 8e17 and 2.6e19, Gardner et al.:
@@ -4648,7 +4673,7 @@
             qym1(1:nz) = 0.086_rk + 1.613e-17_rk * 8.e17_rk
             qy(1:nz)   = 0.004_rk + 1._rk/qym1(1:nz)
           endwhere
-          xsqy_tab(j)%sq(1:nz,iw) = qy(1:nz) * yg(iw)
+          sq(1:nz,iw) = qy(1:nz) * yg(iw)
         ENDDO 
       endif
 
@@ -4670,7 +4695,7 @@
 
 !=============================================================================*
 
-      SUBROUTINE r125(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r125(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide product (cross section) x (quantum yield) for ClO photolysis     =*
@@ -4687,6 +4712,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
       INTEGER, intent(inout) :: j
 ! data arrays
@@ -4721,7 +4747,6 @@
           is_initialized = .true.
         endif
       else
-        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
         DO i = 1, nz
           tx = tlev(i)
@@ -4740,9 +4765,9 @@
             endif
             qy2 = 1._rk - qy1
             if( xsqy_tab(j)%channel == 1 ) then
-              xsqy_tab(j)%sq(i,iw) = qy1 * yy
+              sq(i,iw) = qy1 * yy
             elseif( xsqy_tab(j)%channel == 2 ) then
-              xsqy_tab(j)%sq(i,iw) = qy2 * yy
+              sq(i,iw) = qy2 * yy
             endif
           ENDDO
         ENDDO 
@@ -4786,7 +4811,7 @@
 
 !=============================================================================*
 
-      SUBROUTINE r129(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r129(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide product (cross section) x (quantum yield) for bromine nitrite    =*
@@ -4805,6 +4830,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
 ! data arrays
       integer, PARAMETER :: kdata=50
@@ -4818,15 +4844,17 @@
       real(rk), parameter :: qyld(2) = 0.5_rk
 
       REAL(rk) :: yg(kw)
+      real(rk), save :: xsq(kw)
 
       errmsg = ' '
       errflg = 0
 
       if( initialize ) then
-        call check_alloc( ndx=j, nz=nw-1, nw=1, errmsg=errmsg, errflg=errflg )
         CALL readit
         chnl = xsqy_tab(j)%channel
-        xsqy_tab(j)%sq(1:nw-1,1) = qyld(chnl) * yg(1:nw-1)
+        xsq(1:nw-1) = qyld(chnl) * yg(1:nw-1)
+      else
+        sq(1:nw-1,1) = xsq(1:nw-1)
       endif
 
       CONTAINS
@@ -4847,7 +4875,7 @@
 
 !******************************************************************
 
-      SUBROUTINE r131(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r131(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide product (cross section) x (quantum yield) for 
@@ -4864,6 +4892,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
 ! data arrays
       integer, PARAMETER :: kdata=150
@@ -4883,28 +4912,27 @@
       if( initialize ) then
         CALL readit
       else
-        call check_alloc( j, nz, nw-1, errmsg, errflg )
 ! quantum yields assumed unity
         DO iw = 1, nw-1
           where( tlev(1:nz) .le. 223._rk )
-            xsqy_tab(j)%sq(1:nz,iw) = yg223(iw)
+            sq(1:nz,iw) = yg223(iw)
           elsewhere (tlev(1:nz) .gt. 223._rk .and. tlev(1:nz) .le. 243._rk )
-            xsqy_tab(j)%sq(1:nz,iw) = yg223(iw) &
+            sq(1:nz,iw) = yg223(iw) &
                    + (yg243(iw) - yg223(iw))*(tlev(1:nz) - 223._rk)*.05_rk
           elsewhere (tlev(1:nz) .gt. 243._rk .and. tlev(1:nz) .le. 263._rk )
-            xsqy_tab(j)%sq(1:nz,iw) = yg243(iw) &
+            sq(1:nz,iw) = yg243(iw) &
                    + (yg263(iw) - yg243(iw))*(tlev(1:nz) - 243._rk)*.05_rk
           elsewhere (tlev(1:nz) .gt. 263._rk .and. tlev(1:nz) .le. 298._rk )
-            xsqy_tab(j)%sq(1:nz,iw) = yg263(iw) &
+            sq(1:nz,iw) = yg263(iw) &
                    + (yg298(iw) - yg263(iw))*(tlev(1:nz) - 263._rk)/35._rk
           elsewhere (tlev(1:nz) .gt. 298._rk .and. tlev(1:nz) .le. 323._rk )
-            xsqy_tab(j)%sq(1:nz,iw) = yg298(iw) &
+            sq(1:nz,iw) = yg298(iw) &
                    + (yg323(iw) - yg298(iw))*(tlev(1:nz) - 298._rk)*.04_rk
           elsewhere (tlev(1:nz) .gt. 323._rk .and. tlev(1:nz) .le. 343._rk )
-            xsqy_tab(j)%sq(1:nz,iw) = yg323(iw) &
+            sq(1:nz,iw) = yg323(iw) &
                    + (yg343(iw) - yg323(iw))*(tlev(1:nz) - 323._rk)*.05_rk
           elsewhere (tlev(1:nz) .gt. 343._rk )
-            xsqy_tab(j)%sq(1:nz,iw) = 0._rk
+            sq(1:nz,iw) = 0._rk
           endwhere
         ENDDO 
       endif
@@ -4964,7 +4992,7 @@
 
 !******************************************************************
 
-      SUBROUTINE r132(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r132(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide product (cross section) x (quantum yield) for 
@@ -4981,6 +5009,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
 ! data arrays
       integer, PARAMETER :: kdata=2000
@@ -5000,19 +5029,18 @@
       if( initialize ) then
         CALL readit
       else
-        call check_alloc( j, nz, nw-1, errmsg, errflg )
 ! quantum yields assumed unity
         DO iw = 1, nw-1
           where(tlev(1:nz) .le. 204._rk )
-            xsqy_tab(j)%sq(1:nz,iw) = yg204(iw)
+            sq(1:nz,iw) = yg204(iw)
           elsewhere (tlev(1:nz) .gt. 204._rk .and. tlev(1:nz) .le. 296._rk )
-            xsqy_tab(j)%sq(1:nz,iw) = yg204(iw) &
+            sq(1:nz,iw) = yg204(iw) &
                 + (yg296(iw) - yg204(iw))*(tlev(1:nz) - 204._rk)/92._rk
           elsewhere (tlev(1:nz) .gt. 296._rk .and. tlev(1:nz) .le. 378._rk )
-            xsqy_tab(j)%sq(1:nz,iw) = yg296(iw) &
+            sq(1:nz,iw) = yg296(iw) &
                 + (yg378(iw) - yg296(iw))*(tlev(1:nz) - 296._rk)/82._rk
           elsewhere (tlev(1:nz) .gt. 378._rk )
-            xsqy_tab(j)%sq(1:nz,iw) = yg378(iw)  
+            sq(1:nz,iw) = yg378(iw)  
           endwhere
         ENDDO 
       endif
@@ -5063,7 +5091,7 @@
 
 !******************************************************************
 
-      SUBROUTINE pxCH2O(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE pxCH2O(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  JPL 2011 recommendation.                                                 =*
@@ -5081,6 +5109,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
       integer, PARAMETER :: kdata=200
 
@@ -5110,7 +5139,6 @@
           is_initialized = .true.
         endif
       else
-        call check_alloc( j, nz, nw-1, errmsg, errflg )
 
         t(1:nz)  = tlev(1:nz) - 298._rk
         t1(1:nz) = (300._rk - tlev(1:nz))/80._rk
@@ -5130,9 +5158,9 @@
             qymt(1:nz) = qym300
           ENDIF
           if( xsqy_tab(j)%channel == 1 ) then
-            xsqy_tab(j)%sq(1:nz,iw) = sig(1:nz) * qyr300
+            sq(1:nz,iw) = sig(1:nz) * qyr300
           elseif( xsqy_tab(j)%channel == 2 ) then
-            xsqy_tab(j)%sq(1:nz,iw) = sig(1:nz) * qymt(1:nz)
+            sq(1:nz,iw) = sig(1:nz) * qymt(1:nz)
           endif
         ENDDO
       endif
@@ -5181,7 +5209,7 @@
 
 !=============================================================================*
 
-      SUBROUTINE r140(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r140(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide product (cross section) x (quantum yield) for CHCl3 photolysis:  =*
@@ -5198,6 +5226,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
 ! data arrays
       integer, PARAMETER :: kdata=50
@@ -5225,7 +5254,6 @@
       if( initialize ) then
         CALL readit
       else
-        call check_alloc( j, nz, nw-1, errmsg, errflg )
       
 !** quantum yield assumed to be unity
         temp(1:nz) = min(max(tlev(1:nz),210._rk),300._rk) - 295._rk
@@ -5236,7 +5264,7 @@
           IF(w1 > 190._rk .AND. w1 < 240._rk) THEN 
             tcoeff = b0 + w1*(b1 + w1*(b2 + w1*(b3 + w1*b4)))
           ENDIF
-          xsqy_tab(j)%sq(1:nz,iw) = yg(iw) * 10._rk**(tcoeff*temp(1:nz))
+          sq(1:nz,iw) = yg(iw) * 10._rk**(tcoeff*temp(1:nz))
         ENDDO
       endif
 
@@ -5258,7 +5286,7 @@
 
 !=============================================================================*
 
-      SUBROUTINE r141(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r141(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide product (cross section) x (quantum yield) for C2H5ONO2           =*
@@ -5277,6 +5305,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
 ! data arrays
       integer, PARAMETER :: kdata = 50
@@ -5295,11 +5324,10 @@
       if( initialize ) then
         CALL readit
       else
-        call check_alloc( j, nz, nw-1, errmsg, errflg )
 ! quantum yield = 1
         t(1:nz) = tlev(1:nz) - 298._rk
         DO iw = 1, nw - 1
-          xsqy_tab(j)%sq(1:nz,iw) = yg1(iw) * exp(yg2(iw) * t(1:nz))
+          sq(1:nz,iw) = yg1(iw) * exp(yg2(iw) * t(1:nz))
         ENDDO
       endif
 
@@ -5329,7 +5357,7 @@
 
       END SUBROUTINE r141
 
-      SUBROUTINE r146(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg )
+      SUBROUTINE r146(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------*
 !=  PURPOSE:                                                                 =*
 !=  Provide product (cross section) x (quantum yield) for                    =*
@@ -5348,6 +5376,7 @@
       REAL(rk), intent(in)    :: airden(:)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
 
 ! data arrays
       integer, PARAMETER :: kdata=200
@@ -5356,15 +5385,15 @@
       REAL(rk)    :: x(kdata), y(kdata)
 
 ! local
-      REAL(rk)    :: yg1(kw), yg2(kw)
+      REAL(rk), save    :: yg1(kw), yg2(kw)
 
       errmsg = ' '
       errflg = 0
 
       if( initialize ) then
-        call check_alloc( ndx=j, nz=nw-1, nw=1, errmsg=errmsg, errflg=errflg )
         CALL readit
-        xsqy_tab(j)%sq(1:nw-1,1) = yg1(1:nw-1) * yg2(1:nw-1)
+      else  
+        sq(1:nw-1,1) = yg1(1:nw-1) * yg2(1:nw-1)
       endif
 
       CONTAINS
@@ -5831,36 +5860,5 @@
 
 
       END FUNCTION get_xsqy_tab_ndx
-
-      SUBROUTINE check_alloc( ndx, nz, nw, errmsg, errflg )
-
-      integer, intent(in) :: ndx
-      integer, intent(in) :: nz
-      integer, intent(in) :: nw
-      character(len=*), intent(out) :: errmsg
-      integer,          intent(out) :: errflg
-
-      integer :: astat
-
-      errmsg = ' '
-      errflg = 0
-
-      if( .not. allocated(xsqy_tab(ndx)%sq) ) then
-        allocate( xsqy_tab(ndx)%sq(nz,nw),stat=astat )
-      elseif( size(xsqy_tab(ndx)%sq,dim=1) /= nz ) then
-        deallocate( xsqy_tab(ndx)%sq )
-        allocate( xsqy_tab(ndx)%sq(nz,nw),stat=astat )
-      else
-        astat = 0
-      endif
-      xsqy_tab(ndx)%sq = qnan
-      
-      if( astat /= 0 ) then
-         write(errmsg,'(''check_alloc: failed to alloc sq; error = '',i4)') astat
-         errflg = astat
-         return
-      endif
-
-      END SUBROUTINE check_alloc
 
       end module module_rxn

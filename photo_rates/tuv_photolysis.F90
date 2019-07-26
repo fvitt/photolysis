@@ -178,13 +178,15 @@ contains
 !! | local_name | standard_name             | long_name                 | units   | rank | type      | kind      | intent | optional |
 !! |------------|---------------------------|---------------------------|---------|------|-----------|-----------|--------|----------|
 !! | realkind   | phys_real_kind            | physics real kind         | none    |    0 | integer   |           | in     | F        |
+!! | nlev       | num_levels_for_photolysis | number of column layers   | count   |    0 | integer   |           | in     | F        |
 !! | errmsg     | ccpp_error_message        | CCPP error message        | none    |    0 | character | len=*     | out    | F        |
 !! | errflg     | ccpp_error_flag           | CCPP error flag           | flag    |    0 | integer   |           | out    | F        |
 !!
-subroutine tuv_photolysis_init( realkind, errmsg, errflg )
+subroutine tuv_photolysis_init( realkind, nlev, errmsg, errflg )
     use wavelength_grid, only: nwave
 
     integer,          intent(in)  :: realkind
+    integer,          intent(in)  :: nlev
     character(len=*), intent(out) :: errmsg
     integer,          intent(out) :: errflg
 
@@ -199,7 +201,7 @@ subroutine tuv_photolysis_init( realkind, errmsg, errflg )
 
     tuv_n_wavelen = nwave
 
-    call  calc_tuv_init( is_full_tuv, tuv_jnames, xsqy_filepath, errmsg, errflg )
+    call  calc_tuv_init( is_full_tuv, nlev, tuv_jnames, xsqy_filepath, errmsg, errflg )
 
   end subroutine tuv_photolysis_init
 

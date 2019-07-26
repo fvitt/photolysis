@@ -104,12 +104,12 @@
          istat = istat + astat
       endif
       if (.not. allocated(o2_xs) ) then
-         allocate(o2_xs(nw))
+         allocate(o2_xs(nw),stat=astat)
          o2_xs = qnan
          istat = istat + astat
       endif
       if (.not. allocated(so2_xs) ) then
-         allocate(so2_xs(nw))
+         allocate(so2_xs(nw),stat=astat)
          o2_xs = qnan
          istat = istat + astat
       endif

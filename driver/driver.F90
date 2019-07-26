@@ -69,7 +69,7 @@ program driver
      call abort()
   end if
 
-  call tuv_photolysis_init( r8, errmsg, errflg )
+  call tuv_photolysis_init( r8, nlevels, errmsg, errflg )
   if (errflg/=0) then
       write(*,*) 'FAILURE: '//trim(errmsg)
      call abort()

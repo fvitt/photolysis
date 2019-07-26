@@ -40,25 +40,71 @@ contains
   !------------------------------------------------------------------------------
   ! initialize
   !------------------------------------------------------------------------------
-  subroutine calc_tuv_init( full_tuv, jnames, xsqy_filepath, errmsg, errflg )
+  subroutine calc_tuv_init( full_tuv, nlevs, jnames, xsqy_filepath, errmsg, errflg )
 
     logical, intent(in) :: full_tuv
+    integer, intent(in) :: nlevs
     character(len=*), intent(in) :: jnames(:)
     character(len=*), intent(in) :: xsqy_filepath
     character(len=*), intent(out) :: errmsg
     integer,          intent(out) :: errflg
     
-    integer :: i,j,n
+    integer :: i,j,n,jndx
     integer :: astat
-    
+    logical :: rxn_initialized
+    real(rk) :: dummy(nlevs)
+
     is_full_tuv = full_tuv
     nj = size(jnames)
-    allocate( tuv_jname(nj) )
+    allocate( tuv_jname(nj), stat=astat )
+    if( astat /= 0 ) then
+       errmsg = 'calc_tuv_init: failed to allocate tuv_jname'
+       errflg = astat
+       return
+    endif
+
     tuv_jname(:) = jnames(:)
     
-    if( .not. is_full_tuv ) then
+    if( is_full_tuv ) then
+
+       call rxn_init( nwave+1, wl, errmsg, errflg )
+       allocate( rxn_ndx(nj), stat=astat )
+       if( astat /= 0 ) then
+          errmsg = 'calc_tuv_init: failed to allocate rxn_ndx'
+          errflg = astat
+          return
+       endif
+       rxn_ndx(1:nj) = -1
+       do j = 1,nj
+          if( j /= j_o2_ndx ) then
+             do n = 2,npht_tab
+                if( trim(xsqy_table(n)%wrf_label) == trim(tuv_jname(j)) ) then
+                   rxn_ndx(j) = n
+                   exit
+                endif
+             enddo
+          endif
+       enddo
+
+       rxn_initialized = .not. get_initialization()
+       if( .not. rxn_initialized ) then
+          do n = 1,nj
+             jndx = rxn_ndx(n)
+             if( jndx /= -1 ) then
+                call the_subs(jndx)%xsqy_sub(nwave+1,wl,wc,nlevs,dummy,dummy,jndx, errmsg, errflg )
+             endif
+          enddo
+          call set_initialization( status=.false. )
+       endif
+
+    else
        call read_xsqy_tables(xsqy_filepath, errmsg, errflg)
-       allocate( xsqy_is_zdep(nj) )
+       allocate( xsqy_is_zdep(nj), stat=astat )
+       if( astat /= 0 ) then
+          errmsg = 'calc_tuv_init: failed to allocate xsqy_is_zdep'
+          errflg = astat
+          return
+       endif
        xsqy_is_zdep(:) = .false.
        if( j_o2_ndx > 0 ) then
           xsqy_is_zdep(j_o2_ndx) = .true.
@@ -75,20 +121,6 @@ contains
              end do t_loop
           endif
        end do
-    else
-       call rxn_init( nwave+1, wl, errmsg, errflg )
-       allocate( rxn_ndx(nj) )
-       rxn_ndx(1:nj) = -1
-       do j = 1,nj
-          if( j /= j_o2_ndx ) then
-             do n = 2,npht_tab
-                if( trim(xsqy_table(n)%wrf_label) == trim(tuv_jname(j)) ) then
-                   rxn_ndx(j) = n
-                   exit
-                endif
-             enddo
-          endif
-       enddo
     endif
 
   end subroutine calc_tuv_init
@@ -116,8 +148,8 @@ contains
 
     integer :: n,jndx
     integer :: k
-    real(rk) :: dummy(nlevs)
-    logical :: rxn_initialized
+    real(rk) :: sq2d(nlevs,nwave)
+    real(rk) :: sq1d(nwave,1)
 
     tuv_prate = qnan
     rad_fld_tpose = qnan
@@ -128,19 +160,6 @@ contains
        endif
     elseif( any( xsqy_table(1:nj)%tpflag == 0 ) ) then
        rad_fld_tpose = transpose( rad_fld )
-    endif
-
-    if( is_full_tuv ) then
-       rxn_initialized = .not. get_initialization()
-       if( .not. rxn_initialized ) then
-          do n = 1,nj
-             jndx = rxn_ndx(n)
-             if( jndx /= -1 ) then
-                call the_subs(jndx)%xsqy_sub(nwave+1,wl,wc,nlevs,dummy,dummy,jndx, errmsg, errflg )
-             endif
-          enddo
-          call set_initialization( status=.false. )
-       endif
     endif
 
     rate_loop: do n = 1,nj
@@ -158,8 +177,10 @@ contains
              jndx = rxn_ndx(n)
              if( jndx /= -1 ) then
                 if( xsqy_table(jndx)%tpflag /= 0 ) then
-                   call the_subs(jndx)%xsqy_sub(nwave+1,wl,wc,nlevs,tlev,dens_air,jndx, errmsg, errflg)
-                endif
+                   call the_subs(jndx)%xsqy_sub(nwave+1,wl,wc,nlevs,tlev,dens_air,jndx, errmsg, errflg, sq=sq2d)
+                else
+                   call the_subs(jndx)%xsqy_sub(nwave+1,wl,wc,nlevs,tlev,dens_air,jndx, errmsg, errflg, sq=sq1d)
+                end if
              endif
           endif
        elseif( .not. is_full_tuv ) then
@@ -183,11 +204,11 @@ contains
           if( n /= j_o2_ndx ) then
              if( xsqy_table(jndx)%tpflag > 0 ) then
                 do k = kts,kte
-                   xsect(nlambda_start:nwave) = xsqy_table(jndx)%sq(k,nlambda_start:nwave)*photon_flux(nlambda_start:nwave)*esfact
+                   xsect(nlambda_start:nwave) = sq2d(k,nlambda_start:nwave)*photon_flux(nlambda_start:nwave)*esfact
                    tuv_prate(k,n) = dot_product( rad_fld(nlambda_start:nwave,k),xsect(nlambda_start:nwave) )
                 end do
              else                
-                xsect(nlambda_start:nwave) = xsqy_table(jndx)%sq(nlambda_start:nwave,1)*photon_flux(nlambda_start:nwave)*esfact
+                xsect(nlambda_start:nwave) = sq1d(nlambda_start:nwave,1)*photon_flux(nlambda_start:nwave)*esfact
                 tuv_prate(:,n) = matmul( rad_fld_tpose(:,nlambda_start:nwave),xsect(nlambda_start:nwave) )
              endif
           else
@@ -299,14 +320,13 @@ contains
     !---------------------------------------------------------------------
     !	... local variables
     !---------------------------------------------------------------------
-    integer :: astat, ierr, ret
+    integer :: astat, ret
     integer :: m
     integer :: ncid, dimid, varid
     character(len=64) :: varname
 
     errmsg = ' '
     errflg = 0
-    ierr = 0
 
     ret = nf90_open( trim(xsqy_filepath), nf90_noclobber, ncid )
     if( ret /= nf90_noerr ) then
@@ -341,11 +361,23 @@ contains
     end if
 
     allocate( temp_tab(ntemp), conc_tab(nconc), stat=astat )
-    ierr = astat + ierr
+    if( astat /= 0 ) then
+       errmsg = 'read_xsqy_tables: failed to allocate'
+       errflg = astat
+       return
+    endif
     allocate( del_temp_tab(ntemp-1), del_conc_tab(nconc-1), stat=astat )
-    ierr = astat + ierr
+    if( astat /= 0 ) then
+       errmsg = 'read_xsqy_tables: failed to allocate'
+       errflg = astat
+       return
+    endif
     allocate( xsqy_tab(nwave,ntemp,nconc,nj), stat=astat )
-    ierr = astat + ierr
+    if( astat /= 0 ) then
+       errmsg = 'read_xsqy_tables: failed to allocate'
+       errflg = astat
+       return
+    endif
 
     ret = nf90_inq_varid( ncid, 'temps', varid )
     if( ret /= nf90_noerr ) then
