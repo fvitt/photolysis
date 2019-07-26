@@ -81,6 +81,7 @@
       end interface
 
       type(xsqy_subs), allocatable :: the_subs(:)
+      real(rk) :: xnan
 
       CONTAINS
 
@@ -182,6 +183,7 @@
 
       errmsg = ' '
       errflg = 0
+      xnan = qnan()
 
       call set_initialization( status=.true. )
 
@@ -1226,8 +1228,8 @@
 
       errmsg = ' '
       errflg = 0
-      xs = qnan
-      qy1d = qnan
+      xs = xnan
+      qy1d = xnan
 
       if( .not. initialize ) then
 
@@ -1310,8 +1312,8 @@
  !*************** NO2 photodissociation
 
       if( initialize ) then
-         yg1 = qnan 
-         yg2 = qnan
+         yg1 = xnan 
+         yg2 = xnan
         CALL readit
         ydel(1:nw-1) = yg1(1:nw-1) - yg2(1:nw-1)
       else

@@ -34,6 +34,7 @@ module  module_prates_tuv
 
   integer, parameter :: nlambda_start = 1
   real(rk) :: esfact = 1.0_rk
+  real(rk) :: xnan
 
 contains
 
@@ -54,6 +55,8 @@ contains
     logical :: rxn_initialized
     real(rk) :: dummy(nlevs)
 
+    xnan = qnan()
+    
     is_full_tuv = full_tuv
     nj = size(jnames)
     allocate( tuv_jname(nj), stat=astat )
@@ -151,8 +154,8 @@ contains
     real(rk) :: sq2d(nlevs,nwave)
     real(rk) :: sq1d(nwave,1)
 
-    tuv_prate = qnan
-    rad_fld_tpose = qnan
+    tuv_prate = xnan
+    rad_fld_tpose = xnan
 
     if( .not. is_full_tuv ) then
        if( any( .not. xsqy_is_zdep(:) ) ) then
@@ -163,8 +166,8 @@ contains
     endif
 
     rate_loop: do n = 1,nj
-       xsect = qnan
-       xsqy = qnan
+       xsect = xnan
+       xsqy = xnan
        !---------------------------------------------------------------------
        ! set cross-section x quantum yields
        !---------------------------------------------------------------------
@@ -275,7 +278,7 @@ contains
     endif
 
     dw(:nwave) = wl(2:nwave+1) - wl(1:nwave)
-    photon_flux(:nwave) = qnan
+    photon_flux(:nwave) = xnan
 
     !---------------------------------------------------------------------
     !	... read arrays
