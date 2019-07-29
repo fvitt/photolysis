@@ -60,12 +60,14 @@ subroutine tuv_radiation_transfer_init( realkind, nlevels, errmsg, errflg )
 !! | o3vmr      | O3_vmr_col                            | O3 volume mixing ratio column      | mole/mole |    1 | real      | kind_phys | in     | F        |
 !! | so2vmr     | SO2_vmr_col                           | SO2 volume mixing ratio column     | mole/mole |    1 | real      | kind_phys | in     | F        |
 !! | no2vmr     | NO2_vmr_col                           | NO2 volume mixing ratio column     | mole/mole |    1 | real      | kind_phys | in     | F        |
+!! | cldfrac    | cloud_fraction                        | cloud fraction                     | none      |    1 | real      | kind_phys | in     | F        |
+!! | qll        | cloud_water_dens                      | cloud water mass denstiry          | g/m3      |    1 | real      | kind_phys | in     | F        |
 !! | dto2       | O2_optical_depth                      | optical depth due to O2 absorption | cm        |    2 | real      | kind_phys | in     | F        |
 !! | radfld     | actinic_photon_fluxes                 | actinic photon fluxes              | cm-2 sec-1|    2 | real      | kind_phys | out    | F        |
 !! | errmsg     | ccpp_error_message                    | CCPP error message                 | none      |    0 | character | len=*     | out    | F        |
 !! | errflg     | ccpp_error_flag                       | CCPP error flag                    | flag      |    0 | integer   |           | out    | F        |
 !!
-  subroutine tuv_radiation_transfer_run( zenith, albedo, press_mid, alt, temp, o3vmr, so2vmr, no2vmr, dto2, radfld, errmsg, errflg )
+  subroutine tuv_radiation_transfer_run( zenith, albedo, press_mid, alt, temp, o3vmr, so2vmr, no2vmr, cldfrac, qll, dto2, radfld, errmsg, errflg )
 
     use tuv_subs,         only: tuv_radfld
     use wavelength_grid,    only: nwave, wl, wc
@@ -80,6 +82,8 @@ subroutine tuv_radiation_transfer_init( realkind, nlevels, errmsg, errflg )
     real(rk),         intent(in)  :: o3vmr(:)
     real(rk),         intent(in)  :: so2vmr(:)
     real(rk),         intent(in)  :: no2vmr(:)
+    real(rk),         intent(in)  :: cldfrac(:)
+    real(rk),         intent(in)  :: qll(:) ! cld water content (g/m3)
     real(rk),         intent(in)  :: dto2(:,:)
     real(rk),         intent(out) :: radfld(:,:) ! /sec
     character(len=*), intent(out) :: errmsg
@@ -117,8 +121,6 @@ subroutine tuv_radiation_transfer_init( realkind, nlevels, errmsg, errflg )
     real(rk) :: dtcld(nlyr,nwave), omcld(nlyr,nwave), gcld(nlyr,nwave)
     real(rk) :: dt_cld(nlyr)
     
-    real(rk) :: qll(nlev) ! cld water content (g/m3)
-    real(rk) :: cldfrac(nlev)
     real(rk) :: efld(nlev,nwave)
     real(rk) :: e_dir(nlev,nwave)
     real(rk) :: e_dn(nlev,nwave)
@@ -151,8 +153,6 @@ subroutine tuv_radiation_transfer_init( realkind, nlevels, errmsg, errflg )
     tlev(nlev:1:-1) = temp(1:nlev)
     zlev(nlev:1:-1) = alt(1:nlev)*1.e-3_rk ! m -> km
 
-    qll=0.0_rk
-    cldfrac=0.0_rk
     tauaer300=0.0_rk
     tauaer400=0.0_rk
     tauaer600=0.0_rk

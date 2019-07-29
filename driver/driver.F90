@@ -29,11 +29,13 @@ program driver
   real(r8), allocatable :: o3vmrcol(:)
   real(r8), allocatable :: so2vmrcol(:)
   real(r8), allocatable :: no2vmrcol(:)
+  real(r8), allocatable :: cldfrac(:)
+  real(r8), allocatable :: cldwat(:)
   real(r8), allocatable :: srb_o2_xs(:,:)
   real(r8), allocatable :: dto2(:,:)
   real(r8), allocatable :: radfld(:,:)
   real(r8), allocatable :: tuv_prates(:,:)
-  
+
   character(len=*), parameter :: nml_file = 'test_nml'
   character(len=*), parameter :: env_conds_file = &
        '/terminator-data1/fvitt/micm_inputs/MusicBox_env_cond_1col_c190109.nc'
@@ -203,6 +205,8 @@ program driver
   allocate(o3vmrcol(nlevels))
   allocate(so2vmrcol(nlevels))
   allocate(no2vmrcol(nlevels))
+  allocate(cldfrac(nlevels))
+  allocate(cldwat(nlevels))
 
   zenith = colEnvConds%getsrf('SZA')
   albedo = colEnvConds%getsrf('ASDIR')
@@ -213,11 +217,13 @@ program driver
   o3vmrcol(:nlevels) = colEnvConds%getcol('O3',nlevels)
   so2vmrcol(:nlevels) = colEnvConds%getcol('SO2',nlevels)
   no2vmrcol(:nlevels) = colEnvConds%getcol('NO2',nlevels)
+  cldfrac = 0._r8
+  cldwat = 0._r8
 
   call molec_ox_xsect_run( nlevels, zenith, alt, temp, press_mid, o2vmrcol, dto2, srb_o2_xs, errmsg, errflg )
 
   call  tuv_radiation_transfer_run( &
-       zenith, albedo, press_mid, alt, temp, o3vmrcol, so2vmrcol, no2vmrcol, dto2, radfld, errmsg, errflg )
+       zenith, albedo, press_mid, alt, temp, o3vmrcol, so2vmrcol, no2vmrcol, cldfrac, cldwat, dto2, radfld, errmsg, errflg )
 
   call tuv_photolysis_run( nlevels, temp, press_mid, radfld, srb_o2_xs, tuv_prates, errmsg, errflg )
   
