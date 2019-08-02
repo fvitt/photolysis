@@ -61,16 +61,16 @@ subroutine tuv_radiation_transfer_init( realkind, nlevels, errmsg, errflg )
 !! | so2vmr     | SO2_vmr_col                           | SO2 volume mixing ratio column     | mole/mole |    1 | real      | kind_phys | in     | F        |
 !! | no2vmr     | NO2_vmr_col                           | NO2 volume mixing ratio column     | mole/mole |    1 | real      | kind_phys | in     | F        |
 !! | cldfrac    | cloud_fraction                        | cloud fraction                     | none      |    1 | real      | kind_phys | in     | F        |
-!! | qll        | cloud_water_dens                      | cloud water mass denstiry          | g/m3      |    1 | real      | kind_phys | in     | F        |
+!! | cldwat     | cloud_water_dens                      | cloud water mass denstiry          | g/m3      |    1 | real      | kind_phys | in     | F        |
 !! | dto2       | O2_optical_depth                      | optical depth due to O2 absorption | cm        |    2 | real      | kind_phys | in     | F        |
 !! | radfld     | actinic_photon_fluxes                 | actinic photon fluxes              | cm-2 sec-1|    2 | real      | kind_phys | out    | F        |
 !! | errmsg     | ccpp_error_message                    | CCPP error message                 | none      |    0 | character | len=*     | out    | F        |
 !! | errflg     | ccpp_error_flag                       | CCPP error flag                    | flag      |    0 | integer   |           | out    | F        |
 !!
-  subroutine tuv_radiation_transfer_run( zenith, albedo, press_mid, alt, temp, o3vmr, so2vmr, no2vmr, cldfrac, qll, dto2, radfld, errmsg, errflg )
+  subroutine tuv_radiation_transfer_run( zenith, albedo, press_mid, alt, temp, o3vmr, so2vmr, no2vmr, cldfrac, cldwat, dto2, radfld, errmsg, errflg )
 
     use tuv_subs,         only: tuv_radfld
-    use wavelength_grid,    only: nwave, wl, wc
+    use wavelength_grid,  only: nwave, wl, wc
     use module_xsections, only: o2_xs, so2_xs, o3xs, no2xs_jpl06a
     use params_mod
  
@@ -83,7 +83,7 @@ subroutine tuv_radiation_transfer_init( realkind, nlevels, errmsg, errflg )
     real(rk),         intent(in)  :: so2vmr(:)
     real(rk),         intent(in)  :: no2vmr(:)
     real(rk),         intent(in)  :: cldfrac(:)
-    real(rk),         intent(in)  :: qll(:) ! cld water content (g/m3)
+    real(rk),         intent(in)  :: cldwat(:) ! cld water content (g/m3)
     real(rk),         intent(in)  :: dto2(:,:)
     real(rk),         intent(out) :: radfld(:,:) ! /sec
     character(len=*), intent(out) :: errmsg
@@ -98,6 +98,8 @@ subroutine tuv_radiation_transfer_init( realkind, nlevels, errmsg, errflg )
     real(rk) :: alb(nwave)
     real(rk) :: zlev(nlev) ! km 
     real(rk) :: tlev(nlev)
+    real(rk) :: cldfrclev(nlev)
+    real(rk) :: cldwatlev(nlev)
     real(rk) :: aircol(nlyr)  ! # molecules / cm2 in each layer
     real(rk) :: o3col(nlyr) 
     real(rk) :: so2col(nlyr)
@@ -151,6 +153,8 @@ subroutine tuv_radiation_transfer_init( realkind, nlevels, errmsg, errflg )
     ! inputs need to be bottom up vert coord
     aircol(1:nlyr) = aircol(nlyr:1:-1)
     tlev(nlev:1:-1) = temp(1:nlev)
+    cldfrclev(nlev:1:-1) = cldfrac(1:nlev)
+    cldwatlev(nlev:1:-1) = cldwat(1:nlev)
     zlev(nlev:1:-1) = alt(1:nlev)*1.e-3_rk ! m -> km
 
     tauaer300=0.0_rk
@@ -177,7 +181,7 @@ subroutine tuv_radiation_transfer_init( realkind, nlevels, errmsg, errflg )
     o3_xs  = transpose( o3_xs_tpose )
     no2_xs = transpose( no2_xs_tpose )
 
-    call tuv_radfld( nlambda_start, cld_od_opt, cldfrac, nlyr, nwave, &
+    call tuv_radfld( nlambda_start, cld_od_opt, cldfrclev, nlyr, nwave, &
          zen, zlev, alb, &
          aircol, o3col, so2col, no2col, &
          tauaer300, tauaer400, tauaer600, tauaer999, &
@@ -185,7 +189,7 @@ subroutine tuv_radiation_transfer_init( realkind, nlevels, errmsg, errflg )
          gaer300, gaer400, gaer600, gaer999, &
          dtaer, omaer, gaer, dtcld, omcld, gcld, &
          has_aer_ra_feedback, &
-         qll, dobsi, o3_xs, no2_xs, o2_xs, &
+         cldwatlev, dobsi, o3_xs, no2_xs, o2_xs, &
          so2_xs, wl(1), wc, tlev, dto2, radfld, efld, &
          e_dir, e_dn, e_up, &
          dir_fld, dwn_fld, up_fld, dt_cld, errmsg, errflg )
