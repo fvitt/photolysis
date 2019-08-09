@@ -35,7 +35,7 @@
         integer            :: nfiles
         integer            :: nskip(max_files)
         integer            :: nread(max_files)
-        real(rk)               :: xfac(max_files)
+        real(rk)           :: xfac(max_files)
         character(len=388) :: filename(max_files)
       end type file_specs
 
@@ -44,8 +44,8 @@
         integer :: channel
         integer :: jndx
         real(rk)    :: qyld
-        character(len=50) :: label
-        character(len=50) :: wrf_label
+        character(len=50) :: equation
+        character(len=50) :: rxn_name
         type(xs_qy_tab), pointer :: next
         type(xs_qy_tab), pointer :: last
         type(file_specs)  :: filespec
@@ -82,6 +82,8 @@
 
       type(xsqy_subs), allocatable :: the_subs(:)
       real(rk) :: xnan
+
+      real(rk), parameter :: wlla(2)  = (/ 121.4_rk, 121.9_rk/) ! Lyamn Alpha limits
 
       CONTAINS
 
@@ -125,7 +127,7 @@
           xsq(1:nw-1,j) = xsqy_tab(j)%qyld * yg(1:nw-1)
         endif
       else
-        sq(1:nw-1,1) = xsq(1:nw-1,j)
+         sq(1:nw-1,1) = xsq(1:nw-1,j)
       endif
 
       CONTAINS 
@@ -148,7 +150,7 @@
         y1(1:n) = y1(1:n) * xsqy_tab(j)%filespec%xfac(fileno)
 
         CALL add_pnts_inter2(x1,y1,yg,kdata,n, &
-                             nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                             nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
       enddo
 
       END SUBROUTINE readit
@@ -209,7 +211,7 @@
       
       xsqy_tab(1:kj)%tpflag  = 0
       xsqy_tab(1:kj)%channel = 1
-      xsqy_tab(1:kj)%label   =  ' '
+      xsqy_tab(1:kj)%equation =  ' '
       xsqy_tab(1:kj)%qyld    =  1._rk
       xsqy_tab(1:kj)%filespec%nfiles =  1
       do m = 1,max_files
@@ -236,10 +238,10 @@
       integer, intent(inout) :: m
       type(xsqy_subs), intent(inout) :: subr(:)
 
-      xsqy_tab(m)%label   = 'O3 -> O2 + O(1D)'
-      xsqy_tab(m+1)%label = 'O3 -> O2 + O(3P)'
-      xsqy_tab(m)%wrf_label   = 'j_o1d'
-      xsqy_tab(m+1)%wrf_label = 'j_o3p'
+      xsqy_tab(m)%equation   = 'O3 -> O2 + O(1D)'
+      xsqy_tab(m)%rxn_name   = 'jo3_a'
+      xsqy_tab(m+1)%equation = 'O3 -> O2 + O(3P)'
+      xsqy_tab(m+1)%rxn_name = 'jo3_b'
       xsqy_tab(m:m+1)%jndx = (/ m,m+1 /)
       xsqy_tab(m+1)%channel = 2
       xsqy_tab(m:m+1)%tpflag = 1
@@ -247,8 +249,8 @@
       subr(m+1)%xsqy_sub => r01
       m = m + 2
 
-      xsqy_tab(m)%label = 'NO2 -> NO + O(3P)'
-      xsqy_tab(m)%wrf_label = 'j_no2'
+      xsqy_tab(m)%equation = 'NO2 -> NO + O(3P)'
+      xsqy_tab(m)%rxn_name = 'jno2'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%tpflag = 1
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/YLD/NO2_jpl11.yld'
@@ -257,10 +259,10 @@
       subr(m)%xsqy_sub   => r02
       m = m + 1
 
-      xsqy_tab(m)%label   = 'NO3 -> NO + O2'
-      xsqy_tab(m+1)%label = 'NO3 -> NO2 + O(3P)'
-      xsqy_tab(m)%wrf_label   = 'j_no3_a'
-      xsqy_tab(m+1)%wrf_label = 'j_no3_b'
+      xsqy_tab(m)%equation   = 'NO3 -> NO + O2'
+      xsqy_tab(m)%rxn_name   = 'jno3_b'
+      xsqy_tab(m+1)%equation = 'NO3 -> NO2 + O(3P)'
+      xsqy_tab(m+1)%rxn_name = 'jno3_a'
       xsqy_tab(m)%jndx = m
       xsqy_tab(m+1)%channel = 2
       xsqy_tab(m:m+1)%tpflag = 1
@@ -276,24 +278,54 @@
       subr(m+1)%xsqy_sub => r03
       m = m + 2
 
-      xsqy_tab(m)%label   = 'N2O5 -> NO3 + NO + O(3P)'
-      xsqy_tab(m+1)%label = 'N2O5 -> NO3 + NO2'
-      xsqy_tab(m)%wrf_label   = 'j_n2o5_a'
-      xsqy_tab(m+1)%wrf_label = 'j_n2o5_b'
+      xsqy_tab(m)%equation   = 'N2O5 -> NO3 + NO + O(3P)'
+      xsqy_tab(m)%rxn_name   = 'jn2o5_b'
+      xsqy_tab(m+1)%equation = 'N2O5 -> NO3 + NO2'
+      xsqy_tab(m+1)%rxn_name = 'jn2o5_a'
       xsqy_tab(m)%jndx = m
       xsqy_tab(m+1)%channel = 2
       xsqy_tab(m:m+1)%tpflag = 1
-      xsqy_tab(m)%filespec%nfiles = 2
-      xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/N2O5_jpl11.abs'
-      xsqy_tab(m)%filespec%filename(2) = trim(input_data_root)//'/DATAJ1/ABS/N2O5_jpl11.abs'
-      xsqy_tab(m)%filespec%nskip(1:2) = (/ 4,111 /)
-      xsqy_tab(m)%filespec%nread(1:2) = (/ 103,8 /)
-      subr(m)%xsqy_sub   => r04
-      subr(m+1)%xsqy_sub => r04
+      xsqy_tab(m)%filespec%nfiles = 1
+      xsqy_tab(m:m+1)%filespec%filename(1) = trim(input_data_root)//'/XSQY/XS_N2O5_JPL06.txt'
+      xsqy_tab(m:m+1)%filespec%nskip(1) = 41
+      xsqy_tab(m:m+1)%filespec%nread(1) = 103
+      subr(m)%xsqy_sub   => XSQY_N2O5
+      subr(m+1)%xsqy_sub => XSQY_N2O5
       m = m + 2
 
-      xsqy_tab(m)%label = 'HNO2 -> OH + NO'
-      xsqy_tab(m)%wrf_label = 'j_hno2'
+      xsqy_tab(m  )%equation   = 'H2O + hv -> H + OH'
+      xsqy_tab(m  )%rxn_name   = 'jh2o_a'
+      xsqy_tab(m+1)%equation   = 'H2O + hv -> H2 + O(1D)'
+      xsqy_tab(m+1)%rxn_name   = 'jh2o_b'
+      xsqy_tab(m+2)%equation   = 'H2O + hv -> 2H + O(3P)'
+      xsqy_tab(m+2)%rxn_name   = 'jh2o_c'
+      xsqy_tab(m  )%jndx = m
+      xsqy_tab(m+1)%jndx = m+1
+      xsqy_tab(m+2)%jndx = m+2
+      xsqy_tab(m  )%channel = 1
+      xsqy_tab(m+1)%channel = 2
+      xsqy_tab(m+2)%channel = 3
+      xsqy_tab(m:m+2)%tpflag = 0
+      xsqy_tab(m:m+2)%filespec%nfiles = 3
+      xsqy_tab(m:m+2)%filespec%filename(1) = trim(input_data_root)//'/XSQY/XS_H2O_JPL06.txt'
+      xsqy_tab(m:m+2)%filespec%nskip(1) = 28
+      xsqy_tab(m:m+2)%filespec%nread(1) = 8
+      xsqy_tab(m:m+2)%filespec%filename(2) = trim(input_data_root)//'/XSQY/XS_H2O_cantrell_1996.txt'
+      xsqy_tab(m:m+2)%filespec%nskip(2) = 12
+      xsqy_tab(m:m+2)%filespec%nread(2) = 11
+      xsqy_tab(m:m+2)%filespec%filename(3) = trim(input_data_root)//'/XSQY/XS_H2O_yoshino_1996.txt'
+      xsqy_tab(m:m+2)%filespec%nskip(3) = 23
+      xsqy_tab(m:m+2)%filespec%nread(3) = 6783
+      xsqy_tab(m  )%filespec%xfac(1:3) = (/ 1.e-20_rk, 1.e-20_rk, 1._rk /)
+      xsqy_tab(m+1)%filespec%xfac(1:3) = (/ 1.e-20_rk, 1.e-20_rk, 1._rk /)
+      xsqy_tab(m+2)%filespec%xfac(1:3) = (/ 1.e-20_rk, 1.e-20_rk, 1._rk /)
+      subr(m  )%xsqy_sub => XSQY_H2O
+      subr(m+1)%xsqy_sub => XSQY_H2O
+      subr(m+2)%xsqy_sub => XSQY_H2O
+      m = m + 3
+      
+      xsqy_tab(m)%equation = 'HNO2 -> OH + NO'
+      xsqy_tab(m)%rxn_name = 'jhno2'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/HONO_jpl11.abs'
       xsqy_tab(m)%filespec%nskip(1) = 3
@@ -301,8 +333,8 @@
       subr(m)%xsqy_sub   => no_z_dep
       m = m + 1
 
-      xsqy_tab(m)%label = 'HNO3 -> OH + NO2'
-      xsqy_tab(m)%wrf_label = 'j_hno3'
+      xsqy_tab(m)%equation = 'HNO3 -> OH + NO2'
+      xsqy_tab(m)%rxn_name = 'jhno3'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%tpflag = 1
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/HNO3_burk.abs'
@@ -311,8 +343,8 @@
       subr(m)%xsqy_sub   => r06
       m = m + 1
 
-      xsqy_tab(m)%label = 'HNO4 -> HO2 + NO2'
-      xsqy_tab(m)%wrf_label = 'j_hno4'
+      xsqy_tab(m)%equation = 'HNO4 -> HO2 + NO2'
+      xsqy_tab(m)%rxn_name = 'jhno4'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/HNO4_jpl11.abs'
       xsqy_tab(m)%filespec%nskip(1) = 2
@@ -320,8 +352,8 @@
       subr(m)%xsqy_sub   => no_z_dep
       m = m + 1
 
-      xsqy_tab(m)%label = 'H2O2 -> 2 OH'
-      xsqy_tab(m)%wrf_label = 'j_h2o2'
+      xsqy_tab(m)%equation = 'H2O2 -> 2 OH'
+      xsqy_tab(m)%rxn_name = 'jh2o2'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%tpflag = 1
       xsqy_tab(m)%filespec%nfiles      = 2
@@ -332,8 +364,8 @@
       subr(m)%xsqy_sub   => r08
       m = m + 1
 
-      xsqy_tab(m)%label = 'CHBr3 -> Products'
-      xsqy_tab(m)%wrf_label = 'j_chbr3'
+      xsqy_tab(m)%equation = 'CHBr3 -> Products'
+      xsqy_tab(m)%rxn_name = 'jchbr3'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%tpflag = 1
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/CHBr3.jpl97'
@@ -342,12 +374,29 @@
       subr(m)%xsqy_sub   => r09
       m = m + 1
 
-      xsqy_tab(m)%label   = 'CH3CHO -> CH3 + HCO'
-      xsqy_tab(m+1)%label = 'CH3CHO -> CH4 + CO'
-      xsqy_tab(m+2)%label = 'CH3CHO -> CH3CO + H'
-      xsqy_tab(m)%wrf_label = 'j_ch3cho_a'
-      xsqy_tab(m+1)%wrf_label = 'j_ch3cho_b'
-      xsqy_tab(m+2)%wrf_label = 'j_ch3cho_c'
+      xsqy_tab(m)%equation = 'CH3CHO + hv -> CH3O2 + CO + HO2'
+      xsqy_tab(m)%rxn_name = 'jch3cho'
+      xsqy_tab(m)%jndx  = m
+      xsqy_tab(m)%tpflag = 2
+      xsqy_tab(m)%filespec%nfiles = 3
+      xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/XSQY/XS_CH3CHO_JPL06.txt'
+      xsqy_tab(m)%filespec%filename(2) = trim(input_data_root)//'/XSQY/QY_CH3CHO_iup.yld.txt'
+      xsqy_tab(m)%filespec%filename(3) = trim(input_data_root)//'/XSQY/QY_CH3CHO_press.yld.txt'
+      xsqy_tab(m)%filespec%nskip(1) = 31
+      xsqy_tab(m)%filespec%nread(1) = 101
+      xsqy_tab(m)%filespec%nskip(2) = 4
+      xsqy_tab(m)%filespec%nread(2) = 12
+      xsqy_tab(m)%filespec%nskip(3) = 4
+      xsqy_tab(m)%filespec%nread(3) = 5
+      subr(m)%xsqy_sub   => XSQY_CH3CHO
+      m = m + 1
+
+      xsqy_tab(m)%equation   = 'CH3CHO -> CH3 + HCO'
+      xsqy_tab(m+1)%equation = 'CH3CHO -> CH4 + CO'
+      xsqy_tab(m+2)%equation = 'CH3CHO -> CH3CO + H'
+      xsqy_tab(m)%rxn_name = 'j_ch3cho_a'
+      xsqy_tab(m+1)%rxn_name = 'j_ch3cho_b'
+      xsqy_tab(m+2)%rxn_name = 'j_ch3cho_c'
       xsqy_tab(m)%jndx = m
       xsqy_tab(m+1:m+2)%channel = (/ 2,3 /)
       xsqy_tab(m:m+2)%tpflag = (/ 2,0,0 /)
@@ -361,8 +410,8 @@
       subr(m+2)%xsqy_sub => r11
       m = m + 3
 
-      xsqy_tab(m)%label = 'C2H5CHO -> C2H5 + HCO'
-      xsqy_tab(m)%wrf_label = 'j_c2h5cho'
+      xsqy_tab(m)%equation = 'C2H5CHO -> C2H5 + HCO'
+      xsqy_tab(m)%rxn_name = 'j_c2h5cho'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%tpflag = 2
       xsqy_tab(m)%filespec%nfiles = 2
@@ -373,12 +422,12 @@
       subr(m)%xsqy_sub   => r12
       m = m + 1
 
-      xsqy_tab(m)%label   = 'CHOCHO -> HCO + HCO'
-      xsqy_tab(m+1)%label = 'CHOCHO -> H2 + 2CO'
-      xsqy_tab(m+2)%label = 'CHOCHO -> CH2O + CO'
-      xsqy_tab(m)%wrf_label = 'j_gly_a'
-      xsqy_tab(m+1)%wrf_label = 'j_gly_b'
-      xsqy_tab(m+2)%wrf_label = 'j_gly_c'
+      xsqy_tab(m)%equation   = 'CHOCHO -> HCO + HCO'
+      xsqy_tab(m+1)%equation = 'CHOCHO -> H2 + 2CO'
+      xsqy_tab(m+2)%equation = 'CHOCHO -> CH2O + CO'
+      xsqy_tab(m)%rxn_name = 'j_gly_a'
+      xsqy_tab(m+1)%rxn_name = 'j_gly_b'
+      xsqy_tab(m+2)%rxn_name = 'j_gly_c'
       xsqy_tab(m)%jndx = m
       xsqy_tab(m+1:m+2)%channel = (/ 2,3 /)
       xsqy_tab(m)%filespec%nfiles = 2
@@ -391,8 +440,8 @@
       subr(m+2)%xsqy_sub => r13
       m = m + 3
 
-      xsqy_tab(m)%label = 'CH3COCHO -> CH3CO + HCO'
-      xsqy_tab(m)%wrf_label = 'j_mgly'
+      xsqy_tab(m)%equation = 'CH3COCHO -> CH3CO + HCO'
+      xsqy_tab(m)%rxn_name = 'j_mgly'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%tpflag = 2
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/CH3COCHO/CH3COCHO_jpl11.abs'
@@ -401,8 +450,18 @@
       subr(m)%xsqy_sub   => r14
       m = m + 1
 
-      xsqy_tab(m)%label = 'CH3COCH3 -> CH3CO + CH3'
-      xsqy_tab(m)%wrf_label = 'j_ch3coch3'
+      xsqy_tab(m)%equation = 'MGLY + hv ->  CH3CO3  + CO + HO2'
+      xsqy_tab(m)%rxn_name = 'jmgly'
+      xsqy_tab(m)%jndx  = m
+      xsqy_tab(m)%tpflag = 2
+      xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/XSQY/XS_CH3COCHO_ncar.txt'
+      xsqy_tab(m)%filespec%nskip(1) = 0
+      xsqy_tab(m)%filespec%nread(1) = 271
+      subr(m)%xsqy_sub   => XSQY_MGLY
+      m = m + 1
+
+      xsqy_tab(m)%equation = 'CH3COCH3 -> CH3CO + CH3'
+      xsqy_tab(m)%rxn_name = 'j_ch3coch3'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%tpflag = 3
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/CH3COCH3/CH3COCH3_jpl11.abs'
@@ -411,8 +470,20 @@
       subr(m)%xsqy_sub   => r15
       m = m + 1
 
-      xsqy_tab(m)%label = 'CH3OOH -> CH3O + OH'
-      xsqy_tab(m)%wrf_label = 'j_ch3ooh'
+      xsqy_tab(m)%equation = 'CH3COCH3 + hv -> CH3CO3 + CH3O2'
+      xsqy_tab(m)%rxn_name = 'jacet'
+      xsqy_tab(m)%jndx  = m
+      xsqy_tab(m)%tpflag = 1
+      xsqy_tab(m)%filespec%nfiles = 2
+      xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/XSQY/XS_ACETONE_JPL06.txt'
+      xsqy_tab(m)%filespec%filename(2) = trim(input_data_root)//'/XSQY/XS_ACETONE_TD_JPL06.txt'
+      xsqy_tab(m)%filespec%nskip(1:2) = (/ 35, 34 /)
+      xsqy_tab(m)%filespec%nread(1:2) = (/ 135, 135 /)
+      subr(m)%xsqy_sub   => XSQY_ACETONE
+      m = m + 1
+
+      xsqy_tab(m)%equation = 'CH3OOH -> CH3O + OH'
+      xsqy_tab(m)%rxn_name = 'j_ch3ooh'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/CH3OOH/CH3OOH_jpl11.abs'
       xsqy_tab(m)%filespec%nskip(1) = 2
@@ -420,8 +491,18 @@
       subr(m)%xsqy_sub   => no_z_dep
       m = m + 1
 
-      xsqy_tab(m)%label = 'CH3ONO2 -> CH3O + NO2'
-      xsqy_tab(m)%wrf_label = 'j_ch3ono2'
+      xsqy_tab(m)%equation = 'CH3OOH + hv -> CH2O + H + OH'
+      xsqy_tab(m)%rxn_name = 'jch3ooh'
+      xsqy_tab(m)%jndx  = m
+      xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/XSQY/XS_CH3OOH_JPL06.txt'
+      xsqy_tab(m)%filespec%nskip(1) = 20
+      xsqy_tab(m)%filespec%nread(1) = 32
+      xsqy_tab(m)%filespec%xfac(1)  = 1._rk
+      subr(m)%xsqy_sub   => no_z_dep
+      m = m + 1
+
+      xsqy_tab(m)%equation = 'CH3ONO2 -> CH3O + NO2'
+      xsqy_tab(m)%rxn_name = 'j_ch3ono2'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%tpflag = 1
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/RONO2/CH3ONO2_jpl11.abs'
@@ -430,10 +511,20 @@
       subr(m)%xsqy_sub   => r17
       m = m + 1
 
-      xsqy_tab(m)%label   = 'CH3CO(OONO2) -> CH3CO(OO) + NO2'
-      xsqy_tab(m+1)%label = 'CH3CO(OONO2) -> CH3CO(O) + NO3'
-      xsqy_tab(m)%wrf_label = 'j_pan_a'
-      xsqy_tab(m+1)%wrf_label = 'j_pan_b'
+      xsqy_tab(m)%equation = 'PAN + hv -> Products'
+      xsqy_tab(m)%rxn_name = 'jpan'
+      xsqy_tab(m)%jndx  = m
+      xsqy_tab(m)%tpflag = 1
+      xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/XSQY/XS_PAN_JPL06.txt'
+      xsqy_tab(m)%filespec%nskip(1) = 20
+      xsqy_tab(m)%filespec%nread(1) = 78
+      subr(m)%xsqy_sub   => XSQY_PAN
+      m = m + 1
+
+      xsqy_tab(m)%equation   = 'CH3CO(OONO2) -> CH3CO(OO) + NO2'
+      xsqy_tab(m+1)%equation = 'CH3CO(OONO2) -> CH3CO(O) + NO3'
+      xsqy_tab(m)%rxn_name = 'j_pan_a'
+      xsqy_tab(m+1)%rxn_name = 'j_pan_b'
       xsqy_tab(m)%jndx = m
       xsqy_tab(m+1)%channel = 2
       xsqy_tab(m:m+1)%tpflag = 1
@@ -444,16 +535,16 @@
       subr(m+1)%xsqy_sub => r18
       m = m + 2
 
-      xsqy_tab(m)%label = 'CCl2O -> Products'
-      xsqy_tab(m)%wrf_label = 'j_ccl2o'
+      xsqy_tab(m)%equation = 'CCl2O -> Products'
+      xsqy_tab(m)%rxn_name = 'j_ccl2o'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/CCl2O_jpl94.abs'
       xsqy_tab(m)%filespec%nskip(1) = -1
       subr(m)%xsqy_sub   => no_z_dep
       m = m + 1
 
-      xsqy_tab(m)%label = 'CCl4 -> Products'
-      xsqy_tab(m)%wrf_label = 'j_ccl4'
+      xsqy_tab(m)%equation = 'CCl4 -> Products'
+      xsqy_tab(m)%rxn_name = 'jccl4'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%tpflag = 1
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/CCl4_jpl11.abs'
@@ -462,16 +553,16 @@
       subr(m)%xsqy_sub   => r20
       m = m + 1
 
-      xsqy_tab(m)%label = 'CClFO -> Products'
-      xsqy_tab(m)%wrf_label = 'j_cclfo'
+      xsqy_tab(m)%equation = 'CClFO -> Products'
+      xsqy_tab(m)%rxn_name = 'j_cclfo'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/CClFO_jpl94.abs'
       xsqy_tab(m)%filespec%nskip(1) = -1
       subr(m)%xsqy_sub   => no_z_dep
       m = m + 1
 
-      xsqy_tab(m)%label = 'CF2O -> Products'
-      xsqy_tab(m)%wrf_label = 'j_cf2o'
+      xsqy_tab(m)%equation = 'CF2O -> Products'
+      xsqy_tab(m)%rxn_name = 'j_cf2o'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/CF2O_jpl11.abs'
       xsqy_tab(m)%filespec%nskip(1) = 5
@@ -479,8 +570,8 @@
       subr(m)%xsqy_sub   => no_z_dep
       m = m + 1
 
-      xsqy_tab(m)%label = 'CF2ClCFCl2 (CFC-113) -> Products'
-      xsqy_tab(m)%wrf_label = 'j_cf2clcfcl2'
+      xsqy_tab(m)%equation = 'CF2ClCFCl2 (CFC-113) -> Products'
+      xsqy_tab(m)%rxn_name = 'jcfc113'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%tpflag = 1
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/CFC-113_jpl94.abs'
@@ -488,8 +579,8 @@
       subr(m)%xsqy_sub   => r23
       m = m + 1
 
-      xsqy_tab(m)%label = 'CF2ClCF2Cl (CFC-114) -> Products'
-      xsqy_tab(m)%wrf_label = 'j_cf2clcf2cl'
+      xsqy_tab(m)%equation = 'CF2ClCF2Cl (CFC-114) -> Products'
+      xsqy_tab(m)%rxn_name = 'jcfc114'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%tpflag = 1
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/CFC-114_jpl94.abs'
@@ -497,16 +588,16 @@
       subr(m)%xsqy_sub   => r24
       m = m + 1
 
-      xsqy_tab(m)%label = 'CF3CF2Cl (CFC-115) -> Products'
-      xsqy_tab(m)%wrf_label = 'j_cf3cf2cl'
+      xsqy_tab(m)%equation = 'CF3CF2Cl (CFC-115) -> Products'
+      xsqy_tab(m)%rxn_name = 'jcfc115'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/CFC-115_jpl94.abs'
       xsqy_tab(m)%filespec%nskip(1) = -1
       subr(m)%xsqy_sub   => no_z_dep
       m = m + 1
 
-      xsqy_tab(m)%label = 'CCl3F (CFC-11) -> Products'
-      xsqy_tab(m)%wrf_label = 'j_ccl3f'
+      xsqy_tab(m)%equation = 'CCl3F (CFC-11) -> Products'
+      xsqy_tab(m)%rxn_name = 'jcfcl3'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%tpflag = 1
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/CFC-11_jpl94.abs'
@@ -514,8 +605,8 @@
       subr(m)%xsqy_sub   => r26
       m = m + 1
 
-      xsqy_tab(m)%label = 'CCl2F2 (CFC-12) -> Products'
-      xsqy_tab(m)%wrf_label = 'j_ccl2f2'
+      xsqy_tab(m)%equation = 'CCl2F2 (CFC-12) -> Products'
+      xsqy_tab(m)%rxn_name = 'jcf2cl2'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%tpflag = 1
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/CFC-12_jpl94.abs'
@@ -523,16 +614,16 @@
       subr(m)%xsqy_sub   => r27
       m = m + 1
 
-      xsqy_tab(m)%label = 'CH3Br -> Products'
-      xsqy_tab(m)%wrf_label = 'j_ch3br'
+      xsqy_tab(m)%equation = 'CH3Br -> Products'
+      xsqy_tab(m)%rxn_name = 'jch3br'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/CH3Br_jpl94.abs'
       xsqy_tab(m)%filespec%nskip(1) = -1
       subr(m)%xsqy_sub   => no_z_dep
       m = m + 1
 
-      xsqy_tab(m)%label = 'CH3CCl3 -> Products'
-      xsqy_tab(m)%wrf_label = 'j_ch3ccl3'
+      xsqy_tab(m)%equation = 'CH3CCl3 -> Products'
+      xsqy_tab(m)%rxn_name = 'jch3ccl3'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%tpflag = 1
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/CH3CCl3_jpl94.abs'
@@ -540,8 +631,8 @@
       subr(m)%xsqy_sub   => r29
       m = m + 1
 
-      xsqy_tab(m)%label = 'CH3Cl -> Products'
-      xsqy_tab(m)%wrf_label = 'j_ch3cl'
+      xsqy_tab(m)%equation = 'CH3Cl -> Products'
+      xsqy_tab(m)%rxn_name = 'jch3cl'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%tpflag = 1
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/CH3Cl_jpl94.abs'
@@ -549,61 +640,61 @@
       subr(m)%xsqy_sub   => r30
       m = m + 1
 
-      xsqy_tab(m)%label = 'ClOO -> Products'
-      xsqy_tab(m)%wrf_label = 'j_cloo'
+      xsqy_tab(m)%equation = 'ClOO -> Products'
+      xsqy_tab(m)%rxn_name = 'j_cloo'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/ClOO_jpl94.abs'
       xsqy_tab(m)%filespec%nskip(1) = -1
       subr(m)%xsqy_sub   => no_z_dep
       m = m + 1
 
-      xsqy_tab(m)%label = 'CF3CHCl2 (HCFC-123) -> Products'
-      xsqy_tab(m)%wrf_label = 'j_cf3chcl2'
+      xsqy_tab(m)%equation = 'CF3CHCl2 (HCFC-123) -> Products'
+      xsqy_tab(m)%rxn_name = 'j_cf3chcl2'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%tpflag = 1
       subr(m)%xsqy_sub   => r32
       m = m + 1
 
-      xsqy_tab(m)%label = 'CF3CHFCl (HCFC-124) -> Products'
-      xsqy_tab(m)%wrf_label = 'j_cf3chfcl'
+      xsqy_tab(m)%equation = 'CF3CHFCl (HCFC-124) -> Products'
+      xsqy_tab(m)%rxn_name = 'j_cf3chfcl'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%tpflag = 1
       subr(m)%xsqy_sub   => r33
       m = m + 1
 
-      xsqy_tab(m)%label = 'CH3CFCl2 (HCFC-141b) -> Products'
-      xsqy_tab(m)%wrf_label = 'j_ch3cfcl2'
+      xsqy_tab(m)%equation = 'CH3CFCl2 (HCFC-141b) -> Products'
+      xsqy_tab(m)%rxn_name = 'jhcfc141b'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/HCFC-141b_jpl94.abs'
       xsqy_tab(m)%filespec%nskip(1) = -1
       subr(m)%xsqy_sub   => no_z_dep
       m = m + 1
 
-      xsqy_tab(m)%label = 'CH3CF2Cl (HCFC-142b) -> Products'
-      xsqy_tab(m)%wrf_label = 'j_ch3cf2cl'
+      xsqy_tab(m)%equation = 'CH3CF2Cl (HCFC-142b) -> Products'
+      xsqy_tab(m)%rxn_name = 'jhcfc142b'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%tpflag = 1
       subr(m)%xsqy_sub   => r35
       m = m + 1
 
-      xsqy_tab(m)%label = 'CF3CF2CHCl2 (HCFC-225ca) -> Products'
-      xsqy_tab(m)%wrf_label = 'j_cf3cf2chcl2'
+      xsqy_tab(m)%equation = 'CF3CF2CHCl2 (HCFC-225ca) -> Products'
+      xsqy_tab(m)%rxn_name = 'j_cf3cf2chcl2'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/HCFC-225ca_jpl94.abs'
       xsqy_tab(m)%filespec%nskip(1) = -1
       subr(m)%xsqy_sub   => no_z_dep
       m = m + 1
 
-      xsqy_tab(m)%label = 'CF2ClCF2CHFCl (HCFC-225cb) -> Products'
-      xsqy_tab(m)%wrf_label = 'j_cf2clcf2chfcl'
+      xsqy_tab(m)%equation = 'CF2ClCF2CHFCl (HCFC-225cb) -> Products'
+      xsqy_tab(m)%rxn_name = 'j_cf2clcf2chfcl'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/HCFC-225cb_jpl94.abs'
       xsqy_tab(m)%filespec%nskip(1) = -1
       subr(m)%xsqy_sub   => no_z_dep
       m = m + 1
 
-      xsqy_tab(m)%label = 'CHClF2 (HCFC-22) -> Products'
-      xsqy_tab(m)%wrf_label = 'j_chclf2'
+      xsqy_tab(m)%equation = 'CHClF2 (HCFC-22) -> Products'
+      xsqy_tab(m)%rxn_name = 'jhcfc22'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%tpflag = 1
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/HCFC-22_jpl94.abs'
@@ -611,8 +702,8 @@
       subr(m)%xsqy_sub   => r38
       m = m + 1
 
-      xsqy_tab(m)%label = 'HO2 -> OH + O'
-      xsqy_tab(m)%wrf_label = 'j_ho2'
+      xsqy_tab(m)%equation = 'HO2 -> OH + O'
+      xsqy_tab(m)%rxn_name = 'j_ho2'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/HO2_jpl11.abs'
       xsqy_tab(m)%filespec%nskip(1) = 10
@@ -620,49 +711,49 @@
       subr(m)%xsqy_sub   => r39
       m = m + 1
 
-      xsqy_tab(m)%label = 'CF2Br2 (Halon-1202) -> Products'
-      xsqy_tab(m)%wrf_label = 'j_cf2bf2'
+      xsqy_tab(m)%equation = 'CF2Br2 (Halon-1202) -> Products'
+      xsqy_tab(m)%rxn_name = 'j_cf2bf2'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/Halon-1202_jpl97.abs'
       xsqy_tab(m)%filespec%nskip(1) = -1
       subr(m)%xsqy_sub   => no_z_dep
       m = m + 1
 
-      xsqy_tab(m)%label = 'CF2BrCl (Halon-1211) -> Products'
-      xsqy_tab(m)%wrf_label = 'j_cf2brcl'
+      xsqy_tab(m)%equation = 'CF2BrCl (Halon-1211) -> Products'
+      xsqy_tab(m)%rxn_name = 'j_cf2brcl'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/Halon-1211_jpl97.abs'
       xsqy_tab(m)%filespec%nskip(1) = -1
       subr(m)%xsqy_sub   => no_z_dep
       m = m + 1
 
-      xsqy_tab(m)%label = 'CF3Br (Halon-1301) -> Products'
-      xsqy_tab(m)%wrf_label = 'j_cf3br'
+      xsqy_tab(m)%equation = 'CF3Br (Halon-1301) -> Products'
+      xsqy_tab(m)%rxn_name = 'jcf3br'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/Halon-1301_jpl97.abs'
       xsqy_tab(m)%filespec%nskip(1) = -1
       subr(m)%xsqy_sub   => no_z_dep
       m = m + 1
 
-      xsqy_tab(m)%label = 'CF2BrCF2Br (Halon-2402) -> Products'
-      xsqy_tab(m)%wrf_label = 'j_cf2brcf2br'
+      xsqy_tab(m)%equation = 'CF2BrCF2Br (Halon-2402) -> Products'
+      xsqy_tab(m)%rxn_name = 'jh2402'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/Halon-2402_jpl97.abs'
       xsqy_tab(m)%filespec%nskip(1) = -1
       subr(m)%xsqy_sub   => no_z_dep
       m = m + 1
 
-      xsqy_tab(m)%label = 'N2O -> N2 + O(1D)'
-      xsqy_tab(m)%wrf_label = 'j_n2o'
+      xsqy_tab(m)%equation = 'N2O -> N2 + O(1D)'
+      xsqy_tab(m)%rxn_name = 'jn2o'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%tpflag = 1
       subr(m)%xsqy_sub   => r44
       m = m + 1
 
-      xsqy_tab(m)%label   = 'ClONO2 -> Cl + NO3'
-      xsqy_tab(m+1)%label = 'ClONO2 -> ClO + NO2'
-      xsqy_tab(m)%wrf_label = 'j_clono2_a'
-      xsqy_tab(m+1)%wrf_label = 'j_clono2_b'
+      xsqy_tab(m)%equation   = 'ClONO2 -> Cl + NO3'
+      xsqy_tab(m+1)%equation = 'ClONO2 -> ClO + NO2'
+      xsqy_tab(m)%rxn_name = 'jclono2_a'
+      xsqy_tab(m+1)%rxn_name = 'jclono2_b'
       xsqy_tab(m)%jndx = m
       xsqy_tab(m+1)%channel = 2
       xsqy_tab(m:m+1)%tpflag = 1
@@ -673,10 +764,10 @@
       subr(m+1)%xsqy_sub => r45
       m = m + 2
 
-      xsqy_tab(m)%label   = 'BrONO2 -> BrO + NO2'
-      xsqy_tab(m+1)%label = 'BrONO2 -> Br + NO3'
-      xsqy_tab(m)%wrf_label = 'j_brono2_a'
-      xsqy_tab(m+1)%wrf_label = 'j_brono2_b'
+      xsqy_tab(m)%equation   = 'BrONO2 -> BrO + NO2'
+      xsqy_tab(m+1)%equation = 'BrONO2 -> Br + NO3'
+      xsqy_tab(m)%rxn_name = 'jbrono2_b'
+      xsqy_tab(m+1)%rxn_name = 'jbrono2_a'
       xsqy_tab(m)%jndx = m
       xsqy_tab(m+1)%channel = 2
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/BrONO2_jpl03.abs'
@@ -686,19 +777,19 @@
       subr(m+1)%xsqy_sub => r46
       m = m + 2
 
-      xsqy_tab(m)%label = 'Cl2 -> Cl + Cl'
-      xsqy_tab(m)%wrf_label = 'j_cl2'
+      xsqy_tab(m)%equation = 'Cl2 -> Cl + Cl'
+      xsqy_tab(m)%rxn_name = 'jcl2'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%tpflag = 1
       subr(m)%xsqy_sub   => r47
       m = m + 1
 
-      xsqy_tab(m)%label   = 'HOCH2CHO -> CH2OH + HCO'
-      xsqy_tab(m+1)%label = 'HOCH2CHO -> CH3OH + CO'
-      xsqy_tab(m+2)%label = 'HOCH2CHO -> CH2CHO + OH'
-      xsqy_tab(m)%wrf_label = 'j_glyald_a'
-      xsqy_tab(m+1)%wrf_label = 'j_glyald_b'
-      xsqy_tab(m+2)%wrf_label = 'j_glyald_c'
+      xsqy_tab(m)%equation   = 'HOCH2CHO -> CH2OH + HCO'
+      xsqy_tab(m+1)%equation = 'HOCH2CHO -> CH3OH + CO'
+      xsqy_tab(m+2)%equation = 'HOCH2CHO -> CH2CHO + OH'
+      xsqy_tab(m)%rxn_name = 'j_glyald_a'
+      xsqy_tab(m+1)%rxn_name = 'j_glyald_b'
+      xsqy_tab(m+2)%rxn_name = 'j_glyald_c'
       xsqy_tab(m)%jndx = m
       xsqy_tab(m+1:m+2)%channel = (/ 2,3 /)
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/CH2OHCHO/glycolaldehyde_jpl11.abs'
@@ -709,8 +800,8 @@
       subr(m+2)%xsqy_sub => r101
       m = m + 3
 
-      xsqy_tab(m)%label = 'CH3COCOCH3 -> Products'
-      xsqy_tab(m)%wrf_label = 'j_biacetyl'
+      xsqy_tab(m)%equation = 'CH3COCOCH3 -> Products'
+      xsqy_tab(m)%rxn_name = 'j_biacetyl'
       xsqy_tab(m)%qyld  = .158_rk
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/CH3COCOCH3/biacetyl_horowitz.abs'
@@ -719,8 +810,8 @@
       subr(m)%xsqy_sub   => no_z_dep
       m = m + 1
 
-      xsqy_tab(m)%label = 'CH3COCH=CH2 -> Products'
-      xsqy_tab(m)%wrf_label = 'j_mvk'
+      xsqy_tab(m)%equation = 'CH3COCH=CH2 -> Products'
+      xsqy_tab(m)%rxn_name = 'jmvk'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%tpflag = 2
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/MVK_jpl11.abs'
@@ -729,8 +820,8 @@
       subr(m)%xsqy_sub   => r103
       m = m + 1
 
-      xsqy_tab(m)%label = 'CH2=C(CH3)CHO -> Products'
-      xsqy_tab(m)%wrf_label = 'j_macr'
+      xsqy_tab(m)%equation = 'CH2=C(CH3)CHO -> Products'
+      xsqy_tab(m)%rxn_name = 'j_macr'
       xsqy_tab(m)%qyld  = .01_rk
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/Methacrolein_jpl11.abs'
@@ -739,8 +830,8 @@
       subr(m)%xsqy_sub   => no_z_dep
       m = m + 1
 
-      xsqy_tab(m)%label = 'CH3COCO(OH) -> Products'
-      xsqy_tab(m)%wrf_label = 'j_ch3cocooh'
+      xsqy_tab(m)%equation = 'CH3COCO(OH) -> Products'
+      xsqy_tab(m)%rxn_name = 'j_ch3cocooh'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/CH3COCOOH/pyruvic_jpl11.abs'
       xsqy_tab(m)%filespec%nskip(1) = 2
@@ -748,8 +839,8 @@
       subr(m)%xsqy_sub   => no_z_dep
       m = m + 1
 
-      xsqy_tab(m)%label = 'CH3CH2ONO2 -> CH3CH2O + NO2'
-      xsqy_tab(m)%wrf_label = 'j_ch3ch2ono2'
+      xsqy_tab(m)%equation = 'CH3CH2ONO2 -> CH3CH2O + NO2'
+      xsqy_tab(m)%rxn_name = 'j_ch3ch2ono2'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%tpflag = 1
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/RONO2/RONO2_talukdar.abs'
@@ -758,8 +849,8 @@
       subr(m)%xsqy_sub   => r106
       m = m + 1
 
-      xsqy_tab(m)%label = 'CH3CHONO2CH3 -> CH3CHOCH3 + NO2'
-      xsqy_tab(m)%wrf_label = 'j_ch3chono2ch3'
+      xsqy_tab(m)%equation = 'CH3CHONO2CH3 -> CH3CHOCH3 + NO2'
+      xsqy_tab(m)%rxn_name = 'j_ch3chono2ch3'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%tpflag = 1
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/RONO2/RONO2_talukdar.abs'
@@ -768,26 +859,26 @@
       subr(m)%xsqy_sub   => r107
       m = m + 1
 
-      xsqy_tab(m)%label = 'CH2(OH)CH2(ONO2) -> CH2(OH)CH2(O.) + NO2'
-      xsqy_tab(m)%wrf_label = 'j_ch2ohch2ono2'
+      xsqy_tab(m)%equation = 'CH2(OH)CH2(ONO2) -> CH2(OH)CH2(O.) + NO2'
+      xsqy_tab(m)%rxn_name = 'j_ch2ohch2ono2'
       xsqy_tab(m)%jndx  = m
       subr(m)%xsqy_sub   => r108
       m = m + 1
 
-      xsqy_tab(m)%label = 'CH3COCH2(ONO2) -> CH3COCH2(O.) + NO2'
-      xsqy_tab(m)%wrf_label = 'j_ch3coch2ono2'
+      xsqy_tab(m)%equation = 'CH3COCH2(ONO2) -> CH3COCH2(O.) + NO2'
+      xsqy_tab(m)%rxn_name = 'j_ch3coch2ono2'
       xsqy_tab(m)%jndx  = m
       subr(m)%xsqy_sub   => r109
       m = m + 1
 
-      xsqy_tab(m)%label = 'C(CH3)3(ONO2) -> C(CH3)3(O.) + NO2'
-      xsqy_tab(m)%wrf_label = 'j_bnit1'
+      xsqy_tab(m)%equation = 'C(CH3)3(ONO2) -> C(CH3)3(O.) + NO2'
+      xsqy_tab(m)%rxn_name = 'j_bnit1'
       xsqy_tab(m)%jndx  = m
       subr(m)%xsqy_sub   => r110
       m = m + 1
 
-      xsqy_tab(m)%label = 'ClOOCl -> Cl + ClOO'
-      xsqy_tab(m)%wrf_label = 'j_cloocl'
+      xsqy_tab(m)%equation = 'ClOOCl -> Cl + ClOO'
+      xsqy_tab(m)%rxn_name = 'j_cloocl'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/ClOOCl_jpl11.abs'
       xsqy_tab(m)%filespec%nskip(1) = 3
@@ -795,10 +886,10 @@
       subr(m)%xsqy_sub   => no_z_dep
       m = m + 1
 
-      xsqy_tab(m)%label   = 'CH2(OH)COCH3 -> CH3CO + CH2(OH)'
-      xsqy_tab(m+1)%label = 'CH2(OH)COCH3 -> CH2(OH)CO + CH3'
-      xsqy_tab(m)%wrf_label = 'j_hyac_a'
-      xsqy_tab(m+1)%wrf_label = 'j_hyac_b'
+      xsqy_tab(m)%equation   = 'CH2(OH)COCH3 -> CH3CO + CH2(OH)'
+      xsqy_tab(m+1)%equation = 'CH2(OH)COCH3 -> CH2(OH)CO + CH3'
+      xsqy_tab(m)%rxn_name = 'j_hyac_a'
+      xsqy_tab(m+1)%rxn_name = 'j_hyac_b'
       xsqy_tab(m)%jndx = m
       xsqy_tab(m+1)%channel = 2
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/Hydroxyacetone_jpl11.abs'
@@ -808,20 +899,20 @@
       subr(m+1)%xsqy_sub => r112
       m = m + 2
 
-      xsqy_tab(m)%label = 'HOBr -> OH + Br'
-      xsqy_tab(m)%wrf_label = 'j_hobr'
+      xsqy_tab(m)%equation = 'HOBr -> OH + Br'
+      xsqy_tab(m)%rxn_name = 'jhobr'
       xsqy_tab(m)%jndx  = m
       subr(m)%xsqy_sub   => r113
       m = m + 1 
 
-      xsqy_tab(m)%label = 'BrO -> Br + O'
-      xsqy_tab(m)%wrf_label = 'j_bro'
+      xsqy_tab(m)%equation = 'BrO -> Br + O'
+      xsqy_tab(m)%rxn_name = 'jbro'
       xsqy_tab(m)%jndx  = m
       subr(m)%xsqy_sub   => r114
       m = m + 1 
 
-      xsqy_tab(m)%label = 'Br2 -> Br + Br'
-      xsqy_tab(m)%wrf_label = 'j_br2'
+      xsqy_tab(m)%equation = 'Br2 -> Br + Br'
+      xsqy_tab(m)%rxn_name = 'j_br2'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/Br2.abs'
       xsqy_tab(m)%filespec%nskip(1) = 6
@@ -830,12 +921,12 @@
       subr(m)%xsqy_sub   => no_z_dep
       m = m + 1
 
-      xsqy_tab(m)%label   = 'NO3-(aq) -> NO2(aq) + O-'
-      xsqy_tab(m+1)%label = 'NO3-(aq) -> NO2-(aq) + O(3P)'
-      xsqy_tab(m+2)%label = 'NO3-(aq) with qy=1'
-      xsqy_tab(m)%wrf_label = 'j_no3_aq_a'
-      xsqy_tab(m+1)%wrf_label = 'j_no3_aq_b'
-      xsqy_tab(m+2)%wrf_label = 'j_no3_aq_c'
+      xsqy_tab(m)%equation   = 'NO3-(aq) -> NO2(aq) + O-'
+      xsqy_tab(m+1)%equation = 'NO3-(aq) -> NO2-(aq) + O(3P)'
+      xsqy_tab(m+2)%equation = 'NO3-(aq) with qy=1'
+      xsqy_tab(m)%rxn_name = 'j_no3_aq_a'
+      xsqy_tab(m+1)%rxn_name = 'j_no3_aq_b'
+      xsqy_tab(m+2)%rxn_name = 'j_no3_aq_c'
       xsqy_tab(m)%jndx = m
       xsqy_tab(m+1:m+2)%channel = (/ 2,3 /)
       xsqy_tab(m)%tpflag = 1
@@ -847,8 +938,8 @@
       subr(m+2)%xsqy_sub => r118
       m = m + 3
 
-      xsqy_tab(m)%label = 'CH3COCH2CH3 -> CH3CO + CH2CH3'
-      xsqy_tab(m)%wrf_label = 'j_mek'
+      xsqy_tab(m)%equation = 'CH3COCH2CH3 -> CH3CO + CH2CH3'
+      xsqy_tab(m)%rxn_name = 'j_mek'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%tpflag = 2
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/Martinez.abs'
@@ -857,10 +948,10 @@
       subr(m)%xsqy_sub   => r119
       m = m + 1
 
-      xsqy_tab(m)%label   = 'CH3CH2CO(OONO2) -> CH3CH2CO(OO) + NO2'
-      xsqy_tab(m+1)%label = 'CH3CH2CO(OONO2) -> CH3CH2CO(O) + NO3'
-      xsqy_tab(m)%wrf_label = 'j_ppn_a'
-      xsqy_tab(m+1)%wrf_label = 'j_ppn_b'
+      xsqy_tab(m)%equation   = 'CH3CH2CO(OONO2) -> CH3CH2CO(OO) + NO2'
+      xsqy_tab(m+1)%equation = 'CH3CH2CO(OONO2) -> CH3CH2CO(O) + NO3'
+      xsqy_tab(m)%rxn_name = 'j_ppn_a'
+      xsqy_tab(m+1)%rxn_name = 'j_ppn_b'
       xsqy_tab(m:m+1)%tpflag  = 1
       xsqy_tab(m)%jndx = m
       xsqy_tab(m+1)%channel = 2
@@ -871,8 +962,8 @@
       subr(m+1)%xsqy_sub => r120
       m = m + 2
 
-      xsqy_tab(m)%label = 'HOCH2OOH -> HOCH2O. + OH'
-      xsqy_tab(m)%wrf_label = 'j_hoch2ooh'
+      xsqy_tab(m)%equation = 'HOCH2OOH -> HOCH2O. + OH'
+      xsqy_tab(m)%rxn_name = 'j_hoch2ooh'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/HOCH2OOH_jpl11.abs'
       xsqy_tab(m)%filespec%nskip(1) = 3
@@ -880,8 +971,8 @@
       subr(m)%xsqy_sub   => no_z_dep
       m = m + 1
 
-      xsqy_tab(m)%label = 'CH2=CHCHO -> Products'
-      xsqy_tab(m)%wrf_label = 'j_acrol'
+      xsqy_tab(m)%equation = 'CH2=CHCHO -> Products'
+      xsqy_tab(m)%rxn_name = 'j_acrol'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%tpflag = 2
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/Acrolein.txt'
@@ -890,8 +981,8 @@
       subr(m)%xsqy_sub   => r122
       m = m + 1
 
-      xsqy_tab(m)%label = 'CH3CO(OOH) -> Products'
-      xsqy_tab(m)%wrf_label = 'j_ch3coooh'
+      xsqy_tab(m)%equation = 'CH3CO(OOH) -> Products'
+      xsqy_tab(m)%rxn_name = 'j_ch3coooh'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/Peracetic_acid.txt'
       xsqy_tab(m)%filespec%nskip(1) = 6
@@ -899,8 +990,8 @@
       subr(m)%xsqy_sub   => no_z_dep
       m = m + 1
 
-      xsqy_tab(m)%label = '(CH3)2NNO -> Products'
-      xsqy_tab(m)%wrf_label = 'j_amine'
+      xsqy_tab(m)%equation = '(CH3)2NNO -> Products'
+      xsqy_tab(m)%rxn_name = 'j_amine'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/dmna.abs'
       xsqy_tab(m)%filespec%nskip(1) = 5
@@ -909,10 +1000,10 @@
       subr(m)%xsqy_sub   => no_z_dep
       m = m + 1
 
-      xsqy_tab(m)%label   = 'ClO -> Cl + O(1D)'
-      xsqy_tab(m+1)%label = 'ClO -> Cl + O(3P)'
-      xsqy_tab(m)%wrf_label = 'j_clo_a'
-      xsqy_tab(m+1)%wrf_label = 'j_clo_b'
+      xsqy_tab(m)%equation   = 'ClO -> Cl + O(1D)'
+      xsqy_tab(m+1)%equation = 'ClO -> Cl + O(3P)'
+      xsqy_tab(m)%rxn_name = 'j_clo_a'
+      xsqy_tab(m+1)%rxn_name = 'jclo'
       xsqy_tab(m)%jndx = m
       xsqy_tab(m+1)%channel = 2
       xsqy_tab(m:m+1)%tpflag = 1
@@ -920,8 +1011,8 @@
       subr(m+1)%xsqy_sub => r125
       m = m + 2
 
-      xsqy_tab(m)%label = 'ClNO2 -> Cl + NO2'
-      xsqy_tab(m)%wrf_label = 'j_clno2'
+      xsqy_tab(m)%equation = 'ClNO2 -> Cl + NO2'
+      xsqy_tab(m)%rxn_name = 'j_clno2'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/ClNO2.abs'
       xsqy_tab(m)%filespec%nskip(1) = 2
@@ -929,8 +1020,8 @@
       subr(m)%xsqy_sub   => no_z_dep
       m = m + 1
 
-      xsqy_tab(m)%label = 'BrNO -> Br + NO'
-      xsqy_tab(m)%wrf_label = 'j_brno'
+      xsqy_tab(m)%equation = 'BrNO -> Br + NO'
+      xsqy_tab(m)%rxn_name = 'j_brno'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/BrNO.abs'
       xsqy_tab(m)%filespec%nskip(1) = 3
@@ -939,8 +1030,8 @@
       subr(m)%xsqy_sub   => no_z_dep
       m = m + 1
 
-      xsqy_tab(m)%label = 'BrNO2 -> Br + NO2'
-      xsqy_tab(m)%wrf_label = 'j_brno2'
+      xsqy_tab(m)%equation = 'BrNO2 -> Br + NO2'
+      xsqy_tab(m)%rxn_name = 'j_brno2'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/BrNO2.abs'
       xsqy_tab(m)%filespec%nskip(1) = 6
@@ -949,10 +1040,10 @@
       subr(m)%xsqy_sub   => no_z_dep
       m = m + 1
 
-      xsqy_tab(m)%label   = 'BrONO -> Br + NO2'
-      xsqy_tab(m+1)%label = 'BrONO -> BrO + NO'
-      xsqy_tab(m)%wrf_label = 'j_brono_a'
-      xsqy_tab(m+1)%wrf_label = 'j_brono_b'
+      xsqy_tab(m)%equation   = 'BrONO -> Br + NO2'
+      xsqy_tab(m+1)%equation = 'BrONO -> BrO + NO'
+      xsqy_tab(m)%rxn_name = 'jbrono_b'
+      xsqy_tab(m+1)%rxn_name = 'jbrono_a'
       xsqy_tab(m)%jndx = m
       xsqy_tab(m+1)%channel = 2
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/BrONO.abs'
@@ -962,8 +1053,8 @@
       subr(m+1)%xsqy_sub => r129
       m = m + 2
 
-      xsqy_tab(m)%label = 'HOCl -> HO + Cl'
-      xsqy_tab(m)%wrf_label = 'j_hocl'
+      xsqy_tab(m)%equation = 'HOCl -> HO + Cl'
+      xsqy_tab(m)%rxn_name = 'jhocl'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/HOCl.abs'
       xsqy_tab(m)%filespec%nskip(1) = 7
@@ -972,8 +1063,8 @@
       subr(m)%xsqy_sub   => no_z_dep
       m = m + 1
 
-      xsqy_tab(m)%label = 'NOCl -> NO + Cl'
-      xsqy_tab(m)%wrf_label = 'j_nocl'
+      xsqy_tab(m)%equation = 'NOCl -> NO + Cl'
+      xsqy_tab(m)%rxn_name = 'j_nocl'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%tpflag = 1
       xsqy_tab(m)%filespec%nfiles = 2
@@ -983,8 +1074,8 @@
       subr(m)%xsqy_sub   => r131
       m = m + 1
 
-      xsqy_tab(m)%label = 'OClO -> Products'
-      xsqy_tab(m)%wrf_label = 'j_oclo'
+      xsqy_tab(m)%equation = 'OClO -> Products'
+      xsqy_tab(m)%rxn_name = 'joclo'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%tpflag = 1
       xsqy_tab(m)%filespec%nfiles      = 3
@@ -996,8 +1087,8 @@
       subr(m)%xsqy_sub   => r132
       m = m + 1
 
-      xsqy_tab(m)%label = 'BrCl -> Br + Cl'
-      xsqy_tab(m)%wrf_label = 'j_brcl'
+      xsqy_tab(m)%equation = 'BrCl -> Br + Cl'
+      xsqy_tab(m)%rxn_name = 'jbrcl'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/BrCl.abs'
       xsqy_tab(m)%filespec%nskip(1) = 9
@@ -1006,8 +1097,8 @@
       subr(m)%xsqy_sub   => no_z_dep
       m = m + 1
 
-      xsqy_tab(m)%label = 'CH3(OONO2) -> CH3(OO) + NO2'
-      xsqy_tab(m)%wrf_label = 'j_ch3oono2'
+      xsqy_tab(m)%equation = 'CH3(OONO2) -> CH3(OO) + NO2'
+      xsqy_tab(m)%rxn_name = 'j_ch3oono2'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/CH3OONO2.abs'
       xsqy_tab(m)%filespec%nskip(1) = 9
@@ -1016,8 +1107,8 @@
       subr(m)%xsqy_sub   => no_z_dep
       m = m + 1
 
-      xsqy_tab(m)%label = 'C(CH3)3(ONO) -> C(CH3)3(O) + NO'
-      xsqy_tab(m)%wrf_label = 'j_bnit2'
+      xsqy_tab(m)%equation = 'C(CH3)3(ONO) -> C(CH3)3(O) + NO'
+      xsqy_tab(m)%rxn_name = 'j_bnit2'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/t-butyl-nitrite.abs'
       xsqy_tab(m)%filespec%nskip(1) = 4
@@ -1026,8 +1117,8 @@
       subr(m)%xsqy_sub   => no_z_dep
       m = m + 1
 
-      xsqy_tab(m)%label = 'ClONO -> Cl + NO2'
-      xsqy_tab(m)%wrf_label = 'j_clono'
+      xsqy_tab(m)%equation = 'ClONO -> Cl + NO2'
+      xsqy_tab(m)%rxn_name = 'j_clono'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/ClONO_jpl11.abs'
       xsqy_tab(m)%filespec%nskip(1) = 3
@@ -1035,8 +1126,8 @@
       subr(m)%xsqy_sub   => no_z_dep
       m = m + 1
 
-      xsqy_tab(m)%label = 'HCl -> H + Cl'
-      xsqy_tab(m)%wrf_label = 'j_hcl'
+      xsqy_tab(m)%equation = 'HCl -> H + Cl'
+      xsqy_tab(m)%rxn_name = 'jhcl'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/HCl_jpl11.abs'
       xsqy_tab(m)%filespec%nskip(1) = 3
@@ -1044,10 +1135,10 @@
       subr(m)%xsqy_sub   => no_z_dep
       m = m + 1
 
-      xsqy_tab(m)%label   = 'CH2O -> H + HCO' 
-      xsqy_tab(m+1)%label = 'CH2O -> H2 + CO'
-      xsqy_tab(m)%wrf_label = 'j_ch2o_r'
-      xsqy_tab(m+1)%wrf_label = 'j_ch2o_m'
+      xsqy_tab(m)%equation   = 'CH2O -> H + HCO' 
+      xsqy_tab(m+1)%equation = 'CH2O -> H2 + CO'
+      xsqy_tab(m)%rxn_name = 'j_ch2o_r'
+      xsqy_tab(m+1)%rxn_name = 'j_ch2o_m'
       xsqy_tab(m)%jndx = m
       xsqy_tab(m+1)%channel = 2
       xsqy_tab(m:m+1)%tpflag = (/ 1,3 /)
@@ -1060,8 +1151,8 @@
       subr(m+1)%xsqy_sub  => pxCH2O
       m = m + 2
 
-      xsqy_tab(m)%label = 'CH3COOH -> CH3 + COOH'
-      xsqy_tab(m)%wrf_label = 'j_ch3cooh'
+      xsqy_tab(m)%equation = 'CH3COOH -> CH3 + COOH'
+      xsqy_tab(m)%rxn_name = 'j_ch3cooh'
       xsqy_tab(m)%qyld  = .55_rk
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/CH3COOH_jpl11.abs'
@@ -1070,8 +1161,8 @@
       subr(m)%xsqy_sub   => no_z_dep
       m = m + 1
 
-      xsqy_tab(m)%label = 'CH3OCl -> CH3O + Cl'
-      xsqy_tab(m)%wrf_label = 'j_ch3ocl'
+      xsqy_tab(m)%equation = 'CH3OCl -> CH3O + Cl'
+      xsqy_tab(m)%rxn_name = 'j_ch3ocl'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/CH3OCl_jpl11.abs'
       xsqy_tab(m)%filespec%nskip(1) = 3
@@ -1079,8 +1170,8 @@
       subr(m)%xsqy_sub   => no_z_dep
       m = m + 1
 
-      xsqy_tab(m)%label = 'CHCl3 -> Products'
-      xsqy_tab(m)%wrf_label = 'j_chcl3'
+      xsqy_tab(m)%equation = 'CHCl3 -> Products'
+      xsqy_tab(m)%rxn_name = 'j_chcl3'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%tpflag = 1
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/CHCl3_jpl11.abs'
@@ -1089,8 +1180,8 @@
       subr(m)%xsqy_sub   => r140
       m = m + 1
 
-      xsqy_tab(m)%label = 'C2H5ONO2 -> C2H5O + NO2'
-      xsqy_tab(m)%wrf_label = 'j_c2h5ono2'
+      xsqy_tab(m)%equation = 'C2H5ONO2 -> C2H5O + NO2'
+      xsqy_tab(m)%rxn_name = 'j_c2h5ono2'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%tpflag = 1
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/RONO2/C2H5ONO2_iup2006.abs'
@@ -1099,8 +1190,8 @@
       subr(m)%xsqy_sub   => r141
       m = m + 1
 
-      xsqy_tab(m)%label = 'n-C3H7ONO2 -> C3H7O + NO2'
-      xsqy_tab(m)%wrf_label = 'j_nc3h7ono2'
+      xsqy_tab(m)%equation = 'n-C3H7ONO2 -> C3H7O + NO2'
+      xsqy_tab(m)%rxn_name = 'j_nc3h7ono2'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/RONO2/nC3H7ONO2_iup2006.abs'
       xsqy_tab(m)%filespec%nskip(1) = 3
@@ -1108,8 +1199,8 @@
       subr(m)%xsqy_sub   => no_z_dep
       m = m + 1
 
-      xsqy_tab(m)%label = '1-C4H9ONO2 -> 1-C4H9O + NO2'
-      xsqy_tab(m)%wrf_label = 'j_1c4h9ono2'
+      xsqy_tab(m)%equation = '1-C4H9ONO2 -> 1-C4H9O + NO2'
+      xsqy_tab(m)%rxn_name = 'j_1c4h9ono2'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/RONO2/1C4H9ONO2_iup2006.abs'
       xsqy_tab(m)%filespec%nskip(1) = 3
@@ -1117,8 +1208,8 @@
       subr(m)%xsqy_sub   => no_z_dep
       m = m + 1
 
-      xsqy_tab(m)%label = '2-C4H9ONO2 -> 2-C4H9O + NO2'
-      xsqy_tab(m)%wrf_label = 'j_2c4h9ono2'
+      xsqy_tab(m)%equation = '2-C4H9ONO2 -> 2-C4H9O + NO2'
+      xsqy_tab(m)%rxn_name = 'j_2c4h9ono2'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/RONO2/2C4H9ONO2_iup2006.abs'
       xsqy_tab(m)%filespec%nskip(1) = 3
@@ -1126,8 +1217,8 @@
       subr(m)%xsqy_sub   => no_z_dep
       m = m + 1
 
-      xsqy_tab(m)%label = 'perfluoro 1-iodopropane -> products'
-      xsqy_tab(m)%wrf_label = 'j_perfluoro'
+      xsqy_tab(m)%equation = 'perfluoro 1-iodopropane -> products'
+      xsqy_tab(m)%rxn_name = 'j_perfluoro'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/PF-n-iodopropane.abs'
       xsqy_tab(m)%filespec%nskip(1) = 2
@@ -1135,8 +1226,8 @@
       subr(m)%xsqy_sub   => no_z_dep
       m = m + 1
 
-      xsqy_tab(m)%label = 'I2 -> I + I'
-      xsqy_tab(m)%wrf_label = 'j_i2'
+      xsqy_tab(m)%equation = 'I2 -> I + I'
+      xsqy_tab(m)%rxn_name = 'j_i2'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/YLD/I2.qy'
       xsqy_tab(m)%filespec%nskip(1) = 4
@@ -1144,8 +1235,8 @@
       subr(m)%xsqy_sub   => r146
       m = m + 1
 
-      xsqy_tab(m)%label = 'IO -> I + O'
-      xsqy_tab(m)%wrf_label = 'j_io'
+      xsqy_tab(m)%equation = 'IO -> I + O'
+      xsqy_tab(m)%rxn_name = 'j_io'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/IO_jpl11.abs'
       xsqy_tab(m)%filespec%nskip(1) = 2
@@ -1153,15 +1244,15 @@
       subr(m)%xsqy_sub   => no_z_dep
       m = m + 1
 
-      xsqy_tab(m)%label = 'IOH -> I + OH'
-      xsqy_tab(m)%wrf_label = 'j_ioh'
+      xsqy_tab(m)%equation = 'IOH -> I + OH'
+      xsqy_tab(m)%rxn_name = 'j_ioh'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/IOH_jpl11.abs'
       xsqy_tab(m)%filespec%nskip(1) = 2
       xsqy_tab(m)%filespec%nread(1) = 101
       subr(m)%xsqy_sub   => no_z_dep
 
-      end subroutine setup_sub_calls
+    end subroutine setup_sub_calls
 
 !-----------------------------------------------------------------------------*
 !=  *** ALL the following subroutines have the following arguments
@@ -1356,11 +1447,11 @@
                       skip_cnt=2,rd_cnt=n,x=x1,y=y1,y1=y2 )
       xsav(1:n) = x1(1:n)
       CALL add_pnts_inter2(x1,y1,yg1,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/y1(1),0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/y1(1),0._rk/), errmsg, errflg)
       n = nsav
       x1(1:n) = xsav(1:n)
       CALL add_pnts_inter2(x1,y2,yg2,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/y2(1),0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/y2(1),0._rk/), errmsg, errflg)
 
       END SUBROUTINE readit
 
@@ -1463,7 +1554,7 @@
                       skip_cnt=6,rd_cnt=n,x=x1,y=y1 )
       y1(1:n) = y1(1:n)*1.E-20_rk
       CALL add_pnts_inter2(x1,y1,yg1,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       n = 56 ; nsav = 56
       CALL base_read( filespec=trim(input_data_root)//'/DATAJ1/YLD/NO3_jpl2011.qy', errmsg=errmsg, errflg=errflg, &
@@ -1479,23 +1570,23 @@
       q2_190(1:n) = q2_190(1:n)*.001_rk
 
       CALL add_pnts_inter2(x,q1_298,yg_298,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
       n = nsav ; x(1:n) = xsav(1:n)
       CALL add_pnts_inter2(x,q1_230,yg_230,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
       n = nsav ; x(1:n) = xsav(1:n)
       CALL add_pnts_inter2(x,q1_190,yg_190,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
      
       n = nsav ; x(1:n) = xsav(1:n)
       CALL add_pnts_inter2(x,q2_298,yg_298(1,2),kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/1._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/1._rk,0._rk/), errmsg, errflg)
       n = nsav ; x(1:n) = xsav(1:n)
       CALL add_pnts_inter2(x,q2_230,yg_230(1,2),kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/1._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/1._rk,0._rk/), errmsg, errflg)
       n = nsav ; x(1:n) = xsav(1:n)
       CALL add_pnts_inter2(x,q2_190,yg_190(1,2),kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/1._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/1._rk,0._rk/), errmsg, errflg)
 
       END SUBROUTINE readit
 
@@ -1576,7 +1667,7 @@
                       skip_cnt=4,rd_cnt=n1,x=x1,y=y1 )
       y1(1:n1) = y1(1:n1) * 1.E-20_rk
       CALL add_pnts_inter2(x1,y1,yg1,kdata,n1, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
 ! read temperature dependence coefficients:
       n2 = 8
@@ -1584,7 +1675,7 @@
                       skip_cnt=111,rd_cnt=n2,x=x2,y=A,y1=B )
 
       CALL add_pnts_inter2(x2,B,yg2,kdata,n2, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       END SUBROUTINE readit
 
@@ -1655,13 +1746,13 @@
 
       y1(1:n1) = y1(1:n1) * 1.e-20_rk
       CALL add_pnts_inter2(x1,y1,yg1,kdata,n1, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       y2(1:n1) = y2(1:n1) * 1.e-3_rk
       yends(:) = (/ y2(1),y2(n1) /)
       n1 = nsav ; x1(1:n1) = xsav(1:n1)
       CALL add_pnts_inter2(x1,y2,yg2,kdata,n1, &
-                           nw,wl,xsqy_tab(j)%label,deltax,yends, errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,yends, errmsg, errflg)
 
       END SUBROUTINE readit
 
@@ -1765,7 +1856,7 @@
 
       n = n + n1
       CALL add_pnts_inter2(x1,y1,yg,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       END SUBROUTINE readit
 
@@ -1850,7 +1941,7 @@
 
       y1(1:n1) = y1(1:n1) * 1.e-20_rk
       CALL add_pnts_inter2(x1,y1,yg,kdata,n1, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/y1(1),0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/y1(1),0._rk/), errmsg, errflg)
 
       END SUBROUTINE readit
 
@@ -1958,7 +2049,7 @@
       y1(1:n) = y1(1:n) * 1.e-20_rk
 
       CALL add_pnts_inter2(x1,y1,yg,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
 ! quantum yields
 
@@ -1968,11 +2059,11 @@
       xsav(1:n) = x1(1:n)
     
       CALL add_pnts_inter2(x1,y1,yg1,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
       n = nsav
       x1(1:n) = xsav(1:n)
       CALL add_pnts_inter2(x1,y2,yg2,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       yg3(1:nw-1) = 0._rk
 
@@ -2056,7 +2147,7 @@
       y1(1:n) = y1(1:n) * 1.e-20_rk
 
       CALL add_pnts_inter2(x1,y1,yg,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
 ! quantum yields
 
@@ -2147,7 +2238,7 @@
       y1(1:n) = y1(1:n) * 1.e-20_rk
       yends(:) = 0._rk
       CALL add_pnts_inter2(x1,y1,yg,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,yends, errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,yends, errmsg, errflg)
 
 ! quantum yields
 
@@ -2157,15 +2248,15 @@
       xsav(1:n) = x(1:n)
       yends(1) = y1(1)
       CALL add_pnts_inter2(x,y1,yg1,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,yends, errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,yends, errmsg, errflg)
       n = nsav ; x(1:n) = xsav(1:n)
       yends(1) = y2(1)
       CALL add_pnts_inter2(x,y2,yg2,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,yends, errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,yends, errmsg, errflg)
       n = nsav ; x(1:n) = xsav(1:n)
       yends(1) = y3(1)
       CALL add_pnts_inter2(x,y3,yg3,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,yends, errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,yends, errmsg, errflg)
 
       END SUBROUTINE readit
 
@@ -2250,7 +2341,7 @@
                       skip_cnt=2,rd_cnt=n,x=x1,y=y1 )
       y1(1:n) = y1(1:n) * 1.e-20_rk
       CALL add_pnts_inter2(x1,y1,yg,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
          
       END SUBROUTINE readit
 
@@ -2322,13 +2413,13 @@
       xsav(1:n) = x1(1:n)
 
       CALL add_pnts_inter2(x1,y1,yg,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
       n = nsav ; x1(1:n) = xsav(1:n)
       CALL add_pnts_inter2(x1,y2,yg2,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
       n = nsav ; x1(1:n) = xsav(1:n)
       CALL add_pnts_inter2(x1,y3,yg3,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
          
       END SUBROUTINE readit
 
@@ -2395,10 +2486,10 @@
       y2(1:n) = y2(1:n) * 1.e-3_rk
       xsav(1:n) = x1(1:n)
       CALL add_pnts_inter2(x1,y1,yg,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
       n = nsav ; x1(1:n) = xsav(1:n)
       CALL add_pnts_inter2(x1,y2,yg1,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       END SUBROUTINE readit
 
@@ -2481,10 +2572,10 @@
       xsav(1:n) = x1(1:n)
  
       CALL add_pnts_inter2(x1,y1,yg,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
       n = nsav ; x1(1:n) = xsav(1:n)
       CALL add_pnts_inter2(x1,y2,yg2,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       END SUBROUTINE readit
 
@@ -2570,7 +2661,7 @@
       y1(1:n) = y1(1:n) * 1.E-20_rk
          
       CALL add_pnts_inter2(x1,y1,yg,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       END SUBROUTINE readit
 
@@ -2647,12 +2738,12 @@
       
 !* sigma @ 295 K
       CALL add_pnts_inter2(x1,y1,yg1,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
 ! sigma @ 210 K
       n = nsav ; x1(1:n) = xsav(1:n)
       CALL add_pnts_inter2(x1,y2,yg2,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       END SUBROUTINE readit
 
@@ -2729,12 +2820,12 @@
 
 !* sigma @ 295 K
       CALL add_pnts_inter2(x1,y1,yg1,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       n = nsav ; x1(1:n) = xsav(1:n)
 ! sigma @ 210 K
       CALL add_pnts_inter2(x1,y2,yg2,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       END SUBROUTINE readit
 
@@ -2798,7 +2889,7 @@
 !* sigma @ 298 K
 
       CALL add_pnts_inter2(x1,y1,yg,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       END SUBROUTINE readit
 
@@ -2860,7 +2951,7 @@
 
 !* sigma @ 298 K
       CALL add_pnts_inter2(x1,y1,yg,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       END SUBROUTINE readit
 
@@ -2945,17 +3036,17 @@
 
 !* sigma @ 295 K
       CALL add_pnts_inter2(x1,y1,yg1,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       n = nsav ; x1(1:n) = xsav(1:n)
 !* sigma @ 250 K
       CALL add_pnts_inter2(x1,y2,yg2,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       n = nsav ; x1(1:n) = xsav(1:n)
 !* sigma @ 210 K
       CALL add_pnts_inter2(x1,y3,yg3,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       END SUBROUTINE readit
 
@@ -3041,17 +3132,17 @@
 
 !* sigma @ 296 K
       CALL add_pnts_inter2(x1,y1,yg1,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       n = nsav ; x1(1:n) = xsav(1:n)
 !* sigma @ 279 K
       CALL add_pnts_inter2(x1,y2,yg2,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       n = nsav ; x1(1:n) = xsav(1:n)
 !* sigma @ 255 K
       CALL add_pnts_inter2(x1,y3,yg3,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       END SUBROUTINE readit
 
@@ -3391,27 +3482,27 @@
 
 !* sigma @ 295 K
       CALL add_pnts_inter2(x1,y1,yg1,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       n = nsav ; x1(1:n) = xsav(1:n)
 !* sigma @ 270 K
       CALL add_pnts_inter2(x1,y2,yg2,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       n = nsav ; x1(1:n) = xsav(1:n)
 !* sigma @ 250 K
       CALL add_pnts_inter2(x1,y3,yg3,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       n = nsav ; x1(1:n) = xsav(1:n)
 !* sigma @ 230 K
       CALL add_pnts_inter2(x1,y4,yg4,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       n = nsav ; x1(1:n) = xsav(1:n)
 !* sigma @ 210 K
       CALL add_pnts_inter2(x1,y5,yg5,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       END SUBROUTINE readit
 
@@ -3478,7 +3569,7 @@
       y1(1:n) = y1(1:n) * 1.E-20_rk
 
       CALL add_pnts_inter2(x1,y1,yg,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       END SUBROUTINE readit
 
@@ -3639,15 +3730,15 @@
       y1(1:n)   = y1(1:n) * 1.E-20_rk
 
       CALL add_pnts_inter2(x1,y1,yg1,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       n = nsav ; x1(1:n) = xsav(1:n)
       CALL add_pnts_inter2(x1,y2,yg2,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       n = nsav ; x1(1:n) = xsav(1:n)
       CALL add_pnts_inter2(x1,y3,yg3,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       END SUBROUTINE readit
 
@@ -3713,7 +3804,7 @@
       y1(1:n) = y1(1:n) * 1.E-20_rk
 
       CALL add_pnts_inter2(x1,y1,yg1,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       END SUBROUTINE readit
 
@@ -3832,7 +3923,7 @@
       y(1:n) = y(1:n) * 1.e-20_rk
          
       CALL add_pnts_inter2(x,y,yg,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       END SUBROUTINE readit
 
@@ -3904,7 +3995,7 @@
       y(1:n) = y(1:n) * 1.e-20_rk
 
       CALL add_pnts_inter2(x,y,yg,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       END SUBROUTINE readit
 
@@ -3978,7 +4069,7 @@
         wrk(1:n1) = pack( x1(1:n),mask=y1(1:n) > 0._rk )
         x1(1:n1)  = wrk(1:n1)
         CALL add_pnts_inter2(x1,y1,yg1,kdata,n1, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
       else
         yg1(:nw) = 0._rk
       endif
@@ -4069,7 +4160,7 @@
         wrk(1:n1) = pack( x1(1:n),mask=y1(1:n) > 0._rk )
         x1(1:n1)  = wrk(1:n1)
         CALL add_pnts_inter2(x1,y1,yg1,kdata,n1, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
       else
         yg1(:nw) = 0._rk
       endif
@@ -4274,7 +4365,7 @@
       y(1:n) = y(1:n) * 1.e-20_rk
 
       CALL add_pnts_inter2(x,y,yg,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       END SUBROUTINE readit
 
@@ -4456,7 +4547,7 @@
                       y2=wrk,y3=wrk,y4=wrk )
       y1(1:n) = y1(1:n) * 3.82e-21_rk
       CALL add_pnts_inter2(x1,y1,yg2,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       END SUBROUTINE readit
 
@@ -4532,7 +4623,7 @@
       y(1:n) = y(1:n) * 1.e-20_rk
 
       CALL add_pnts_inter2(x,y,yg,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       END SUBROUTINE readit
 
@@ -4611,11 +4702,11 @@
       xsav(1:n) = x1(1:n)
  
       CALL add_pnts_inter2(x1,y1,yg,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       n = nsav ; x1(1:n) = xsav(1:n)
       CALL add_pnts_inter2(x1,y2,yg2,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       END SUBROUTINE readit
 
@@ -4689,7 +4780,7 @@
                       skip_cnt=6,rd_cnt=n,x=x1,y=y1 )
       y1(1:n) = y1(1:n) * 1.E-20_rk
  
-      CALL add_pnts_inter2(x1,y1,yg,kdata,n,nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+      CALL add_pnts_inter2(x1,y1,yg,kdata,n,nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       END SUBROUTINE readit
 
@@ -4803,7 +4894,7 @@
          x1(1:nn) = xsav(1:nn)
          y1(1:nn) = y(1:nn,m)
          CALL add_pnts_inter2(x1,y1,yg,kdata,nn, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
          ygt(1:nw-1,m) = yg(1:nw-1)
       ENDDO
 
@@ -4869,7 +4960,7 @@
                       skip_cnt=8,rd_cnt=n,x=x1,y=y1 )
  
       CALL add_pnts_inter2(x1,y1,yg,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       END SUBROUTINE readit
 
@@ -4966,27 +5057,27 @@
       nsav = n ; xsav(1:n) = x1(1:n)
 
       CALL add_pnts_inter2(x1,y223,yg223,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       n = nsav ; x1(1:n) = xsav(1:n)
       CALL add_pnts_inter2(x1,y243,yg243,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       n = nsav ; x1(1:n) = xsav(1:n)
       CALL add_pnts_inter2(x1,y263,yg263,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       n = nsav ; x1(1:n) = xsav(1:n)
       CALL add_pnts_inter2(x1,y298,yg298,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       n = nsav ; x1(1:n) = xsav(1:n)
       CALL add_pnts_inter2(x1,y323,yg323,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       n = nsav ; x1(1:n) = xsav(1:n)
       CALL add_pnts_inter2(x1,y343,yg343,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       END SUBROUTINE readit
 
@@ -5079,13 +5170,13 @@
       CLOSE(kin)
       
       CALL add_pnts_inter2(x204,y204,yg204,kdata,n204, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       CALL add_pnts_inter2(x296,y296,yg296,kdata,n296, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       CALL add_pnts_inter2(x378,y378,yg378,kdata,n378, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       END SUBROUTINE readit
 
@@ -5185,11 +5276,11 @@
       
 !     terminate endpoints and interpolate to working grid
       CALL add_pnts_inter2(x1,y298,yg1,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
       
       n = nsav ; x1(1:n) = xsav(1:n)
       CALL add_pnts_inter2(x1,tcoef,yg2,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
 ! quantum yields: Read, terminate, interpolate:
 
@@ -5199,11 +5290,11 @@
       xsav(1:n) = x1(1:n)
 
       CALL add_pnts_inter2(x1,qr,yg3,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/qr(1),0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/qr(1),0._rk/), errmsg, errflg)
 
       n = nsav ; x1(1:n) = xsav(1:n)
       CALL add_pnts_inter2(x1,qm,yg4,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/qm(1),0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/qm(1),0._rk/), errmsg, errflg)
 
       END SUBROUTINE readit
 
@@ -5280,7 +5371,7 @@
       y1(1:n) = y1(1:n) * 1.E-20_rk
       
       CALL add_pnts_inter2(x1,y1,yg,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       END SUBROUTINE readit
 
@@ -5349,11 +5440,11 @@
       xsav(1:n) = x1(1:n)
 
       CALL add_pnts_inter2(x1,y1,yg1,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       n = nsav ; x1(1:n) = xsav(1:n)
       CALL add_pnts_inter2(x1,y2,yg2,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
       END SUBROUTINE readit
 
@@ -5409,7 +5500,7 @@
       y(1:n) = y(1:n) * 1.e-20_rk
       
       CALL add_pnts_inter2(x,y,yg1,kdata,n, &
-                           nw,wl,xsqy_tab(j)%label,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                           nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
 ! quantum yields 
 
@@ -5417,12 +5508,1026 @@
       CALL base_read( filespec=trim(input_data_root)//'/DATAJ1/YLD/I2.qy', errmsg=errmsg, errflg=errflg, &
                       skip_cnt=4,rd_cnt=n,x=x,y=y )
       
-      CALL add_pnts_inter2(x,y,yg2,kdata,n,nw,wl,xsqy_tab(j)%label,deltax,(/1._rk,0._rk/), errmsg, errflg)
+      CALL add_pnts_inter2(x,y,yg2,kdata,n,nw,wl,xsqy_tab(j)%equation,deltax,(/1._rk,0._rk/), errmsg, errflg)
 
       END SUBROUTINE readit
 
       END SUBROUTINE r146
 
+
+      subroutine XSQY_N2O5(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
+!-----------------------------------------------------------------------------!
+!   purpose:                                                                  !
+!   provide product (cross section) x (quantum yield):                        !
+!           N2O5 + hv -> NO3 + NO2                                            !
+!           N2O5 + hv -. NO3 + NO + O                                         !
+!   cross section: JPL06                                                      !
+!-----------------------------------------------------------------------------!
+!   parameters:                                                               !
+!   nw     - integer, number of specified intervals + 1 in working        (i) !
+!            wavelength grid                                                  !
+!   wl     - real, vector of lower limits of wavelength intervals in      (i) !
+!            working wavelength grid                                          !
+!   wc     - real, vector of center points of wavelength intervals in     (i) !
+!            working wavelength grid                                          !
+!   nz     - integer, number of altitude levels in working altitude grid  (i) !
+!   tlev   - real, temperature (k) at each specified altitude level       (i) !
+!   airlev - real, air density (molec/cc) at each altitude level          (i) !
+!   j      - integer, counter for number of weighting functions defined  (io) !
+!   sq     - real, cross section x quantum yield (cm^2) for each          (o) !
+!            photolysis reaction defined, at each defined wavelength and      !
+!            at each defined altitude level                                   !
+!   jlabel - character*60, string identifier for each photolysis reaction (o) !
+!            defined                                                          !
+!-----------------------------------------------------------------------------!
+!   edit history:                                                             !
+!   01/17/08  Doug Kinnison                                                   !
+!-----------------------------------------------------------------------------!
+
+!-----------------------------------------------------------------------------!
+!     ... args                                                                !
+!-----------------------------------------------------------------------------!
+        INTEGER, intent(in) :: nw
+        INTEGER, intent(in) :: nz
+        INTEGER, intent(inout) :: j
+        REAL(rk), intent(in)    :: wl(:), wc(:)
+        REAL(rk), intent(in)    :: tlev(:)
+        REAL(rk), intent(in)    :: airden(:)
+        character(len=*), intent(out) :: errmsg
+        integer,          intent(out) :: errflg
+        real(rk), optional, intent(out) :: sq(:,:)
+
+
+        !-----------------------------------------------------------------------------!
+        !     ... local                                                               !
+        !-----------------------------------------------------------------------------!
+        integer, parameter :: kdata=300
+        real(rk) :: x1   (kdata)
+        real(rk) :: y1   (kdata)
+        real(rk) :: wctmp(kdata)
+        real(rk) :: wcb  (kdata)
+        real(rk) :: ytmp (nz,kdata)
+        real(rk) :: ycomb(nz,kdata)
+        real(rk) :: ytd  (nz,kw)
+        real(rk) :: yg   (kw)
+        real(rk) :: yg1  (kw)
+        real(rk) :: qy_O3p
+        real(rk) :: tin(nz)
+        real(rk) :: XS_harwood (nz,16)
+        real(rk), save :: Xin(kdata) = -huge(1._rk)
+        real(rk), save :: Yin(kdata) = -huge(1._rk)
+
+        integer i, iw, n, idum, ierr
+        integer iz, icnt, iwc, n1, chnl
+
+        real(rk), parameter :: ww(16) = (/ &
+             260.0,   270.0,   280.0,    290.0,   300.0, &
+             310.0,   320.0,   330.0,    340.0,   350.0, &
+             360.0,   370.0,   380.0,    390.0,   400.0, &
+             410.0 /)
+
+        real(rk), parameter :: aa(16) = (/ &
+             -18.27,  -18.42,  -18.59,   -18.72,  -18.84, &
+             -18.90,  -18.93,  -18.87,   -18.77,  -18.71, &
+             -18.31,  -18.14,  -18.01,   -18.42,  -18.59, &
+             -18.13 /)
+
+        real(rk), parameter :: bb(16) = (/ &
+             -0.091,  -0.104,  -0.112,   -0.135,  -0.170,  &
+             -0.226,  -0.294,  -0.388,   -0.492,  -0.583,  &
+             -0.770,  -0.885,  -0.992,   -0.949,  -0.966, &
+             -1.160 /)
+        LOGICAL, save :: is_initialized = .false.
+
+        if( initialize ) then
+           if( .not. is_initialized ) then
+              CALL readit
+              is_initialized = .true.
+           endif
+        else
+
+           !----------------------------------------------------
+           !     ... tin set to tlev
+           !----------------------------------------------------
+           tin(:) = tlev(:)
+
+           !----------------------------------------------------
+           !     ... Calculate the T-dep XS (233-295K)
+           !         and 260-410nm
+           !----------------------------------------------------
+           do iw = 1, 16
+              do iz = 1, nz
+                 IF (tin(iz) .LT. 200.0) THEN
+                    XS_harwood(iz,iw) = 10**(aa(iw) + (1000.*bb(iw)/200.0))
+                 ENDIF
+                 IF ((tin(iz) .GE. 200.0) .AND. (tin(iz) .LE. 295.)) THEN
+                    XS_harwood(iz,iw) = 10**(aa(iw) + (1000.*bb(iw)/tin(iz)))
+                 ENDIF
+                 IF (tin(iz) .GT. 295.0) THEN
+                    XS_harwood(iz,iw) = 10**(aa(iw) + (1000.*bb(iw)/295.0))
+                 ENDIF
+              enddo
+           enddo
+
+           !     ... Combine cross sections
+           do iz = 1, nz
+              icnt = 1
+
+              !     ... < 260 nm
+              do i = 1, n
+                 IF (xin(i) .LT. 260.) THEN
+                    ycomb(iz,icnt) = yin(i)
+                    wcb  (icnt)    = xin(i)
+                    icnt = icnt + 1
+                 ENDIF
+              enddo
+              !     ... 260-410 nm
+              do i = 1, 16
+                 ycomb(iz,icnt) = (xs_harwood(iz,i))
+                 wcb  (icnt)    =  ww(i)
+                 icnt = icnt+1
+              enddo
+              !     ... >410 nm
+              do i = 1, n
+                 IF (xin(i) .GT. 410.) THEN
+                    ycomb(iz,icnt) = yin(i)
+                    wcb  (icnt)    = xin(i)
+                    icnt = icnt+1
+                 ENDIF
+              enddo
+           enddo
+
+           !     ... Interpolate to TUV grid 
+           do iz = 1, nz
+              n1 = icnt-1
+              y1 = ycomb(iz,:)
+              x1 = wcb
+              call add_pnts_inter2(x1,y1,yg1, kdata, n1, &
+                             nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
+
+              ytd(iz,:) = yg1(:)
+
+           enddo
+
+           !-------------------------------------------------------
+           !     ... quantum yield (JPL06)
+           !-------------------------------------------------------
+
+           chnl = xsqy_tab(j)%channel
+           do iw = 1, nw-1
+
+              if (wc(iw) .GE. 300.0) THEN 
+                 qy_O3p = 0.0
+                 if (chnl.eq.1) then ! 'N2O5 + hv -> NO3 + NO2'
+                    do iz = 1, nz
+                       sq(iz,iw) = 1.0 * ytd(iz,iw)
+                    enddo
+                 else                ! 'N2O5 + hv -> NO3 + NO + O'
+                    do iz = 1, nz
+                       sq(iz,iw) = qy_O3p
+                    enddo
+                 endif
+              endif
+
+              if (wc(iw) .LT. 300.0) THEN
+                 qy_O3p = min( 1._rk, 3.832441_rk - 0.012809638_rk * wc(iw) )
+                 qy_O3p = max( 0._rk, qy_O3p )
+                 if (chnl.eq.1) then ! 'N2O5 + hv -> NO3 + NO2'
+                    do iz = 1, nz
+                       sq(iz,iw) = (1.0-qy_O3p)*ytd(iz,iw)
+
+                    enddo
+                 else                ! 'N2O5 + hv -> NO3 + NO + O'
+                    do iz = 1, nz
+                       sq(iz,iw) = qy_O3p *ytd(iz,iw)
+                    enddo
+                 endif
+              endif
+
+           enddo
+
+        endif
+
+      contains
+        subroutine readit
+          n = xsqy_tab(j)%filespec%nread(1)
+          CALL base_read( filespec=xsqy_tab(j)%filespec%filename(1), &
+               errmsg=errmsg, errflg=errflg, &
+               skip_cnt=xsqy_tab(j)%filespec%nskip(1), &
+               rd_cnt=n, &
+               x=Xin,y=Yin )
+        end subroutine readit
+      end subroutine  XSQY_N2O5
+
+      subroutine XSQY_CH3CHO(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
+!---------------------------------------------------------------------------!
+!  PURPOSE:                                                                 !
+!  Provide product (cross section) x (quantum yield) for CH3CHO photolysis: !
+!      (a)  CH3CHO + hv -> CH3 + HCO                                        !
+!      (b)  CH3CHO + hv -> CH4 + CO                                         !
+!      (c)  CH3CHO + hv -> CH3CO + H                                        !
+!  Cross section:  Choice between                                           !
+!                   (1) IUPAC 97 data, from Martinez et al.                 !
+!                   (2) Calvert and Pitts                                   !
+!                   (3) Martinez et al., Table 1 scanned from paper         !
+!                   (4) KFA tabulations                                     !
+!  Quantum yields: Choice between                                           !
+!                   (1) IUPAC 97, pressure correction using Horowith and    !
+!                                 Calvert, 1982                             !
+!                   (2) NCAR data file, from Moortgat, 1986                 !
+!---------------------------------------------------------------------------!
+!  PARAMETERS:                                                              !
+!  NW     - INTEGER, number of specified intervals + 1 in working        (I)!
+!           wavelength grid                                                 !
+!  WL     - REAL, vector of lower limits of wavelength intervals in      (I)!
+!           working wavelength grid                                         !
+!  WC     - REAL, vector of center points of wavelength intervals in     (I)!
+!           working wavelength grid                                         !
+!  NZ     - INTEGER, number of altitude levels in working altitude grid  (I)!
+!  TLEV   - REAL, temperature (K) at each specified altitude level       (I)!
+!  AIRDEN - REAL, air density (molec/cc) at each altitude level          (I)!
+!  J      - INTEGER, counter for number of weighting functions defined  (IO)!
+!  SQ     - REAL, cross section x quantum yield (cm^2) for each          (O)!
+!           photolysis reaction defined, at each defined wavelength and     !
+!           at each defined altitude level                                  !
+!  JLABEL - CHARACTER*50, string identifier for each photolysis reaction (O)!
+!           defined                                                         !
+!---------------------------------------------------------------------------!
+
+!-----------------------------------------------------------------------------!
+!     ... args                                                                !
+!-----------------------------------------------------------------------------!
+      INTEGER, intent(in) :: nw
+      INTEGER, intent(in) :: nz
+      INTEGER, intent(inout) :: j
+      REAL(rk), intent(in)    :: wl(:), wc(:)
+      REAL(rk), intent(in)    :: tlev(:)
+      REAL(rk), intent(in)    :: airden(:)
+      character(len=*), intent(out) :: errmsg
+      integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
+
+!-----------------------------------------------------------------------------!
+!     ... local                                                               !
+!-----------------------------------------------------------------------------!
+      integer kdata
+      parameter (kdata=150)
+
+      integer  i, n, n1, n2, ierr, iz, iw, idum
+      real(rk)  x1(kdata), x2(kdata)
+      real(rk)  y1(kdata), y2(kdata)
+      real(rk), save :: yg(kw) = -huge(1._rk)
+      real(rk), save :: yg1(kw) = -huge(1._rk)
+      real(rk), save :: yg2(kw) = -huge(1._rk)
+      real(rk), save :: yg3(kw) = -huge(1._rk)
+      real(rk), save :: yg4(kw) = -huge(1._rk)
+      real(rk)  qy1, qy2, qy3
+      real(rk)  sig
+
+      if (present(sq)) then
+         sq = xnan
+      end if
+      
+!----------------------------------------------------
+!... CH3CHO photolysis
+!       1:  CH3 + HCO
+!       2:  CH4 + CO
+!       3:  CH3CO + H
+!----------------------------------------------------
+!      j = j+1
+!      jlabel(j) = 'ch3cho -> ch3 + hco'	
+!      j = j+1
+!      jlabel(j) = 'ch3cho -> ch4 + co'	
+!      j = j+1
+!      jlabel(j) = 'ch3cho -> ch3co + h'
+!----------------------------------------------------
+
+      if( initialize ) then
+         CALL readit
+      else
+         !----------------------------------------------------
+         !...  combine XS*QY 
+         !----------------------------------------------------
+         DO iw = 1, nw - 1
+            DO i = 1, nz
+
+               sig = yg(iw)
+               qy1 = yg1(iw)
+               qy2 = yg2(iw)
+               qy3 = yg3(iw)
+
+               !... Pressure correction for channel 1, CH3 + CHO
+               !     based on Horowitz and Calvert 1982.
+
+               qy1 = qy1 * (1._rk + yg4(iw))/(1._rk + yg4(iw)*airden(i)/2.465E19_rk)
+               qy1 = MIN(1._rk, qy1)
+               qy1 = MAX(0._rk, qy1)
+
+               sq(i,iw) = (sig*qy1)+(sig*qy2) + (sig * qy3)
+
+            ENDDO
+         ENDDO
+      endif
+
+    contains
+      
+      subroutine readit
+        x1 = xnan
+        y1 = xnan
+        n = xsqy_tab(j)%filespec%nread(1)
+        CALL base_read( filespec=xsqy_tab(j)%filespec%filename(1), &
+             errmsg=errmsg, errflg=errflg, &
+             skip_cnt=xsqy_tab(j)%filespec%nskip(1), &
+             rd_cnt=n, &
+             x=x1,y=y1 )
+        call add_pnts_inter2(x1,y1,yg, kdata, n, &
+             nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
+
+        x1 = xnan
+        y1 = xnan
+        y2 = xnan
+
+        n = xsqy_tab(j)%filespec%nread(2)
+        CALL base_read( filespec=xsqy_tab(j)%filespec%filename(2), &
+             errmsg=errmsg, errflg=errflg, &
+             skip_cnt=xsqy_tab(j)%filespec%nskip(2), &
+             rd_cnt=n, &
+             x=x1,y=y2, y1=y1 )
+        call add_pnts_inter2(x1,y1,yg1, kdata, n, &
+             nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
+
+        call add_pnts_inter2(x1,y2,yg2, kdata, n, &
+             nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
+        do iw = 1, nw-1
+           yg3(iw) = 0._rk
+        enddo
+
+        x1 = xnan
+        y1 = xnan
+        n = xsqy_tab(j)%filespec%nread(3)
+        CALL base_read( filespec=xsqy_tab(j)%filespec%filename(3), &
+             errmsg=errmsg, errflg=errflg, &
+             skip_cnt=xsqy_tab(j)%filespec%nskip(3), &
+             rd_cnt=n, &
+             x=x1,y=x2, y1=y2, y2=y1 )        
+        call add_pnts_inter2(x1,y1,yg4, kdata, n, &
+             nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
+
+      end subroutine readit
+
+
+    end subroutine XSQY_CH3CHO
+
+
+          SUBROUTINE XSQY_MGLY(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
+!---------------------------------------------------------------------------!
+!  PURPOSE:                                                                 !
+!  Provide the product (cross section) x (quantum yield) for CH3COCHO       !
+!  photolysis:                                                              !
+!           MGLY (CH3COCHO) + hv -> CH3CO + HCO                             !
+!                                                                           !
+!  Cross section:                                                           !
+!                Average at 1 nm of Staffelbach et al., 1995, and           !
+!                      Meller et al., 1991                                  !
+!  Quantum yield:                                                           !
+!                 Chen, Y., W. Wang, and L. Zhu, Wavelength-dependent       !
+!                 photolysis of methylglyoxal in the 290-440 nm region,     !
+!                 J Phys Chem A, 104, 11126-11131, 2000.                    !
+!---------------------------------------------------------------------------!
+!  PARAMETERS:                                                              !
+!  NW     - INTEGER, number of specified intervals + 1 in working        (I)!
+!           wavelength grid                                                 !
+!  WL     - REAL, vector of lower limits of wavelength intervals in      (I)!
+!           working wavelength grid                                         !
+!  WC     - REAL, vector of center points of wavelength intervals in     (I)!
+!           working wavelength grid                                         !
+!  NZ     - INTEGER, number of altitude levels in working altitude grid  (I)!
+!  TLEV   - REAL, temperature (K) at each specified altitude level       (I)!
+!  AIRDEN - REAL, air density (molec/cc) at each altitude level          (I)!
+!  J      - INTEGER, counter for number of weighting functions defined  (IO)!
+!  SQ     - REAL, cross section x quantum yield (cm^2) for each          (O)!
+!           photolysis reaction defined, at each defined wavelength and     !
+!           at each defined altitude level                                  !
+!  JLABEL - CHARACTER*50, string identifier for each photolysis reaction (O)!
+!           defined                                                         !
+!---------------------------------------------------------------------------!
+
+!-----------------------------------------------------------------------------!
+!     ... args                                                                !
+!-----------------------------------------------------------------------------!
+      INTEGER, intent(in) :: nw
+      INTEGER, intent(in) :: nz
+      INTEGER, intent(inout) :: j
+      REAL(rk), intent(in)    :: wl(:), wc(:)
+      REAL(rk), intent(in)    :: tlev(:)
+      REAL(rk), intent(in)    :: airden(:)
+      character(len=*), intent(out) :: errmsg
+      integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
+
+!---------------------------------------------------------------------------!
+!     ... local                                                             !
+!---------------------------------------------------------------------------!
+      integer kdata
+      parameter (kdata=500)
+
+      integer  i, n, n1, n2, ierr, iw, iz
+      real(rk) :: x1(kdata), y1(kdata)
+      real(rk),save :: yg(kw)=-huge(1._rk)
+      real(rk) :: qy
+      real(rk) :: sig
+      real(rk) :: phi0, kq
+
+      if( initialize ) then
+         CALL readit
+      else
+
+         !-------------------------------------------------------
+         !     ... combine qy * xs
+         !-------------------------------------------------------
+         DO iw = 1, nw - 1
+
+            sig = yg(iw)
+
+            DO i = 1, nz
+
+               !----------------------------------------
+               !             quantum yields:
+               !             zero pressure yield:
+               !             1.0 for wc < 380 nm
+               !             0.0 for wc > 440 nm
+               !             linear in between:
+               !----------------------------------------
+               phi0 = 1._rk - (wc(iw) - 380._rk)/60._rk
+               phi0 = MIN(phi0,1._rk)
+               phi0 = MAX(phi0,0._rk)
+
+               !----------------------------------------------------------
+               !              Pressure correction: 
+               !              quenching coefficient, torr-1
+               !              in air, Koch and Moortgat:
+               !----------------------------------------------------------
+               kq = 1.36e8_rk * EXP(-8793_rk/wc(iw))
+
+               !----------------------------------------------------------
+               !              In N2, Chen et al:
+               !----------------------------------------------------------
+               !              kq = 1.93e4 * EXP(-5639/wc(iw))
+
+               IF(phi0 .GT. 0._rk) THEN
+                  IF (wc(iw) .GE. 380._rk .AND. wc(iw) .LE. 440._rk) THEN
+                     qy = phi0 / (phi0 + kq * airden(i) * 760._rk/2.456E19_rk)
+                  ELSE
+                     qy = phi0
+                  ENDIF
+               ELSE
+                  qy = 0._rk
+               ENDIF
+
+               sq(i,iw) = sig * qy
+
+            ENDDO
+         ENDDO
+
+
+      endif
+
+
+      contains
+      
+        subroutine readit
+          x1 = xnan
+          y1 = xnan
+          n = xsqy_tab(j)%filespec%nread(1)
+          call base_read( filespec=xsqy_tab(j)%filespec%filename(1), &
+               errmsg=errmsg, errflg=errflg, &
+               skip_cnt=xsqy_tab(j)%filespec%nskip(1), &
+               rd_cnt=n, &
+               x=x1,y=y1 )
+          call add_pnts_inter2(x1,y1,yg, kdata, n, &
+               nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
+        end subroutine readit
+
+      end subroutine XSQY_MGLY
+
+      SUBROUTINE XSQY_ACETONE(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
+!---------------------------------------------------------------------------!
+!  PURPOSE:                                                                 !
+!  Provide product (cross section) x (quantum yield) for CH3COCH3 photolysis!
+!          CH3COCH3 + hv -> Products                                        !
+!                                                                           !
+!  Cross section:  Choice between                                           !
+!                   (1) Calvert and Pitts                                   !
+!                   (2) Martinez et al., 1991, alson in IUPAC 97            !
+!                   (3) NOAA, 1998, unpublished as of 01/98                 !
+!  Quantum yield:  Choice between                                           !
+!                   (1) Gardiner et al, 1984                                !
+!                   (2) IUPAC 97                                            !
+!                   (3) McKeen et al., 1997                                 !
+!---------------------------------------------------------------------------!
+!  PARAMETERS:                                                              !
+!  NW     - INTEGER, number of specified intervals + 1 in working        (I)!
+!           wavelength grid                                                 !
+!  WL     - REAL, vector of lower limits of wavelength intervals in      (I)!
+!           working wavelength grid                                         !
+!  WC     - REAL, vector of center points of wavelength intervals in     (I)!
+!           working wavelength grid                                         !
+!  NZ     - INTEGER, number of altitude levels in working altitude grid  (I)!
+!  TLEV   - REAL, temperature (K) at each specified altitude level       (I)!
+!  AIRDEN - REAL, air density (molec/cc) at each altitude level          (I)!
+!  J      - INTEGER, counter for number of weighting functions defined  (IO)!
+!  SQ     - REAL, cross section x quantum yield (cm^2) for each          (O)!
+!           photolysis reaction defined, at each defined wavelength and     !
+!           at each defined altitude level                                  !
+!  JLABEL - CHARACTER*50, string identifier for each photolysis reaction (O)!
+!           defined                                                         !
+!---------------------------------------------------------------------------!
+
+!-----------------------------------------------------------------------------!
+!     ... args                                                                !
+!-----------------------------------------------------------------------------!
+      INTEGER, intent(in) :: nw
+      INTEGER, intent(in) :: nz
+      INTEGER, intent(inout) :: j
+      REAL(rk), intent(in)    :: wl(:), wc(:)
+      REAL(rk), intent(in)    :: tlev(:)
+      REAL(rk), intent(in)    :: airden(:)
+      character(len=*), intent(out) :: errmsg
+      integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
+
+!-----------------------------------------------------------------------------!
+!     ... local                                                               !
+!-----------------------------------------------------------------------------!
+      integer  kdata
+      parameter (kdata=150)
+
+      integer  i, n, n1, n2, n3, iw, ierr, iz, idum
+      real(rk),save :: x1(kdata)=-huge(1._rk)
+      real(rk),save :: y1(kdata)=-huge(1._rk)
+      real(rk),save :: A(kdata)=-huge(1._rk)
+      real(rk),save :: B(kdata)=-huge(1._rk)
+      real(rk),save :: C(kdata)=-huge(1._rk)
+      real(rk) ::  x2(kdata), y2(kdata)
+      real(rk) ::  xs(nz,kdata), sig(nz,kw)
+      real(rk) ::  yg(kw), yg1(kw), yg2(kw), yg3(kw)
+      real(rk) ::  tin(nz), AD(nz)
+      real(rk) ::  qytot(kw), qyCO(kw), qyCH3CO(kw)
+      real(rk) ::  AA0, a0, b0
+      real(rk) ::  AA1, a1, b1, t, qy
+      real(rk) ::  AA2, AA3, AA4, a2, b2, a3, b3, c3, a4, b4
+
+      if (present(sq)) then
+         sq = xnan
+      end if
+      
+!---------------------------------------------
+!     ... CH3COCH3 photodissociation
+!---------------------------------------------
+
+      if( initialize ) then
+         call readit
+      else
+!---------------------------------------------
+!     ... tin set to tlev
+!---------------------------------------------
+         tin(:) = tlev(:)
+         AD (:) = airden(:)
+
+         n1 = xsqy_tab(j)%filespec%nread(1)
+!---------------------------------------------
+!     ... Derive XS at given temperature
+!---------------------------------------------
+    
+         do iz = 1, nz
+
+            do iw = 1, n1
+
+               if ((tin(iz) .GE. 235.) .AND. (tin(iz) .LE. 298.)) Then
+                  xs(iz,iw) = y1(iw) *( 1 + (A(iw)*tin(iz)) + &
+                       (B(iw)*tin(iz)**2)  + &
+                       (C(iw)*tin(iz)**3) )
+
+               endif
+
+               if (tin(iz) .LT. 235.) then
+                  xs(iz,iw) = y1(iw) *( 1 + (A(iw)*235.) + &
+                       (B(iw)*(235.)**2)  + &
+                       (C(iw)*(235.)**3) )
+
+               endif
+
+               if (tin(iz) .GT. 298.) then
+                  xs(iz,iw) = y1(iw) *( 1 + (A(iw)*298.) + &
+                       (B(iw)*(298.)**2)  + &
+                       (C(iw)*(298.)**3) )
+
+               endif
+
+            enddo
+
+            n     = n1
+
+            x2(:) = x1(:)
+            y2(:) = xs(iz,:)
+
+            call add_pnts_inter2(x2,y2,yg, kdata, n, &
+                 nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
+
+
+            sig(iz,:) = yg(:)
+
+         enddo
+
+!---------------------------------------------
+!     ... quantum yield JPL06
+!---------------------------------------------
+         DO iz = 1, nz
+
+            T = min(tin(iz), 295._rk)
+            T = max(T, 218._rk)
+
+            DO iw = 1, nw-1
+
+               IF ((wc(iw) .GE. 279.).AND.(wc(iw) .LT. 327.) ) THEN
+
+                  a0 = 0.350* (T/295.)**(-1.28)
+                  b0 = 0.068* (T/295.)**(-2.65)
+                  AA0 = (a0 / (1-a0))* exp(b0*(wc(iw)-248.))
+                  qyCO(iw) = 1. / (1. + AA0)
+
+               ENDIF
+
+               IF ((wc(iw) .GE. 279.).AND.(wc(iw) .LT. 302.)) THEN
+
+                  a1 = 1.6e-19* (T/295.)**(-2.38) 
+                  b1 = 0.55e-3* (T/295.)**(-3.19)
+                  AA1 = a1* exp(-b1*((1e7/wc(iw)) - 33113.))
+                  qyCH3CO(iw) = (1-qyCO(iw)) / (1 + AA1*AD(iz))
+
+               ELSEIF ((wc(iw) .GE. 302.).AND.(wc(iw) .LE. 327.5)) THEN
+
+                  a2= 1.62e-17* (T/295.)**(-10.03)
+                  b2= 1.79e-3 * (T/295.)**(-1.364)
+                  AA2= a2* exp(-b2*((1e7/wc(iw))-30488.))
+
+                  a3= 26.29*   (T/295.)**(-6.59)
+                  b3= 5.72e-7* (T/295.)**(-2.93)
+                  c3= 30006.*  (T/295.)**(-0.064)
+                  AA3= a3* exp(-b3*((1e7/wc(iw))-c3)**2)
+
+                  a4= 1.67e-15_rk* (T/295._rk)**(-7.25_rk)
+                  b4= 2.08e-3_rk*  (T/295._rk)**(-1.16_rk)
+                  AA4= a4* exp(-b4*((1e7_rk/wc(iw)) - 30488._rk))
+
+                  qyCH3CO(iw) = ((1 + AA4*AD(iz) + AA3) / &
+                       ((1 + AA2*AD(iz) + AA3)* &
+                       (1 + AA4*AD(iz))))*(1-qyCO(iw))
+
+
+               ELSEIF (wc(iw) .GT. 327.5) THEN
+                  qytot(iw)  = 0._rk
+               ENDIF
+
+               qytot(iw) = qyCO(iw) + qyCH3CO(iw)
+
+               if (wc(iw) .LT. 279.) then
+                  qytot(iw) = 1.0_rk
+               endif
+
+               sq(iz,iw) = sig(iz,iw)*qytot(iw)
+
+            ENDDO
+         ENDDO
+      endif      
+
+      contains
+      
+        subroutine readit
+          x1 = xnan
+          y1 = xnan
+          n = xsqy_tab(j)%filespec%nread(1)
+          call base_read( filespec=xsqy_tab(j)%filespec%filename(1), &
+               errmsg=errmsg, errflg=errflg, &
+               skip_cnt=xsqy_tab(j)%filespec%nskip(1), &
+               rd_cnt=n, &
+               x=x1,y=y1 )
+
+          n = xsqy_tab(j)%filespec%nread(2)
+          call base_read( filespec=xsqy_tab(j)%filespec%filename(2), &
+               errmsg=errmsg, errflg=errflg, &
+               skip_cnt=xsqy_tab(j)%filespec%nskip(2), &
+               rd_cnt=n, &
+               x=x1,y=A,y1=B,y2=C )
+          
+          A(:n) = A(:n)*1.e-3_rk
+          B(:n) = B(:n)*1.e-5_rk
+          C(:n) = C(:n)*1.e-8_rk
+        end subroutine readit
+
+      end subroutine XSQY_ACETONE
+
+      SUBROUTINE XSQY_PAN(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
+!---------------------------------------------------------------------------!
+!  PURPOSE:                                                                 !
+!  Provide product (cross section) x (quantum yield) for PAN photolysis:    !
+!       PAN + hv -> Products                                                !
+!                                                                           !
+!  Cross section: from Talukdar et al., 1995                                !
+!  Quantum yield: Assumed to be unity                                       !
+!---------------------------------------------------------------------------!
+!  PARAMETERS:                                                              !
+!  NW     - INTEGER, number of specified intervals + 1 in working        (I)!
+!           wavelength grid                                                 !
+!  WL     - REAL, vector of lower limits of wavelength intervals in      (I)!
+!           working wavelength grid                                         !
+!  WC     - REAL, vector of center points of wavelength intervals in     (I)!
+!           working wavelength grid                                         !
+!  NZ     - INTEGER, number of altitude levels in working altitude grid  (I)!
+!  TLEV   - REAL, temperature (K) at each specified altitude level       (I)!
+!  AIRDEN - REAL, air density (molec/cc) at each altitude level          (I)!
+!  J      - INTEGER, counter for number of weighting functions defined  (IO)!
+!  SQ     - REAL, cross section x quantum yield (cm^2) for each          (O)!
+!           photolysis reaction defined, at each defined wavelength and     !
+!           at each defined altitude level                                  !
+!  JLABEL - CHARACTER*50, string identifier for each photolysis reaction (O)!
+!           defined                                                         !
+!---------------------------------------------------------------------------!
+
+!-----------------------------------------------------------------------------!
+!     ... args                                                                !
+!-----------------------------------------------------------------------------!
+      INTEGER, intent(in) :: nw
+      INTEGER, intent(in) :: nz
+      INTEGER, intent(inout) :: j
+      REAL(rk), intent(in)    :: wl(:), wc(:)
+      REAL(rk), intent(in)    :: tlev(:)
+      REAL(rk), intent(in)    :: airden(:)
+      character(len=*), intent(out) :: errmsg
+      integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
+
+!---------------------------------------------------------------------------!
+!     ... local                                                             !
+!---------------------------------------------------------------------------!
+      integer   kdata
+      parameter (kdata=100)
+      integer i, iw, n, n2, ierr, iz, idum
+      real(rk) ::  x1(kdata), x2(kdata)
+      real(rk) ::  y1(kdata), y2(kdata)
+      real(rk),save ::  yg(kw)= -huge(1._rk)
+      real(rk),save :: yg2(kw) = -huge(1._rk)
+      real(rk) ::  tin(nz)
+      real(rk) ::  qy, sig
+
+      if (present(sq)) then
+         sq = xnan
+      end if
+
+      if( initialize ) then
+         call readit
+      else
+         !----------------------------------------------
+         !     ... tin set to tlev
+         !----------------------------------------------
+         tin(:) = tlev(:)
+
+         !----------------------------------------------
+         !    ... Quantum yield
+         !----------------------------------------------
+         qy = 1.0
+
+         DO iw = 1, nw-1
+            DO iz = 1, nz
+
+               sig = yg(iw) * EXP(yg2(iw)*(tin(iz)-298.))
+
+               sq(iz,iw) = qy * sig
+
+            ENDDO
+         ENDDO
+
+      endif
+
+      contains
+
+        subroutine readit
+          x1 = xnan
+          y1 = xnan
+          y2 = xnan
+          n = xsqy_tab(j)%filespec%nread(1)
+          call base_read( filespec=xsqy_tab(j)%filespec%filename(1), &
+               errmsg=errmsg, errflg=errflg, &
+               skip_cnt=xsqy_tab(j)%filespec%nskip(1), &
+               rd_cnt=n, &
+               x=x1, y=y1, y1=y2 )
+          y1(:n) = y1(:n) * 1.E-20
+          y2(:n) = y2(:n) * 1E-3
+          x2(:n) = x1(:n)
+
+          call add_pnts_inter2(x1,y1,yg, kdata, n, &
+               nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
+          call add_pnts_inter2(x2,y2,yg2, kdata, n, &
+               nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
+        end subroutine readit
+
+      end subroutine XSQY_PAN
+            
+      SUBROUTINE XSQY_H2O(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
+!-----------------------------------------------------------------------------!
+!   purpose:                                                                  !
+!   provide product (cross section) x (quantum yield) for hcl photolysis:     !
+!           H2O + hv -> products                                              !
+!   cross section: taken from three sources                                   !
+!     1) JPL06 (jpl97-4), 175.5 - 189.3                                       !
+!     2) Cantrell et al., grl, 24, 17, 2195-2198, 1997,  183.0 - 193.0 nm     !
+!     3) Yoshino et al.,  chemical physics, 211 (1996) 387-391, 120.38-188.03 !
+!                                                                             !
+!   quantum yield: is unity between 175.5 and 189.3                           !
+!-----------------------------------------------------------------------------!
+!   parameters:                                                               !
+!   nw     - integer, number of specified intervals + 1 in working        (i) !
+!            wavelength grid                                                  !
+!   wl     - real, vector of lower limits of wavelength intervals in      (i) !
+!            working wavelength grid                                          !
+!   wc     - real, vector of center points of wavelength intervals in     (i) !
+!            working wavelength grid                                          !
+!   nz     - integer, number of altitude levels in working altitude grid  (i) !
+!   tlev   - real, temperature (k) at each specified altitude level       (i) !
+!   airlev - real, air density (molec/cc) at each altitude level          (i) !
+!   j      - integer, counter for number of weighting functions defined  (io) !
+!   sq     - real, cross section x quantum yield (cm^2) for each          (o) !
+!            photolysis reaction defined, at each defined wavelength and      !
+!            at each defined altitude level                                   !
+!   jlabel - character*60, string identifier for each photolysis reaction (o) !
+!            defined                                                          !
+!-----------------------------------------------------------------------------!
+!   edit history:                                                             !
+!   06/11/01   original, dek addition                                         !
+!-----------------------------------------------------------------------------!
+
+!-----------------------------------------------------------------------------!
+!     ... args                                                                !
+!-----------------------------------------------------------------------------!
+      INTEGER, intent(in) :: nw
+      INTEGER, intent(in) :: nz
+      INTEGER, intent(inout) :: j
+      REAL(rk), intent(in)    :: wl(:), wc(:)
+      REAL(rk), intent(in)    :: tlev(:)
+      REAL(rk), intent(in)    :: airden(:)
+      character(len=*), intent(out) :: errmsg
+      integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
+
+!-----------------------------------------------------------------------------!
+!     ... local                                                               !
+!-----------------------------------------------------------------------------!
+      integer kdata
+      parameter(kdata=7000)
+      integer n, i, iw, n1, n2, n3, idum, ierr, iz
+      real(rk) :: x1(kdata), y1(kdata)
+      real(rk) :: x2(kdata), y2(kdata)
+      real(rk) :: x3(kdata), y3(kdata)
+      real(rk), save :: sqx(kw,3)=-huge(1._rk)
+      real(rk) :: yg(kw), yg1(kw), yg2(kw), yg3(kw)
+      real(rk) :: qy
+
+      integer :: chnl
+
+      LOGICAL, save :: is_initialized = .false.
+
+!----------------------------------------------
+!     ... jlabel(j) = 'h2o -> prod'
+!----------------------------------------------
+!!$      j = j+1
+!!$      jlabel(j) = 'H2O + hv -> H + OH'
+!!$      j = j+1
+!!$      jlabel(j) = 'H2O + hv -> H2 + O(1D)'
+!!$	j = j+1
+!!$      jlabel(j) = 'H2O + hv -> 2H + O(3P)'
+      if (present(sq)) then
+         sq = xnan
+      end if
+
+      if( initialize ) then
+         if( .not. is_initialized ) then
+            CALL readit
+            is_initialized = .true.
+         endif
+      else
+
+         chnl = xsqy_tab(j)%channel
+         sq(:nw-1,1) = sqx(:nw-1,chnl)
+
+      end if
+
+    contains
+      subroutine readit
+ 
+        x1 = xnan
+        y1 = xnan
+        n = xsqy_tab(j)%filespec%nread(1)
+        call base_read( filespec=xsqy_tab(j)%filespec%filename(1), &
+             errmsg=errmsg, errflg=errflg, &
+             skip_cnt=xsqy_tab(j)%filespec%nskip(1), &
+             rd_cnt=n, &
+             x=x1,y=y1 )
+
+        y1(1:n) = y1(1:n) * xsqy_tab(j)%filespec%xfac(1)
+
+        call add_pnts_inter2(x1,y1,yg1, kdata, n, &
+             nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
+                
+        x2 = xnan
+        y2 = xnan
+        n = xsqy_tab(j)%filespec%nread(2)
+        call base_read( filespec=xsqy_tab(j)%filespec%filename(2), &
+             errmsg=errmsg, errflg=errflg, &
+             skip_cnt=xsqy_tab(j)%filespec%nskip(2), &
+             rd_cnt=n, &
+             x=x2,y=y2 )
+
+        y2(1:n) = y2(1:n) * xsqy_tab(j)%filespec%xfac(2)
+
+        call add_pnts_inter2(x2,y2,yg2, kdata, n, &
+             nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
+
+        x3 = xnan
+        y3 = xnan
+        n = xsqy_tab(j)%filespec%nread(3)
+        call base_read( filespec=xsqy_tab(j)%filespec%filename(3), &
+             errmsg=errmsg, errflg=errflg, &
+             skip_cnt=xsqy_tab(j)%filespec%nskip(3), &
+             rd_cnt=n, &
+             x=x3,y=y3 )
+
+        call add_pnts_inter2(x3,y3,yg3, kdata, n, &
+             nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
+
+
+        !--------------------------------------------------------
+        !     ...combine data sets (i.e., Yoshino et al., 1996 
+        !        and Cantrell et al., 1997)
+        !--------------------------------------------------------    
+        do i = 1, nw-1
+           if (wc(i) .lt. 183.0) then
+              yg(i) = yg3(i)
+           elseif (wc(i) .le. 194.0) then
+              yg(i) = yg2(i)
+           else
+              yg(i) = 0.
+           endif
+	enddo
+
+ !------------------------------------------------------
+ !     ... quantum yield assumed to be unity (jpl97-4)
+ !------------------------------------------------------
+ !     ... 105 to 145 nm
+ !         (JPL 1997 which references Stief, L.J., W.A. 
+ !         Payne, and R. B. Klemm, A flash
+ !         photolysis-resonance fluoresence study of the 
+ !         formation of O(1D) in the photolysis of water 
+ !         and the reaction of O(1D) with H2, Ar, and He, 
+ !         J. Chem. Phys., 62, 4000, 1975.)
+
+        do iw = 1, nw-1
+
+           if (wc(iw) .le. 145.0) then
+
+              sqx(iw,1) = yg(iw) * 0.890
+              sqx(iw,2) = yg(iw) * 0.110
+              sqx(iw,3) = yg(iw) * 0.0
+
+           end if
+
+           !     ... > 145nm
+           !         JPL97
+           if (wc(iw) .gt. 145.0) then
+
+              sqx(iw,1) = yg(iw) * 1.0
+              sqx(iw,2) = yg(iw) * 0.0
+              sqx(iw,3) = yg(iw) * 0.0
+
+           end if
+
+           !     ... Overwrite Lyamn Alpha
+           !         Slanger, T.G., and G. Black, Photodissociative 
+           !         channels at 1216A for H2O, NH3 and CH4,
+           !         J. Chem. Phys., 77, 2432, 1982.)
+           if (wc(iw)>wlla(1) .and. wc(iw)<wlla(2) .and. wc(iw+1)>wlla(2)) then
+              sqx(iw,1) = yg(iw) * 0.780
+              sqx(iw,2) = yg(iw) * 0.100
+              sqx(iw,3) = yg(iw) * 0.120
+           end if
+
+	end do	! end wavelength loop
+
+      end subroutine readit
+
+
+      end subroutine XSQY_H2O     
+      
+      
       SUBROUTINE add_pnts_inter2(xin,yin,yout,kdata,n,nw,wl,jlabel,deltax,yends, errmsg, errflg)
 
       integer, intent(in) :: kdata
@@ -5699,13 +6804,13 @@
       write(44,'(i3,'' Total photorates'')') npht_tab
       write(44,*) ' '
       do m = 2,npht_tab
-        write(44,'(i3,2x,a)') m,trim(xsqy_tab(m)%label)
+        write(44,'(i3,2x,a)') m,trim(xsqy_tab(m)%equation)
       enddo
       write(44,*) ' '
       write(44,'(''Wrf labels'')')
       write(44,*) ' '
       do m = 2,npht_tab
-        write(44,'(i3,2x,a)') m,trim(xsqy_tab(m)%wrf_label)
+        write(44,'(i3,2x,a)') m,trim(xsqy_tab(m)%rxn_name)
       enddo
 
       write(44,*) ' '
@@ -5714,7 +6819,7 @@
       write(44,*) ' '
       do m = 2,npht_tab
         if( xsqy_tab(m)%tpflag == 0 ) then
-          write(44,'(i3,2x,a)') m,trim(xsqy_tab(m)%label)
+          write(44,'(i3,2x,a)') m,trim(xsqy_tab(m)%equation)
         endif
       enddo
 
@@ -5724,7 +6829,7 @@
       write(44,*) ' '
       do m = 2,npht_tab
         if( xsqy_tab(m)%tpflag == 1 ) then
-          write(44,'(i3,2x,a)') m,trim(xsqy_tab(m)%label)
+          write(44,'(i3,2x,a)') m,trim(xsqy_tab(m)%equation)
         endif
       enddo
 
@@ -5734,7 +6839,7 @@
       write(44,*) ' '
       do m = 2,npht_tab
         if( xsqy_tab(m)%tpflag == 2 ) then
-          write(44,'(i3,2x,a)') m,trim(xsqy_tab(m)%label)
+          write(44,'(i3,2x,a)') m,trim(xsqy_tab(m)%equation)
         endif
       enddo
 
@@ -5744,7 +6849,7 @@
       write(44,*) ' '
       do m = 2,npht_tab
         if( xsqy_tab(m)%tpflag == 3 ) then
-          write(44,'(i3,2x,a)') m,trim(xsqy_tab(m)%label)
+          write(44,'(i3,2x,a)') m,trim(xsqy_tab(m)%equation)
         endif
       enddo
 
@@ -5754,7 +6859,7 @@
       write(44,*) ' '
       do m = 2,npht_tab
         if( xsqy_tab(m)%channel == 2 ) then
-          write(44,'(i3,2x,a)') m,trim(xsqy_tab(m)%label)
+          write(44,'(i3,2x,a)') m,trim(xsqy_tab(m)%equation)
         endif
       enddo
 
@@ -5764,7 +6869,7 @@
       write(44,*) ' '
       do m = 2,npht_tab
         if( xsqy_tab(m)%channel == 3 ) then
-          write(44,'(i3,2x,a)') m,trim(xsqy_tab(m)%label)
+          write(44,'(i3,2x,a)') m,trim(xsqy_tab(m)%equation)
         endif
       enddo
 
@@ -5774,7 +6879,7 @@
       write(44,*) ' '
       do m = 2,npht_tab
         if( xsqy_tab(m)%filespec%nfiles > 1 ) then
-          write(44,'(i3,2x,a)') m,trim(xsqy_tab(m)%label)
+          write(44,'(i3,2x,a)') m,trim(xsqy_tab(m)%equation)
         endif
       enddo
 
@@ -5785,7 +6890,7 @@
         n = xsqy_tab(m)%filespec%nfiles
         do n1 = 1,n
           if( xsqy_tab(m)%filespec%nskip(n1)  == -1 ) then
-            write(44,'(i3,2x,a)') m,trim(xsqy_tab(m)%label)
+            write(44,'(i3,2x,a)') m,trim(xsqy_tab(m)%equation)
           endif
         enddo
       enddo
@@ -5798,7 +6903,7 @@
         do n1 = 1,n
           if( xsqy_tab(m)%filespec%nskip(n1) >= 0 .and. &
               xsqy_tab(m)%filespec%filename(n1) /= ' ' ) then
-            write(44,'(i3,2x,a)') m,trim(xsqy_tab(m)%label)
+            write(44,'(i3,2x,a)') m,trim(xsqy_tab(m)%equation)
           endif
         enddo
       enddo
@@ -5811,7 +6916,7 @@
         do n1 = 1,n
           if( xsqy_tab(m)%filespec%xfac(n1) /= 1.e-20_rk ) then
             write(44,'(i3,2x,a,1pg15.7)') &
-              m,trim(xsqy_tab(m)%label),xsqy_tab(m)%filespec%xfac(n1)
+              m,trim(xsqy_tab(m)%equation),xsqy_tab(m)%filespec%xfac(n1)
           endif
         enddo
       enddo
@@ -5835,10 +6940,10 @@
 
       END SUBROUTINE diagnostics
 
-      INTEGER FUNCTION get_xsqy_tab_ndx( jlabel,wrf_label )
+      INTEGER FUNCTION get_xsqy_tab_ndx( jlabel,rxn_name )
 
       character(len=*), optional, intent(in) :: jlabel
-      character(len=*), optional, intent(in) :: wrf_label
+      character(len=*), optional, intent(in) :: rxn_name
 
       integer :: m
 
@@ -5846,14 +6951,14 @@
 
       if( present(jlabel) ) then
         do m = 2,npht_tab
-          if( trim(jlabel) == trim(xsqy_tab(m)%label) ) then
+          if( trim(jlabel) == trim(xsqy_tab(m)%equation) ) then
             get_xsqy_tab_ndx = m
             exit
           endif
         enddo
-      elseif( present(wrf_label) ) then
+      elseif( present(rxn_name) ) then
         do m = 2,npht_tab
-          if( trim(wrf_label) == trim(xsqy_tab(m)%wrf_label) ) then
+          if( trim(rxn_name) == trim(xsqy_tab(m)%rxn_name) ) then
             get_xsqy_tab_ndx = m
             exit
           endif

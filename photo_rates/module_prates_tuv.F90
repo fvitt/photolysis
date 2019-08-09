@@ -88,13 +88,34 @@ contains
        do j = 1,nj
           if( j /= j_o2_ndx ) then
              do n = 2,npht_tab
-                if( trim(xsqy_table(n)%wrf_label) == trim(tuv_jname(j)) ) then
-                   rxn_ndx(j) = n
-                   exit
+                if( trim(xsqy_table(n)%rxn_name) == trim(tuv_jname(j)) ) then
+                   if (.not.any(rxn_ndx==n)) then
+                      rxn_ndx(j) = n
+                      exit
+                   else
+                      errmsg = trim(errmsg)//' '//trim(tuv_jname(j))
+                      errflg = 1
+                   end if
                 endif
              enddo
           endif
        enddo
+
+       if (errflg/=0) then
+          errmsg = 'calc_tuv_init: deplicate jnames: '//trim(errmsg)
+          return
+       end if
+       
+       if (any(rxn_ndx(2:nj)<0)) then
+          errflg = 1
+          errmsg = 'calc_tuv_init: not recognized jnames:'
+          do j = 2,nj
+             if (rxn_ndx(j) < 0 ) then
+                errmsg = trim(errmsg)//' '//trim(tuv_jname(j))
+             end if
+          end do
+          return
+       end if
 
        rxn_initialized = .not. get_initialization()
        if( .not. rxn_initialized ) then

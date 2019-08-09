@@ -43,20 +43,21 @@ program driver
 
   integer :: nlevels,k
 
-  character(len=16), parameter :: my_jnames(113) = &
+  character(len=16), parameter :: my_jnames(119) = &
        (/'j_o2            ' &
-       , 'j_o1d           ' &
-       , 'j_o3p           ' &
-       , 'j_no2           ' &
-       , 'j_no3_a         ' &
-       , 'j_no3_b         ' &
-       , 'j_n2o5_a        ' &
-       , 'j_n2o5_b        ' &
-       , 'j_hno2          ' &
-       , 'j_hno3          ' &
-       , 'j_hno4          ' &
-       , 'j_h2o2          ' &
-       , 'j_chbr3         ' &
+       , 'jo3_a           ' &
+       , 'jo3_b           ' &
+       , 'jno2            ' &
+       , 'jno3_a          ' &
+       , 'jno3_b          ' &
+       , 'jn2o5_a         ' &
+       , 'jn2o5_b         ' &
+       , 'jhno2           ' &
+       , 'jhno3           ' &
+       , 'jhno4           ' &
+       , 'jh2o2           ' &
+       , 'jchbr3          ' &
+       , 'jch3cho         ' &
        , 'j_ch3cho_a      ' &
        , 'j_ch3cho_b      ' &
        , 'j_ch3cho_c      ' &
@@ -64,48 +65,51 @@ program driver
        , 'j_gly_a         ' &
        , 'j_gly_b         ' &
        , 'j_gly_c         ' &
-       , 'j_mgly          ' &
+       , 'jmgly           ' &
        , 'j_ch3coch3      ' &
+       , 'jacet           ' &
        , 'j_ch3ooh        ' &
        , 'j_ch3ono2       ' &
+       , 'jch3ooh         ' &
+       , 'jpan            ' &
        , 'j_pan_a         ' &
        , 'j_pan_b         ' &
        , 'j_ccl2o         ' &
-       , 'j_ccl4          ' &
+       , 'jccl4           ' &
        , 'j_cclfo         ' &
        , 'j_cf2o          ' &
-       , 'j_cf2clcfcl2    ' &
-       , 'j_cf2clcf2cl    ' &
-       , 'j_cf3cf2cl      ' &
-       , 'j_ccl3f         ' &
-       , 'j_ccl2f2        ' &
-       , 'j_ch3br         ' &
-       , 'j_ch3ccl3       ' &
-       , 'j_ch3cl         ' &
+       , 'jcfc113         ' &
+       , 'jcfc114         ' &
+       , 'jcfc115         ' &
+       , 'jcfcl3          ' &
+       , 'jcf2cl2         ' &
+       , 'jch3br          ' &
+       , 'jch3ccl3        ' &
+       , 'jch3cl          ' &
        , 'j_cloo          ' &
        , 'j_cf3chcl2      ' &
        , 'j_cf3chfcl      ' &
-       , 'j_ch3cfcl2      ' &
-       , 'j_ch3cf2cl      ' &
+       , 'jhcfc141b       ' &
+       , 'jhcfc142b       ' &
        , 'j_cf3cf2chcl2   ' &
        , 'j_cf2clcf2chfcl ' &
-       , 'j_chclf2        ' &
+       , 'jhcfc22         ' &
        , 'j_ho2           ' &
        , 'j_cf2bf2        ' &
        , 'j_cf2brcl       ' &
-       , 'j_cf3br         ' &
-       , 'j_cf2brcf2br    ' &
-       , 'j_n2o           ' &
-       , 'j_clono2_a      ' &
-       , 'j_clono2_b      ' &
-       , 'j_brono2_a      ' &
-       , 'j_brono2_b      ' &
-       , 'j_cl2           ' &
+       , 'jcf3br          ' &
+       , 'jh2402          ' &
+       , 'jn2o            ' &
+       , 'jclono2_a       ' &
+       , 'jclono2_b       ' &
+       , 'jbrono2_b       ' &
+       , 'jbrono2_a       ' &
+       , 'jcl2            ' &
        , 'j_glyald_a      ' &
        , 'j_glyald_b      ' &
        , 'j_glyald_c      ' &
        , 'j_biacetyl      ' &
-       , 'j_mvk           ' &
+       , 'jmvk            ' &
        , 'j_macr          ' &
        , 'j_ch3cocooh     ' &
        , 'j_ch3ch2ono2    ' &
@@ -113,11 +117,12 @@ program driver
        , 'j_ch2ohch2ono2  ' &
        , 'j_ch3coch2ono2  ' &
        , 'j_bnit1         ' &
+       , 'j_bnit2         ' &
        , 'j_cloocl        ' &
        , 'j_hyac_a        ' &
        , 'j_hyac_b        ' &
-       , 'j_hobr          ' &
-       , 'j_bro           ' &
+       , 'jhobr           ' &
+       , 'jbro            ' &
        , 'j_br2           ' &
        , 'j_no3_aq_a      ' &
        , 'j_no3_aq_b      ' &
@@ -130,20 +135,17 @@ program driver
        , 'j_ch3coooh      ' &
        , 'j_amine         ' &
        , 'j_clo_a         ' &
-       , 'j_clo_b         ' &
+       , 'jclo            ' &
        , 'j_clno2         ' &
        , 'j_brno          ' &
        , 'j_brno2         ' &
-       , 'j_brono_a       ' &
-       , 'j_brono_b       ' &
-       , 'j_hocl          ' &
+       , 'jbrono_b        ' &
+       , 'jbrono_a        ' &
        , 'j_nocl          ' &
-       , 'j_oclo          ' &
-       , 'j_brcl          ' &
+       , 'joclo           ' &
+       , 'jbrcl           ' &
        , 'j_ch3oono2      ' &
-       , 'j_bnit2         ' &
        , 'j_clono         ' &
-       , 'j_hcl           ' &
        , 'j_ch2o_r        ' &
        , 'j_ch2o_m        ' &
        , 'j_ch3cooh       ' &
@@ -157,9 +159,12 @@ program driver
        , 'j_i2            ' &
        , 'j_io            ' &
        , 'j_ioh           ' &
+       , 'jhocl           ' &
+       , 'jh2o_a          ' &
+       , 'jh2o_b          ' &
+       , 'jh2o_c          ' &
        /)
-
-
+  
   write(*,*) 'BEGIN TEST'
 
   colEnvConds => environ_conditions_create( env_conds_file, lat=45.0, lon=180. )
@@ -189,7 +194,7 @@ program driver
 
   call tuv_photolysis_init( r8, nlevels, my_jnames, errmsg, errflg )
   if (errflg/=0) then
-      write(*,*) 'FAILURE: '//trim(errmsg)
+      write(*,*) 'FAILURE tuv_photolysis_init: '//trim(errmsg)
      call abort()
   end if
 
@@ -236,7 +241,7 @@ program driver
 
      jndx = rxn_ndx(i)
      if (jndx>0) then
-        rxn_string = trim(xsqy_table(jndx)%label)
+        rxn_string = trim(xsqy_table(jndx)%equation)
      else
         rxn_string = 'O2 -> O + O'
      end if
