@@ -84,7 +84,8 @@
       real(rk) :: xnan
 
       real(rk), parameter :: wlla(2)  = (/ 121.4_rk, 121.9_rk/) ! Lyamn Alpha limits
-
+      integer :: la_ndx = -1
+      
       CONTAINS
 
       SUBROUTINE no_z_dep(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
@@ -107,18 +108,24 @@
       integer,          intent(out) :: errflg
       real(rk), optional, intent(out) :: sq(:,:)
       
-      integer, PARAMETER :: kdata=500
+      integer, PARAMETER :: kdata=600
+      integer, PARAMETER :: jdata=200
 
 ! local
       REAL(rk) :: x1(kdata)
       REAL(rk) :: y1(kdata)
       REAL(rk) :: yg(kw)
-      real(rk), save :: xsq(kw,kdata)
+      real(rk), save :: xsq(kw,jdata)
 
       errmsg = ' '
       errflg = 0
 
+      if (present(sq)) then
+         sq = xnan
+      end if
+
       if( initialize ) then
+        yg = xnan
         CALL readit
         if( xsqy_tab(j)%qyld == 1._rk ) then
 !*** quantum yield assumed to be unity
@@ -181,11 +188,26 @@
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
 
-      integer :: astat, m
-
+      integer :: astat, m, iw
+      real(rk) :: wc(nw-1)
+      
       errmsg = ' '
       errflg = 0
       xnan = qnan()
+
+      ! find lyman alpha band
+      wc(1:nw-1) = 0.5_rk*(wl(1:nw-1)+wl(2:nw))
+      do iw = 1, nw
+         if (wc(iw)>wlla(1) .and. wc(iw)<wlla(2) .and. wc(iw+1)>wlla(2)) then
+            la_ndx = iw
+            exit
+         end if
+      end do
+      if (la_ndx < 1) then
+         errflg = 1
+         errmsg = 'rxn_init: Not able to find Lyamn Alpha wavelength band'
+         return
+      end if
 
       call set_initialization( status=.true. )
 
@@ -324,6 +346,178 @@
       subr(m+2)%xsqy_sub => XSQY_H2O
       m = m + 3
       
+      xsqy_tab(m  )%channel = 1
+      xsqy_tab(m  )%equation   = 'HO2NO2 -> OH + NO3'
+      xsqy_tab(m  )%rxn_name   = 'jho2no2_a'
+      xsqy_tab(m+1)%channel = 2
+      xsqy_tab(m+1)%equation   = 'HO2NO2 -> HO2 + NO2'
+      xsqy_tab(m+1)%rxn_name   = 'jho2no2_b'
+      xsqy_tab(m  )%jndx = m
+      xsqy_tab(m+1)%jndx = m+1
+      xsqy_tab(m:m+2)%tpflag = 1
+      xsqy_tab(m:m+2)%filespec%nfiles = 2
+      xsqy_tab(m:m+2)%filespec%filename(1) = trim(input_data_root)//'/XSQY/XS_HO2NO2_JPL06.txt'
+      xsqy_tab(m:m+2)%filespec%nskip(1) = 30
+      xsqy_tab(m:m+2)%filespec%nread(1) = 54     
+      xsqy_tab(m:m+2)%filespec%filename(2) = trim(input_data_root)//'/XSQY/XS_HO2NO2_JPL06.txt'
+      xsqy_tab(m:m+2)%filespec%nskip(2) = 86
+      xsqy_tab(m:m+2)%filespec%nread(2) = 36
+      subr(m  )%xsqy_sub => XSQY_HO2NO2
+      subr(m+1)%xsqy_sub => XSQY_HO2NO2
+      m = m + 2
+
+      xsqy_tab(m)%jndx = m
+      xsqy_tab(m)%equation   = 'CH4 + hv -> CH3O2 + H'
+      xsqy_tab(m)%rxn_name   = 'jch4_a'
+      xsqy_tab(m)%channel = 1
+      xsqy_tab(m+1)%jndx = m+1
+      xsqy_tab(m+1)%equation = 'CH4 + hv -> H2 + Products'
+      xsqy_tab(m+1)%rxn_name = 'jch4_b'
+      xsqy_tab(m+1)%channel = 2
+      xsqy_tab(m:m+1)%tpflag = 0
+      xsqy_tab(m:m+1)%filespec%nfiles = 1
+      xsqy_tab(m:m+1)%filespec%filename(1) = trim(input_data_root)//'/XSQY/XS_CH4.txt'
+      xsqy_tab(m:m+1)%filespec%nskip(1) = 22
+      xsqy_tab(m:m+1)%filespec%nread(1) = 39
+      xsqy_tab(m:m+1)%filespec%xfac(1)  = 1._rk
+      xsqy_tab(m  )%qyld  = 0.45_rk
+      xsqy_tab(m+1)%qyld  = 0.55_rk
+      subr(m)%xsqy_sub   => no_z_dep
+      subr(m+1)%xsqy_sub => no_z_dep
+      m = m + 2
+
+      xsqy_tab(m)%equation = 'CO2 + hv -> CO + O'
+      xsqy_tab(m)%rxn_name = 'jco2'
+      xsqy_tab(m)%jndx  = m
+      xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/XSQY/XS_CO2.txt'
+      xsqy_tab(m)%filespec%nskip(1) = 20
+      xsqy_tab(m)%filespec%nread(1) = 55
+      xsqy_tab(m)%filespec%xfac(1)  = 1._rk
+      subr(m)%xsqy_sub   => no_z_dep
+      m = m + 1
+
+      xsqy_tab(m)%equation = 'COF2 + hv  -> 2F'
+      xsqy_tab(m)%rxn_name = 'jcof2'
+      xsqy_tab(m)%jndx  = m
+      xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/XSQY/XS_COF2_JPL10.txt'
+      xsqy_tab(m)%filespec%nskip(1) = 31
+      xsqy_tab(m)%filespec%nread(1) = 21
+      xsqy_tab(m)%filespec%xfac(1)  = 1._rk
+      subr(m)%xsqy_sub   => no_z_dep
+      m = m + 1
+
+      xsqy_tab(m)%equation = 'COFCl + hv  -> Cl + F'
+      xsqy_tab(m)%rxn_name = 'jcofcl'
+      xsqy_tab(m)%jndx  = m
+      xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/XSQY/XS_COFCL_JPL10.txt'
+      xsqy_tab(m)%filespec%nskip(1) = 32
+      xsqy_tab(m)%filespec%nread(1) = 32
+      xsqy_tab(m)%filespec%xfac(1)  = 1._rk
+      subr(m)%xsqy_sub   => no_z_dep
+      m = m + 1
+
+      xsqy_tab(m)%equation = 'HBr + hv -> H + Br'
+      xsqy_tab(m)%rxn_name = 'jhbr'
+      xsqy_tab(m)%jndx  = m
+      xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/XSQY/XS_HBR_JPL06.txt'
+      xsqy_tab(m)%filespec%nskip(1) = 44
+      xsqy_tab(m)%filespec%nread(1) = 40
+      xsqy_tab(m)%filespec%xfac(1)  = 1._rk
+      subr(m)%xsqy_sub   => no_z_dep
+      m = m + 1
+
+      xsqy_tab(m)%equation = 'HF + hv  -> H + F'
+      xsqy_tab(m)%rxn_name = 'jhf'
+      xsqy_tab(m)%jndx  = m
+      xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/XSQY/XS_HF.txt'
+      xsqy_tab(m)%filespec%nskip(1) = 14
+      xsqy_tab(m)%filespec%nread(1) = 39
+      xsqy_tab(m)%filespec%xfac(1)  = 1._rk
+      subr(m)%xsqy_sub   => no_z_dep
+      m = m + 1
+
+      xsqy_tab(m)%equation = 'SF6 + hv -> product'
+      xsqy_tab(m)%rxn_name = 'jsf6'
+      xsqy_tab(m)%jndx  = m
+      xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/XSQY/XS_SF6.txt'
+      xsqy_tab(m)%filespec%nskip(1) = 14
+      xsqy_tab(m)%filespec%nread(1) = 14
+      xsqy_tab(m)%filespec%xfac(1)  = 1._rk
+      subr(m)%xsqy_sub   => no_z_dep
+      m = m + 1
+
+      xsqy_tab(m)%equation = 'H2SO4 + hv -> HSO3 + OH'
+      xsqy_tab(m)%rxn_name = 'jh2so4'
+      xsqy_tab(m)%jndx   = m
+      xsqy_tab(m)%tpflag = 0
+      xsqy_tab(m)%qyld   = 1._rk
+      xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/XSQY/XS_H2SO4_mills.txt'
+      xsqy_tab(m)%filespec%nskip(1) = 13
+      xsqy_tab(m)%filespec%nread(1) = 125
+      subr(m)%xsqy_sub => XSQY_MMILLS
+      m = m + 1
+
+      xsqy_tab(m)%equation = 'OCS + hv -> CO + S'
+      xsqy_tab(m)%rxn_name = 'jocs'
+      xsqy_tab(m)%jndx   = m
+      xsqy_tab(m)%tpflag = 0
+      xsqy_tab(m)%qyld   = 1._rk
+      xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/XSQY/XS_OCS_mills.txt'
+      xsqy_tab(m)%filespec%nskip(1) = 13
+      xsqy_tab(m)%filespec%nread(1) = 125
+      subr(m)%xsqy_sub => XSQY_MMILLS
+      m = m + 1
+
+      xsqy_tab(m)%equation = 'SO + hv -> S + O'
+      xsqy_tab(m)%rxn_name = 'jso'
+      xsqy_tab(m)%jndx   = m
+      xsqy_tab(m)%tpflag = 0
+      xsqy_tab(m)%qyld   = 1._rk
+      xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/XSQY/XS_SO_mills.txt'
+      xsqy_tab(m)%filespec%nskip(1) = 13
+      xsqy_tab(m)%filespec%nread(1) = 125
+      subr(m)%xsqy_sub => XSQY_MMILLS
+      m = m + 1
+
+      xsqy_tab(m)%equation = 'SO2 + hv -> SO + O'
+      xsqy_tab(m)%rxn_name = 'jso2'
+      xsqy_tab(m)%jndx   = m
+      xsqy_tab(m)%tpflag = 0
+      xsqy_tab(m)%qyld   = 1._rk
+      xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/XSQY/XS_SO2_mills.txt'
+      xsqy_tab(m)%filespec%nskip(1) = 13
+      xsqy_tab(m)%filespec%nread(1) = 125
+      subr(m)%xsqy_sub => XSQY_MMILLS
+      m = m + 1
+
+      xsqy_tab(m)%equation = 'SO3 + hv -> SO2 + O'
+      xsqy_tab(m)%rxn_name = 'jso3'
+      xsqy_tab(m)%jndx   = m
+      xsqy_tab(m)%tpflag = 0
+      xsqy_tab(m)%qyld   = 1._rk
+      xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/XSQY/XS_SO3_mills.txt'
+      xsqy_tab(m)%filespec%nskip(1) = 13
+      xsqy_tab(m)%filespec%nread(1) = 125
+      subr(m)%xsqy_sub => XSQY_MMILLS
+      m = m + 1
+
+      xsqy_tab(m)%equation = 'CH2Br2 + hv -> 2Br'
+      xsqy_tab(m)%rxn_name = 'jch2br2'
+      xsqy_tab(m)%jndx  = m
+      xsqy_tab(m)%tpflag = 1
+      xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/XSQY/XS_CH2BR2_JPL06.txt'
+      xsqy_tab(m)%filespec%nskip(1) = 53
+      xsqy_tab(m)%filespec%nread(1) = 34
+      subr(m)%xsqy_sub   => XSQY_CH2BR2
+      m = m + 1
+
+      xsqy_tab(m)%equation = 'NO = hv => NOp + e'
+      xsqy_tab(m)%rxn_name = 'jno_i'
+      xsqy_tab(m)%jndx  = m
+      xsqy_tab(m)%tpflag = 0
+      subr(m  )%xsqy_sub => XSQY_NOp
+      m = m + 1
+
       xsqy_tab(m)%equation = 'HNO2 -> OH + NO'
       xsqy_tab(m)%rxn_name = 'jhno2'
       xsqy_tab(m)%jndx  = m
@@ -497,6 +691,16 @@
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/XSQY/XS_CH3OOH_JPL06.txt'
       xsqy_tab(m)%filespec%nskip(1) = 20
       xsqy_tab(m)%filespec%nread(1) = 32
+      xsqy_tab(m)%filespec%xfac(1)  = 1._rk
+      subr(m)%xsqy_sub   => no_z_dep
+      m = m + 1
+
+      xsqy_tab(m)%equation = 'Cl2O2 + hv -> Cl + ClOO'
+      xsqy_tab(m)%rxn_name = 'jcl2o2'
+      xsqy_tab(m)%jndx  = m
+      xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/XSQY/XS_CL2O2_JPL10_500nm.txt'
+      xsqy_tab(m)%filespec%nskip(1) = 32
+      xsqy_tab(m)%filespec%nread(1) = 521
       xsqy_tab(m)%filespec%xfac(1)  = 1._rk
       subr(m)%xsqy_sub   => no_z_dep
       m = m + 1
@@ -720,7 +924,7 @@
       m = m + 1
 
       xsqy_tab(m)%equation = 'CF2BrCl (Halon-1211) -> Products'
-      xsqy_tab(m)%rxn_name = 'j_cf2brcl'
+      xsqy_tab(m)%rxn_name = 'jcf2clbr'
       xsqy_tab(m)%jndx  = m
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/Halon-1211_jpl97.abs'
       xsqy_tab(m)%filespec%nskip(1) = -1
@@ -1137,8 +1341,8 @@
 
       xsqy_tab(m)%equation   = 'CH2O -> H + HCO' 
       xsqy_tab(m+1)%equation = 'CH2O -> H2 + CO'
-      xsqy_tab(m)%rxn_name = 'j_ch2o_r'
-      xsqy_tab(m+1)%rxn_name = 'j_ch2o_m'
+      xsqy_tab(m  )%rxn_name = 'jch2o_a'
+      xsqy_tab(m+1)%rxn_name = 'jch2o_b'
       xsqy_tab(m)%jndx = m
       xsqy_tab(m+1)%channel = 2
       xsqy_tab(m:m+1)%tpflag = (/ 1,3 /)
@@ -5938,6 +6142,9 @@
       real(rk) :: sig
       real(rk) :: phi0, kq
 
+      if (present(sq)) then
+         sq = xnan
+      end if
       if( initialize ) then
          CALL readit
       else
@@ -6396,15 +6603,6 @@
 
       LOGICAL, save :: is_initialized = .false.
 
-!----------------------------------------------
-!     ... jlabel(j) = 'h2o -> prod'
-!----------------------------------------------
-!!$      j = j+1
-!!$      jlabel(j) = 'H2O + hv -> H + OH'
-!!$      j = j+1
-!!$      jlabel(j) = 'H2O + hv -> H2 + O(1D)'
-!!$	j = j+1
-!!$      jlabel(j) = 'H2O + hv -> 2H + O(3P)'
       if (present(sq)) then
          sq = xnan
       end if
@@ -6423,7 +6621,7 @@
 
     contains
       subroutine readit
- 
+
         x1 = xnan
         y1 = xnan
         n = xsqy_tab(j)%filespec%nread(1)
@@ -6437,7 +6635,7 @@
 
         call add_pnts_inter2(x1,y1,yg1, kdata, n, &
              nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
-                
+
         x2 = xnan
         y2 = xnan
         n = xsqy_tab(j)%filespec%nread(2)
@@ -6477,19 +6675,19 @@
            else
               yg(i) = 0.
            endif
-	enddo
+        enddo
 
- !------------------------------------------------------
- !     ... quantum yield assumed to be unity (jpl97-4)
- !------------------------------------------------------
- !     ... 105 to 145 nm
- !         (JPL 1997 which references Stief, L.J., W.A. 
- !         Payne, and R. B. Klemm, A flash
- !         photolysis-resonance fluoresence study of the 
- !         formation of O(1D) in the photolysis of water 
- !         and the reaction of O(1D) with H2, Ar, and He, 
- !         J. Chem. Phys., 62, 4000, 1975.)
-
+        !------------------------------------------------------
+        ! quantum yield assumed to be unity (jpl97-4)
+        !------------------------------------------------------
+        ! 105 to 145 nm
+        ! (JPL 1997 which references Stief, L.J., W.A. 
+        ! Payne, and R. B. Klemm, A flash
+        ! photolysis-resonance fluoresence study of the 
+        ! formation of O(1D) in the photolysis of water 
+        ! and the reaction of O(1D) with H2, Ar, and He, 
+        ! J. Chem. Phys., 62, 4000, 1975.)
+        sqx = 0._rk
         do iw = 1, nw-1
 
            if (wc(iw) .le. 145.0) then
@@ -6510,24 +6708,542 @@
 
            end if
 
-           !     ... Overwrite Lyamn Alpha
-           !         Slanger, T.G., and G. Black, Photodissociative 
-           !         channels at 1216A for H2O, NH3 and CH4,
-           !         J. Chem. Phys., 77, 2432, 1982.)
-           if (wc(iw)>wlla(1) .and. wc(iw)<wlla(2) .and. wc(iw+1)>wlla(2)) then
-              sqx(iw,1) = yg(iw) * 0.780
-              sqx(iw,2) = yg(iw) * 0.100
-              sqx(iw,3) = yg(iw) * 0.120
-           end if
+        end do  ! end wavelength loop
 
-	end do	! end wavelength loop
+        ! Overwrite Lyamn Alpha
+        ! Slanger, T.G., and G. Black, Photodissociative 
+        ! channels at 1216A for H2O, NH3 and CH4,
+        ! J. Chem. Phys., 77, 2432, 1982.)
+
+        sqx(la_ndx,1) = yg(iw) * 0.780
+        sqx(la_ndx,2) = yg(iw) * 0.100
+        sqx(la_ndx,3) = yg(iw) * 0.120
 
       end subroutine readit
 
 
       end subroutine XSQY_H2O     
       
+      SUBROUTINE XSQY_HO2NO2(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
+!-----------------------------------------------------------------------------!
+!   purpose:                                                                  !
+!   provide product of (cross section) x (quantum yield) for hno4 photolysis  !
+!    chnl 1)   HO2NO2 + hv -> OH +  NO3                                           !
+!    chnl 2)   HO2NO2 + hv -> HO2 + NO2                                           !
+!   cross sections and QY from JPL06                                          !
+!-----------------------------------------------------------------------------!
+!   parameters:                                                               !
+!   nw     - integer, number of specified intervals + 1 in working        (i) !
+!            wavelength grid                                                  !
+!   wl     - real, vector of lower limits of wavelength intervals in      (i) !
+!            working wavelength grid                                          !
+!   wc     - real, vector of center points of wavelength intervals in     (i) !
+!            working wavelength grid                                          !
+!   nz     - integer, number of altitude levels in working altitude grid  (i) !
+!   tlev   - real, temperature (k) at each specified altitude level       (i) !
+!   airlev - real, air density (molec/cc) at each altitude level          (i) !
+!   j      - integer, counter for number of weighting functions defined  (io) !
+!   sq     - real, cross section x quantum yield (cm^2) for each          (o) !
+!            photolysis reaction defined, at each defined wavelength and      !
+!            at each defined altitude level                                   !
+!   jlabel - character*60, string identifier for each photolysis reaction (o) !
+!            defined                                                          !
+!-----------------------------------------------------------------------------!
+!   edit history:                                                             !
+!   05/98  original, adapted from former jspec1 subroutine                    !
+!   06/01  modified by doug kinnison                                          !
+!   01/08  modified by Doug Kinnison                                          !
+!-----------------------------------------------------------------------------!
+
+!-----------------------------------------------------------------------------!
+!     ... args                                                                !
+!-----------------------------------------------------------------------------!
+      INTEGER, intent(in) :: nw
+      INTEGER, intent(in) :: nz
+      INTEGER, intent(inout) :: j
+      REAL(rk), intent(in)    :: wl(:), wc(:)
+      REAL(rk), intent(in)    :: tlev(:)
+      REAL(rk), intent(in)    :: airden(:)
+      character(len=*), intent(out) :: errmsg
+      integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
+
+!-----------------------------------------------------------------------------!
+!     ... local                                                               !
+!-----------------------------------------------------------------------------!
+      integer kdata
+      parameter(kdata=100)
+      integer i, iw, iz, n, n1, idum, ierr, icnt
+      real(rk),save :: x1   (kdata)=-huge(1._rk), x2(kdata)=-huge(1._rk)
+      real(rk) :: wcb(kdata)
+      real(rk),save :: y1   (kdata)=-huge(1._rk), aa(kdata)=-huge(1._rk), bb (kdata)=-huge(1._rk)
+      real(rk) :: ytmp (nz,kdata), ycomb(nz,kdata)
+      real(rk) :: ytd  (nz,kw), yg(kw)
+      real(rk) :: Q(nz), tin(nz), t
+
+      LOGICAL, save :: is_initialized = .false.
+      integer :: chnl
       
+      if (present(sq)) then
+         sq = xnan
+      end if
+
+      if( initialize ) then
+         if( .not. is_initialized ) then
+            CALL readit
+            is_initialized = .true.
+         endif
+      else
+
+         chnl = xsqy_tab(j)%channel
+
+         !----------------------------------------------
+         !     ... tin set to tlev
+         !----------------------------------------------
+         tin(:) = tlev(:) 
+
+
+         n = xsqy_tab(j)%filespec%nread(1)
+         n1 = xsqy_tab(j)%filespec%nread(2)
+
+         !----------------------------------------------
+         !     ...Derive T-dep Burkholder et al., 2002.)
+         !----------------------------------------------
+         do iz = 1, nz
+            do iw = 1, n1
+               t           = MAX(280._rk,MIN(tin(iz),350._rk))
+               Q(iz)       = 1 + exp(-988._rk/(0.69_rk*t))
+               ytmp(iz,iw) = ( aa(iw)/Q(iz) + bb(iw)*(1-1/Q(iz)))*1e-20_rk
+            enddo
+         enddo
+         !     ... Combine cross sections
+         do iz = 1, nz
+            icnt = 1
+
+            !     ... < 280 nm
+            !     ... x1(iw) goes from 190-350nm
+            do iw = 1, n
+               IF (x1(iw) .LT. 280.) THEN
+                  ycomb(iz,icnt) = y1(iw)
+                  wcb  (icnt)    = x1(iw)
+                  icnt = icnt + 1
+               ENDIF
+            enddo
+            !     ... 280-350 nm
+            do iw = 1, n1
+               ycomb(iz,icnt) = ytmp(iz,iw)
+               wcb  (icnt)    = x2  (iw)
+               icnt = icnt+1
+            enddo
+         enddo
+
+         !     ... Interpolate Combine cross sections
+         do iz = 1, nz
+            n  = icnt-1
+            y1 = ycomb(iz,:)
+            x1 = wcb
+
+            call add_pnts_inter2(x1,y1,yg, kdata, n, &
+                 nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
+
+            ytd(iz,:) = yg(:)
+
+         enddo
+
+         do iw = 1, nw - 1
+            IF (wc(iw) .LT. 200.0) THEN
+               if (chnl==1) then
+                  sq(:nz,iw) = 0.30 * ytd(:nz,iw)
+               else if (chnl==2) then
+                  sq(:nz,iw) = 0.70 * ytd(:nz,iw)
+               end if
+            ELSEIF (wc(iw) .GE. 200.0) THEN
+               if (chnl==1) then
+                  sq(:nz,iw) = 0.20 * ytd(:nz,iw)
+               else if (chnl==2) then
+                  sq(:nz,iw) = 0.80 * ytd(:nz,iw)
+               end if
+            ENDIF
+
+         enddo
+      endif
+
+      contains
+
+        subroutine readit
+          x1 = xnan
+          y1 = xnan
+
+          n = xsqy_tab(j)%filespec%nread(1)
+          call base_read( filespec=xsqy_tab(j)%filespec%filename(1), &
+               errmsg=errmsg, errflg=errflg, &
+               skip_cnt=xsqy_tab(j)%filespec%nskip(1), &
+               rd_cnt=n, &
+               x=x1, y=y1 )
+          
+          x2 = xnan
+          aa = xnan
+          bb = xnan
+          n = xsqy_tab(j)%filespec%nread(2)
+          call base_read( filespec=xsqy_tab(j)%filespec%filename(2), &
+               errmsg=errmsg, errflg=errflg, &
+               skip_cnt=xsqy_tab(j)%filespec%nskip(2), &
+               rd_cnt=n, &
+               x=x2, y=aa, y1=bb )
+
+        end subroutine readit
+        
+      end subroutine XSQY_HO2NO2
+
+      subroutine XSQY_NOp(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
+!-----------------------------------------------------------------------------!
+!   purpose:                                                                  !
+!   provide product (cross section) x (quantum yield):                        !
+!           NO + hv = NOp + e                                                 !
+!   cross section: JPL06                                                      !
+!   quantum yield: is unity.                                                  !
+!-----------------------------------------------------------------------------!
+!   parameters:                                                               !
+!   nw     - integer, number of specified intervals + 1 in working        (i) !
+!            wavelength grid                                                  !
+!   wl     - real, vector of lower limits of wavelength intervals in      (i) !
+!            working wavelength grid                                          !
+!   wc     - real, vector of center points of wavelength intervals in     (i) !
+!            working wavelength grid                                          !
+!   nz     - integer, number of altitude levels in working altitude grid  (i) !
+!   tlev   - real, temperature (k) at each specified altitude level       (i) !
+!   airlev - real, air density (molec/cc) at each altitude level          (i) !
+!   j      - integer, counter for number of weighting functions defined  (io) !
+!   sq     - real, cross section x quantum yield (cm^2) for each          (o) !
+!            photolysis reaction defined, at each defined wavelength and      !
+!            at each defined altitude level                                   !
+!   jlabel - character*60, string identifier for each photolysis reaction (o) !
+!            defined                                                          !
+!-----------------------------------------------------------------------------!
+!   edit history:                                                             !
+!   01/16/08  Doug Kinnison                                                   !
+!-----------------------------------------------------------------------------!
+
+
+!-----------------------------------------------------------------------------!
+!     ... args                                                                !
+!-----------------------------------------------------------------------------!
+        INTEGER, intent(in) :: nw
+        INTEGER, intent(in) :: nz
+        INTEGER, intent(inout) :: j
+        REAL(rk), intent(in)    :: wl(:), wc(:)
+        REAL(rk), intent(in)    :: tlev(:)
+        REAL(rk), intent(in)    :: airden(:)
+        character(len=*), intent(out) :: errmsg
+        integer,          intent(out) :: errflg
+        real(rk), optional, intent(out) :: sq(:,:)
+
+        !----------------------------------------------------
+        !  M. Nicolet, "Aeronomical Aspects of Mesopheric Photodissociation: Prosesses Resulting
+        !  from the Solar H Lyman-Alpha Line", Planet. Space Sci. Vol. 33, No. 1, pp. 69-80, 1985.
+        !  see eq. (27)
+        !----------------------------------------------------
+        if( .not. initialize ) then
+
+           sq(:,:) = 0._rk
+           sq(la_ndx,1) = 2.02e-18_rk ! lyman alpha band
+
+        endif
+
+      end subroutine XSQY_NOp
+
+      subroutine XSQY_CH2BR2(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
+!-----------------------------------------------------------------------------!
+!   purpose:                                                                  !
+!   provide product (cross section) x (quantum yield) for ch2br2 photolysis:  !
+!          CH2Br2 + hv -> 2Br                                                 !
+!   cross section: from JPL06 recommendation                                  !
+!   quantum yield: assumed to be unity                                        !
+!-----------------------------------------------------------------------------!
+!   parameters:                                                               !
+!   nw     - integer, number of specified intervals + 1 in working        (i) !
+!            wavelength grid                                                  !
+!   wl     - real, vector of lower limits of wavelength intervals in      (i) !
+!            working wavelength grid                                          !
+!   wc     - real, vector of center points of wavelength intervals in     (i) !
+!            working wavelength grid                                          !
+!   nz     - integer, number of altitude levels in working altitude grid  (i) !
+!   tlev   - real, temperature (k) at each specified altitude level       (i) !
+!   airlev - real, air density (molec/cc) at each altitude level          (i) !
+!   j      - integer, counter for number of weighting functions defined  (io) !
+!   sq     - real, cross section x quantum yield (cm^2) for each          (o) !
+!            photolysis reaction defined, at each defined wavelength and      !
+!            at each defined altitude level                                   !
+!   jlabel - character*60, string identifier for each photolysis reaction (o) !
+!            defined                                                          !
+!-----------------------------------------------------------------------------!
+!   edit history:                                                             !
+!   07/30/07  Doug Kinnison                                                   !
+!-----------------------------------------------------------------------------!
+
+!-----------------------------------------------------------------------------!
+!     ... args                                                                !
+!-----------------------------------------------------------------------------!
+      INTEGER, intent(in) :: nw
+      INTEGER, intent(in) :: nz
+      INTEGER, intent(inout) :: j
+      REAL(rk), intent(in)    :: wl(:), wc(:)
+      REAL(rk), intent(in)    :: tlev(:)
+      REAL(rk), intent(in)    :: airden(:)
+      character(len=*), intent(out) :: errmsg
+      integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
+
+      !-----------------------------------------------------------------------------!
+      !     ... local                                                               !
+      !-----------------------------------------------------------------------------!
+      integer kdata
+      parameter(kdata=300)
+      integer i, iw, n, idum, nloop, n1
+      integer ierr, iz, iwc, icnt
+      real(rk) :: x1   (kdata),   y1   (kdata)
+      real(rk), save :: xin  (kdata),   yin  (kdata)
+      real(rk) :: wctmp(kdata),   wcb  (kdata)
+      real(rk) :: ytmp (nz,kdata),ycomb(nz,kdata)
+      real(rk) :: yg1  (kw),      ytd  (nz,kw)
+      real(rk) :: qy
+      real(rk) :: tin(nz)
+
+      real(rk), parameter :: AA(5) = (/ &
+           -70.211776_rk , &
+           1.940326e-1_rk , &
+           2.726152e-3_rk , &
+           -1.695472e-5_rk , &
+           2.500066e-8_rk /)
+
+      real(rk), parameter ::  BB(5) = (/ &
+           2.899280_rk , &
+           -4.327724e-2_rk , &
+           2.391599e-4_rk , &
+           -5.807506e-7_rk , &
+           5.244883e-10_rk /)
+
+      real(rk), parameter ::  lp(5) = (/ &
+           0.0_rk , &
+           1.0_rk , &
+           2.0_rk , &
+           3.0_rk , &
+           4.0_rk /)
+
+      n = xsqy_tab(j)%filespec%nread(1)
+
+      if (present(sq)) then
+         sq = xnan
+      end if
+      if( initialize ) then
+         CALL readit
+      else
+
+         !----------------------------------------------
+         !     ... set tin to tlev
+         !----------------------------------------------
+         tin(:)   = tlev(:)
+
+         !----------------------------------------------
+         !    Derive temperature dependence 
+         !----------------------------------------------
+         !    Temperature dependence good between 
+         !      210-300K and 210 nm-290 nm
+         !----------------------------------------------
+         iwc      = 1
+         ytmp(:,:)= 0.0_rk
+
+         do iw = 1, nw-1
+
+            IF ((wc(iw) .GE. 210._rk) .AND. (wc(iw) .LE.290._rk)) THEN
+
+               do iz = 1, nz
+
+                  IF (tin(iz) .LT. 210._rk) THEN
+                     do nloop = 1, 5
+                        ytmp(iz,iwc) = ytmp(iz,iwc) &
+                             +  AA(nloop)* (wc(iw)**lp(nloop)) &
+                             + (210.0_rk-273.0_rk)*BB(nloop)*wc(iw)**lp(nloop)
+                     enddo
+                     wctmp(iwc) = wc(iw)
+                  ENDIF
+
+                  IF ((tin(iz) .GE. 210._rk).AND.(tin(iz) .LE. 300._rk)) THEN
+                     do nloop = 1,5
+
+                        ytmp(iz,iwc) = ytmp(iz,iwc) &
+                             +  AA(nloop)* (wc(iw)**lp(nloop)) &
+                             + (tin(iz)-273.0_rk)*BB(nloop)*wc(iw)**lp(nloop) 
+                     enddo
+                     wctmp(iwc) = wc(iw)
+                  ENDIF
+
+                  IF (tin(iz) .GT. 300._rk) THEN
+                     do nloop = 1, 5
+                        ytmp(iz,iwc) = ytmp(iz,iwc) &
+                             +  AA(nloop)* (wc(iw)**lp(nloop)) &
+                             + (300.0_rk-273.0_rk)*BB(nloop)*wc(iw)**lp(nloop)
+                     enddo
+                     wctmp(iwc) = wc(iw)
+                  ENDIF
+               enddo
+               iwc = iwc+ 1
+
+            ENDIF
+
+         enddo
+
+         !     ... Combine cross sections
+         do iz = 1, nz
+            icnt = 1
+
+            !     ... < 210nm
+            do i = 1, n
+               IF (xin(i) .LT. 210.) THEN
+                  ycomb(iz,icnt) = yin(i)
+                  wcb  (icnt)    = xin(i)
+                  icnt = icnt + 1
+               ENDIF
+            enddo
+            !     ... 210-290 nm
+            do i = 1, iwc-1
+               ycomb(iz,icnt) = 10**(ytmp(iz,i))
+               wcb  (icnt)    = wctmp(i)
+               icnt = icnt+1
+            enddo
+            !     ... >290nm
+            do i = 1, n
+               IF (xin(i) .GT. 290._rk) THEN
+                  ycomb(iz,icnt) = yin(i)
+                  wcb  (icnt)    = xin(i)
+                  icnt = icnt+1
+               ENDIF
+            enddo
+         enddo
+         !----------------------------------------------
+         !     ... interpolate
+         !----------------------------------------------
+         do iz = 1, nz
+            n1 = icnt-1
+            y1 = ycomb(iz,:)
+            x1 = wcb
+
+            call add_pnts_inter2(x1,y1,yg1, kdata, n, &
+                 nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
+
+            if (errflg /= 0) then
+               return
+            end if
+
+            ytd(iz,:) = yg1(:)
+
+         enddo
+
+         !----------------------------------------------
+         !     ...quantum yield assumed to be unity
+         !----------------------------------------------
+         qy = 1._rk
+
+         do iw = 1, nw-1
+            do iz = 1, nz
+               sq(iz,iw) = qy * ytd(iz,iw)
+            enddo
+         enddo
+      endif
+
+    contains
+
+      subroutine readit
+        x1 = xnan
+        y1 = xnan
+        n = xsqy_tab(j)%filespec%nread(1)
+        call base_read( filespec=xsqy_tab(j)%filespec%filename(1), &
+             errmsg=errmsg, errflg=errflg, &
+             skip_cnt=xsqy_tab(j)%filespec%nskip(1), &
+             rd_cnt=n, &
+             x=xin,y=yin )
+
+      end subroutine readit
+
+    end subroutine XSQY_CH2BR2
+
+    SUBROUTINE XSQY_MMILLS(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
+!---------------------------------------------------------------------------!
+!  PARAMETERS:                                                              !
+!  NW     - INTEGER, number of specified intervals + 1 in working        (I)!
+!           wavelength grid                                                 !
+!  WL     - REAL, vector of lower limits of wavelength intervals in      (I)!
+!           working wavelength grid                                         !
+!  WC     - REAL, vector of center points of wavelength intervals in     (I)!
+!           working wavelength grid                                         !
+!  NZ     - INTEGER, number of altitude levels in working altitude grid  (I)!
+!  TLEV   - REAL, temperature (K) at each specified altitude level       (I)!
+!  AIRDEN - REAL, air density (molec/cc) at each altitude level          (I)!
+!  J      - INTEGER, counter for number of weighting functions defined  (IO)!
+!  SQ     - REAL, cross section x quantum yield (cm^2) for each          (O)!
+!           photolysis reaction defined, at each defined wavelength and     !
+!           at each defined altitude level                                  !
+!  JLABEL - CHARACTER*50, string identifier for each photolysis reaction (O)!
+!           defined                                                         !
+!---------------------------------------------------------------------------!
+
+!-----------------------------------------------------------------------------!
+!     ... args                                                                !
+!-----------------------------------------------------------------------------!
+      INTEGER, intent(in) :: nw
+      INTEGER, intent(in) :: nz
+      INTEGER, intent(inout) :: j
+      REAL(rk), intent(in)    :: wl(:), wc(:)
+      REAL(rk), intent(in)    :: tlev(:)
+      REAL(rk), intent(in)    :: airden(:)
+      character(len=*), intent(out) :: errmsg
+      integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
+
+!---------------------------------------------------------------------------!
+!     ... local                                                             !
+!---------------------------------------------------------------------------!
+      INTEGER, parameter :: kdata = 300
+      integer, parameter :: jdata = 200
+      INTEGER :: n, iw
+      REAL(rk) :: x_min(kdata), x_max(kdata), x(kdata), y(kdata)
+      REAL(rk) :: yg(kw)
+      REAL(rk) :: qy
+      real(rk), save :: xsq(kw,jdata)
+
+      if (present(sq)) then
+         sq = xnan
+      end if
+      if( initialize ) then
+         xsq(:,j) = xnan
+         CALL readit
+         xsq(:nw-1,j) = xsqy_tab(j)%qyld*yg(:nw-1)
+      else
+
+         sq(1:nw-1,1) = xsq(1:nw-1,j)
+
+      endif
+
+      contains
+
+      subroutine readit
+        x_max = xnan
+        x_min = xnan
+        x = xnan
+        y = xnan
+        n = xsqy_tab(j)%filespec%nread(1)
+        call base_read( filespec=xsqy_tab(j)%filespec%filename(1), &
+             errmsg=errmsg, errflg=errflg, &
+             skip_cnt=xsqy_tab(j)%filespec%nskip(1), &
+             rd_cnt=n, &
+             x=x_min, y=x_max, y1=y )
+        x(1:n) = 0.5_rk*(x_min(1:n)+x_max(1:n))        
+        call add_pnts_inter2(x,y,yg,kdata,n, &
+             nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
+      end subroutine readit
+
+      end subroutine XSQY_MMILLS
+
       SUBROUTINE add_pnts_inter2(xin,yin,yout,kdata,n,nw,wl,jlabel,deltax,yends, errmsg, errflg)
 
       integer, intent(in) :: kdata
