@@ -86,7 +86,9 @@ contains
        endif
        rxn_ndx(1:nj) = -1
        do j = 1,nj
-          if( j /= j_o2_ndx ) then
+          if( j == j_o2_ndx ) then
+             rxn_ndx(j) = 0
+          else
              do n = 2,npht_tab
                 if( trim(xsqy_table(n)%rxn_name) == trim(tuv_jname(j)) ) then
                    if (.not.any(rxn_ndx==n)) then
@@ -106,10 +108,10 @@ contains
           return
        end if
        
-       if (any(rxn_ndx(2:nj)<0)) then
+       if (any(rxn_ndx(1:nj)<0)) then
           errflg = 1
           errmsg = 'calc_tuv_init: not recognized jnames:'
-          do j = 2,nj
+          do j = 1,nj
              if (rxn_ndx(j) < 0 ) then
                 errmsg = trim(errmsg)//' '//trim(tuv_jname(j))
              end if
@@ -121,7 +123,7 @@ contains
        if( .not. rxn_initialized ) then
           do n = 1,nj
              jndx = rxn_ndx(n)
-             if( jndx /= -1 ) then
+             if( jndx > 0 ) then
                 call the_subs(jndx)%xsqy_sub(nwave+1,wl,wc,nlevs,dummy,dummy,jndx, errmsg, errflg )
              endif
           enddo
