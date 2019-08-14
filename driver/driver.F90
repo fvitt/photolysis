@@ -43,8 +43,8 @@ program driver
 
   integer :: nlevels,k
 
-  character(len=16), parameter :: my_jnames(137) = &
-       (/'j_o2            ' &
+  character(len=16), parameter :: my_jnames(141) = &
+      (/ 'j_o2            ' &
        , 'jo3_a           ' &
        , 'jo3_b           ' &
        , 'jno2            ' &
@@ -181,6 +181,10 @@ program driver
        , 'jso             ' &
        , 'jso2            ' &
        , 'jso3            ' &
+       , 'jglyald         ' &
+       , 'jhyac           ' &
+       , 'jmacr_a         ' &
+       , 'jmacr_b         '  &
        /)
   
   write(*,*) 'BEGIN TEST'

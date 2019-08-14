@@ -345,7 +345,7 @@
       subr(m+1)%xsqy_sub => XSQY_H2O
       subr(m+2)%xsqy_sub => XSQY_H2O
       m = m + 3
-      
+
       xsqy_tab(m  )%channel = 1
       xsqy_tab(m  )%equation   = 'HO2NO2 -> OH + NO3'
       xsqy_tab(m  )%rxn_name   = 'jho2no2_a'
@@ -442,6 +442,50 @@
       xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/XSQY/XS_SF6.txt'
       xsqy_tab(m)%filespec%nskip(1) = 14
       xsqy_tab(m)%filespec%nread(1) = 14
+      xsqy_tab(m)%filespec%xfac(1)  = 1._rk
+      subr(m)%xsqy_sub   => no_z_dep
+      m = m + 1
+
+      xsqy_tab(m)%equation = 'GLYALD + hv -> 2HO2 + CO + CH2O' !  GLYALD (HOCH2CHO) + hv -> 2*HO2 + CO + CH2O 
+      xsqy_tab(m)%rxn_name = 'jglyald'
+      xsqy_tab(m)%jndx = m
+      xsqy_tab(m)%qyld = 0.5_rk
+      xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/XSQY/XS_GLYALD.txt'
+      xsqy_tab(m)%filespec%nskip(1) = 15
+      xsqy_tab(m)%filespec%nread(1) = 131
+      xsqy_tab(m)%filespec%xfac(1)  = 1._rk
+      subr(m)%xsqy_sub   => no_z_dep
+      m = m + 1
+
+      xsqy_tab(m)%equation = 'HYAC + hv -> CH3CO3 + HO2 + CH2O'
+      xsqy_tab(m)%rxn_name = 'jhyac'
+      xsqy_tab(m)%jndx = m
+      xsqy_tab(m)%qyld = 0.65_rk
+      xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/XSQY/XS_HYAC.txt'
+      xsqy_tab(m)%filespec%nskip(1) = 8
+      xsqy_tab(m)%filespec%nread(1) = 101
+      xsqy_tab(m)%filespec%xfac(1)  = 1._rk
+      subr(m)%xsqy_sub   => no_z_dep
+      m = m + 1
+
+      xsqy_tab(m)%equation = 'MACR + hv -> 1.34HO2 + 0.66MCO3 + 1.34CH2O+ CH3CO3'
+      xsqy_tab(m)%rxn_name = 'jmacr_a'
+      xsqy_tab(m)%jndx = m
+      xsqy_tab(m)%qyld = 0.005_rk
+      xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/XSQY/XS_MACR_JPL06.txt'
+      xsqy_tab(m)%filespec%nskip(1) = 20
+      xsqy_tab(m)%filespec%nread(1) = 146
+      xsqy_tab(m)%filespec%xfac(1)  = 1._rk
+      subr(m)%xsqy_sub   => no_z_dep
+      m = m + 1
+
+      xsqy_tab(m)%equation = 'MACR + hv -> 0.66OH + 1.34CO'
+      xsqy_tab(m)%rxn_name = 'jmacr_b'
+      xsqy_tab(m)%jndx = m
+      xsqy_tab(m)%qyld = 0.005_rk
+      xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/XSQY/XS_MACR_JPL06.txt'
+      xsqy_tab(m)%filespec%nskip(1) = 20
+      xsqy_tab(m)%filespec%nread(1) = 146
       xsqy_tab(m)%filespec%xfac(1)  = 1._rk
       subr(m)%xsqy_sub   => no_z_dep
       m = m + 1
