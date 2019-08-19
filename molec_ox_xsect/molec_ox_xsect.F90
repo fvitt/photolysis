@@ -36,7 +36,7 @@ contains
 !! | errmsg     | ccpp_error_message        | CCPP error message                 | none      |    0 | character   | len=*     | out    | F        |
 !! | errflg     | ccpp_error_flag           | CCPP error flag                    | flag      |    0 | integer     |           | out    | F        |
 !!
-  subroutine molec_ox_xsect_run( nlev, zen, alt, temp, press_mid, o2vmr, dto2, srb_o2_xs, errmsg, errflg )
+  subroutine molec_ox_xsect_run( nlev, zen, alt, temp, press_mid, press_top, o2vmr, dto2, srb_o2_xs, errmsg, errflg )
     use module_xsections, only: o2_xs
     use phot_util_mod, only : sphers, airmas
     use la_srb_mod,    only : la_srb_comp
@@ -47,6 +47,7 @@ contains
     real(rk),         intent(in)    :: alt(:)  ! m
     real(rk),         intent(in)    :: temp(:) ! K
     real(rk),         intent(in)    :: press_mid(:)
+    real(rk),         intent(in)    :: press_top
     real(rk),         intent(in)    :: o2vmr(:)
     real(rk),         intent(inout) :: dto2(:,:)
     real(rk),         intent(inout) :: srb_o2_xs(:,:)
@@ -55,16 +56,18 @@ contains
 
     integer  :: nlyr, k
     integer  :: wn
-    integer  :: nid(0:nlev-1)
-    real(rk) :: dsdh(0:nlev-1,nlev-1)
-    real(rk) :: vcol(nlev-1)
-    real(rk) :: scol(nlev-1)
+    integer  :: nid(0:nlev)
+    real(rk) :: dsdh(0:nlev,nlev)
+    real(rk) :: vcol(nlev)
+    real(rk) :: scol(nlev)
     real(rk) :: tlev(nlev)
-    real(rk) :: zlev(nlev)
+    real(rk) :: zlev(nlev+1)
+    real(rk) :: o2lev(nlev+1)
 
-    real(rk) :: aircol(nlev-1)  ! # molecules / cm2 in each layer
+    real(rk) :: aircol(nlev)  ! # molecules / cm2 in each layer
     real(rk) :: o2col(nlev)  
-    real(rk) :: dpress(nlev)
+    real(rk) :: dpress(nlev-1)
+    real(rk) :: delz_cm, delz_km
 
     errmsg = ''
     errflg = 0
@@ -73,23 +76,34 @@ contains
     srb_o2_xs(:,:) = 0._rk
 
     nlyr = nlev-1
-    dpress(1:nlyr) = press_mid(2:nlyr+1) - press_mid(1:nlyr)
+
+    dpress(nlyr:1:-1) = press_mid(2:nlyr+1) - press_mid(1:nlyr)
+    zlev(nlev:1:-1) = alt(1:nlev) *1.e-3_rk ! m -> km
+    o2lev(nlev:1:-1) = o2vmr(1:nlev)
+
+    delz_km = zlev(nlev) - zlev(nlev-1)
+    delz_cm = delz_km*1.e5_rk ! cm
+
+    zlev(nlev+1) = zlev(nlev) + delz_km ! km
+
     do k=1,nlyr
        aircol(k) = 10._rk*dpress(k)*R/(kboltz*g)
-       o2col(k)  = 0.5_rk*(o2vmr(k)+o2vmr(k+1))*aircol(k)
+       o2col(k)  = 0.5_rk*(o2lev(k)+o2lev(k+1))*aircol(k)
     end do
-    aircol(1:nlyr) = aircol(nlyr:1:-1)
-    o2col(1:nlyr)  = o2col(nlyr:1:-1)
+
+    aircol(nlev) = delz_cm * 10._rk * press_top / ( kboltz * temp(1) ) ! molecules / cm2
+    o2col(nlev)  = o2lev(nlev) * aircol(nlev)
+
     tlev(nlev:1:-1) = temp(1:nlev)
-    zlev(nlev:1:-1) = alt(1:nlev)*1.e-3_rk ! m -> km
 
     do wn = 1,nwave
-       dto2(:nlyr,wn) = o2col(:nlyr) * o2_xs(wn)
+       dto2(:nlev,wn) = o2col(:nlev) * o2_xs(wn)
     end do
-    call sphers( nlyr, zlev, zen, dsdh, nid )
-    call airmas( nlyr, dsdh, nid, aircol, vcol, scol )
 
-    call la_srb_comp( nlyr, wl(1), tlev, vcol, scol, o2vmr, o2_xs, dto2, srb_o2_xs )
+    call sphers( nlev, zlev, zen, dsdh, nid )
+    call airmas( nlev, dsdh, nid, aircol, vcol, scol )
+
+    call la_srb_comp( nlev, wl(1), tlev, vcol, scol, o2lev, o2_xs, dto2, srb_o2_xs )
 
   end subroutine molec_ox_xsect_run
 

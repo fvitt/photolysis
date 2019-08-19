@@ -27,6 +27,8 @@ module  module_prates_tuv
 
   integer :: nj 
   integer :: j_o2_ndx = -1
+  integer :: jo2_a_ndx = -1
+  integer :: jo2_b_ndx = -1
   logical :: is_full_tuv = .true.
 
   logical, allocatable :: xsqy_is_zdep(:)
@@ -69,10 +71,9 @@ contains
     tuv_jname(:) = jnames(:)
 
     find_jo2: do n=1,nj
-       if (trim(tuv_jname(n)) == 'j_o2') then
-          j_o2_ndx = n
-          exit find_jo2
-       end if
+       if (trim(tuv_jname(n)) == 'j_o2') j_o2_ndx = n
+       if (trim(tuv_jname(n)) == 'jo2_a') jo2_a_ndx = n
+       if (trim(tuv_jname(n)) == 'jo2_b') jo2_b_ndx = n
     end do find_jo2
 
     if( is_full_tuv ) then
@@ -216,13 +217,16 @@ contains
                 end if
              endif
           endif
-       elseif( .not. is_full_tuv ) then
-          call sjo2( kte, nwave, srb_o2_xs, xsqy )
+       else
+          if( is_full_tuv ) then
+             sq1d = 1._rk
+          else
+             call sjo2( kte, nwave, srb_o2_xs, xsqy )
+          endif
        endif
        !---------------------------------------------------------------------
        ! compute tuv photorates
        !---------------------------------------------------------------------
-       
        if( .not. is_full_tuv ) then
           if( xsqy_is_zdep(n) ) then
              do k = kts,kte
@@ -234,22 +238,20 @@ contains
              tuv_prate(:,n) = matmul( rad_fld_tpose(:,nlambda_start:nwave),xsect(nlambda_start:nwave) )
           endif
        else
-          if( n /= j_o2_ndx ) then
-             if( xsqy_table(jndx)%tpflag > 0 ) then
-                do k = kts,kte
-                   xsect(nlambda_start:nwave) = sq2d(k,nlambda_start:nwave)*photon_flux(nlambda_start:nwave)*esfact
-                   tuv_prate(k,n) = dot_product( rad_fld(nlambda_start:nwave,k),xsect(nlambda_start:nwave) )
-                end do
-             else                
-                xsect(nlambda_start:nwave) = sq1d(nlambda_start:nwave,1)*photon_flux(nlambda_start:nwave)*esfact
-                tuv_prate(:,n) = matmul( rad_fld_tpose(:,nlambda_start:nwave),xsect(nlambda_start:nwave) )
-             endif
-          else
+          if(n==jo2_a_ndx .or. n==jo2_b_ndx .or. n==j_o2_ndx) then
              do k = kts,kte
-                xsect(nlambda_start:nwave) = srb_o2_xs(nlambda_start:nwave,k)*photon_flux(nlambda_start:nwave)*esfact
+                xsect(nlambda_start:nwave) = sq1d(nlambda_start:nwave,1)*srb_o2_xs(nlambda_start:nwave,k)*photon_flux(nlambda_start:nwave)*esfact
                 tuv_prate(k,n) = dot_product( rad_fld(nlambda_start:nwave,k),xsect(nlambda_start:nwave) )
              end do
-          endif
+          else if ( xsqy_table(jndx)%tpflag > 0 ) then
+             do k = kts,kte
+                xsect(nlambda_start:nwave) = sq2d(k,nlambda_start:nwave)*photon_flux(nlambda_start:nwave)*esfact
+                tuv_prate(k,n) = dot_product( rad_fld(nlambda_start:nwave,k),xsect(nlambda_start:nwave) )
+             end do
+          else
+             xsect(nlambda_start:nwave) = sq1d(nlambda_start:nwave,1)*photon_flux(nlambda_start:nwave)*esfact
+             tuv_prate(:,n) = matmul( rad_fld_tpose(:,nlambda_start:nwave),xsect(nlambda_start:nwave) )
+          end if
        endif
     end do rate_loop
 

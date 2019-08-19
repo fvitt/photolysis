@@ -87,9 +87,9 @@ contains
     
   end subroutine jno_timestep_init
 
-  subroutine jno_run( nlev, zen, n2vmr, o2vmr, o3vmr, novmr, press, temp, zkm, jno_out )
-    use params_mod, only : kboltz, R, g
-    use phot_util_mod, only: sphers
+  subroutine jno_run( nlev, zen, n2vmr, o2vmr, o3vmr, novmr, press, temp, alt, jno_out )
+    use phot_util_mod, only : sphers, airmas
+    use params_mod,    only : kboltz, R, g
     
     integer,  intent(in) :: nlev
     real(rk), intent(in) :: zen
@@ -99,57 +99,66 @@ contains
     real(rk), intent(in) :: novmr(nlev)
     real(rk), intent(in) :: press(nlev)
     real(rk), intent(in) :: temp(nlev)
-    real(rk), intent(in) :: zkm(nlev)
+    real(rk), intent(in) :: alt(nlev)
     real(rk), intent(out) :: jno_out(nlev)
-
-    real(rk) :: delz(nlev)               ! layer thickness (cm)
-    real(rk), parameter    :: km2cm = 1.e5_rk
     
+    real(rk) :: dpress(nlev)
     real(rk) :: n2cc(nlev)
-    real(rk) :: o2cc(nlev)
-    real(rk) :: o3cc(nlev)
-    real(rk) :: nocc(nlev)
-    real(rk) :: dens(nlev)
-
+    real(rk) :: aircol(nlev)
+    real(rk) :: o2col(nlev)
+    real(rk) :: o3col(nlev)
+    real(rk) :: nocol(nlev)
     real(rk) :: o2scol(nlev)
     real(rk) :: o3scol(nlev)
     real(rk) :: noscol(nlev)
     real(rk) :: jno(nlev)
+    real(rk) :: zlev(nlev)
 
+    integer  :: nid(0:nlev)
+    real(rk) :: dsdh(0:nlev,nlev)
+    real(rk) :: vcol(nlev)
+
+    integer :: k
+
+    n2cc(nlev:1:-1) = n2vmr(1:nlev) * 10._rk * press(1:nlev) / ( kboltz * temp(1:nlev) )
     
-    integer  :: nid(0:nlev-1)
-    real(rk) :: dsdh(0:nlev-1,nlev-1)
-    real(rk) :: scaleh
-    integer :: k, nlyr
+    ! compute O2, O3 slant columns
 
-    delz = 0._rk
+    dpress(1) = press(1)
+    dpress(2:nlev) = press(2:nlev) - press(1:nlev)
+
+    aircol(:) = 10._rk*dpress(:)*R/(kboltz*g)
+
+    o2col(1) = o2vmr(1)*aircol(1)
+    o3col(1) = o3vmr(1)*aircol(1)
+    nocol(1) = novmr(1)*aircol(1)
+
+    do k = 2,nlev
+       o2col(k) = 0.5_rk*(o2vmr(k)+o2vmr(k-1))*aircol(k)
+       o3col(k) = 0.5_rk*(o3vmr(k)+o3vmr(k-1))*aircol(k)
+       nocol(k) = 0.5_rk*(novmr(k)+novmr(k-1))*aircol(k)
+    end do
     
-    dens(:) = 10._rk * press(:) / ( kboltz * temp(:) ) ! molecules / cm3
-    n2cc(:) = n2vmr(:) * dens(:)
-    o2cc(:) = o2vmr(:) * dens(:)
-    o3cc(:) = o3vmr(:) * dens(:)
-    nocc(:) = novmr(:) * dens(:)
+    aircol(1:nlev) = aircol(nlev:1:-1)
+    o2col(1:nlev)  = o2col(nlev:1:-1)
+    o3col(1:nlev)  = o3col(nlev:1:-1)
+    nocol(1:nlev)  = nocol(nlev:1:-1)
+    zlev(1:nlev)  = alt(nlev:1:-1)*1.e-3_rk ! m -> km
 
-    !------------------------------------------------------------------------------
-    !     ... Derive Slant Path for Spherical Atmosphere
-    !------------------------------------------------------------------------------
-    nlyr = nlev - 1
-    call sphers( nlyr, zkm(nlev:1:-1), zen, dsdh, nid )
+    nid = 0
+    dsdh = 0._rk
+    call sphers( nlev, zlev, zen, dsdh, nid )
 
-    !------------------------------------------------------------------------------
-    !     ... Derive O2, O3, and NO Slant Column
-    !------------------------------------------------------------------------------
-    delz(1:nlev-1) = km2cm*(zkm(1:nlev-1) - zkm(2:nlev))
-    scaleh = 10.e5_rk ! cm
-    call slant_col( nlev, delz, dsdh, nid, o2cc, scaleh, o2scol )
-    call slant_col( nlev, delz, dsdh, nid, o3cc, scaleh, o3scol )
-    call slant_col( nlev, delz, dsdh, nid, nocc, scaleh, noscol )
+    ! calc slant columns above each level
+    call airmas( nlev, dsdh, nid, o2col, vcol, o2scol )
+    call airmas( nlev, dsdh, nid, o3col, vcol, o3scol )
+    call airmas( nlev, dsdh, nid, nocol, vcol, noscol )
 
     ! calc J rates for NO + hv -> N + O
     call jno_calc( nlev, etfphot_ms93, n2cc, o2scol, o3scol,  noscol, jno )
 
     jno_out(1:nlev) = jno(nlev:1:-1)
-
+    
   end subroutine jno_run
 
   subroutine jno_calc( nlev, etfphot, n2cc, o2scol, o3scol,  noscol, jno )
@@ -311,88 +320,11 @@ contains
       !         transition in the srb (5-0)
       !----------------------------------------------------------------
       if( w == 4 ) then
-         pjno = 1.65e9_rk/(5.1e7_rk + 1.65e9_rk + (1.5e-9_rk*n2cc(nlev-lev+1)))*pjno
+         pjno = 1.65e9_rk/(5.1e7_rk + 1.65e9_rk + (1.5e-9_rk*n2cc(lev)))*pjno
       end if
 
     end function pjno
 
   end subroutine jno_calc
-  
-      subroutine slant_col( nlev, delz, dsdh, nid, absden, hscale, scol )
-!=============================================================================!
-!   PURPOSE:                                                                  !
-!   Derive Column
-!=============================================================================!
-!   PARAMETERS:                                                               !
-!   NLEV   - INTEGER, number of specified altitude levels in the working  (I) !
-!            grid                                                             !
-!   DELZ   - REAL, specified altitude working grid (km)                   (I) !
-!   DSDH   - REAL, slant path of direct beam through each layer crossed  (O)  !
-!             when travelling from the top of the atmosphere to layer i;      !
-!             DSDH(i,j), i = 0..NZ-1, j = 1..NZ-1                             !
-!   NID    - INTEGER, number of layers crossed by the direct beam when   (O)  !
-!             travelling from the top of the atmosphere to layer i;           !
-!             NID(i), i = 0..NZ-1                                             !
-!            specified altitude at each specified wavelength                  !
-!   absden - REAL, absorber concentration, molecules cm-3                     !
-!   SCOL   - REAL, absorber Slant Column, molecules cm-2                      !
-!=============================================================================!
-!   EDIT HISTORY:                                                             !
-!   09/01  Read in profile from an input file, DEK                            !
-!   01/02  Taken from Sasha Madronich's TUV code                              !
-!=============================================================================!
-       use phot_util_mod, only: airmas
-!------------------------------------------------------------------------------
-!       ... Dummy arguments
-!------------------------------------------------------------------------------
-      integer, intent(in) :: nlev
-      integer, intent(in) :: nid(0:nlev-1)              ! see above
-      real(rk), intent(in)    :: delz(nlev)	        ! layer thickness (cm)
-      real(rk), intent(in)    :: dsdh(0:nlev-1,nlev-1)	! see above
-      real(rk), intent(in)    :: absden(nlev)           ! absorber concentration (molec. cm-3)
-      real(rk), intent(in)    :: hscale
-      real(rk), intent(out)   :: scol(nlev)		! absorber Slant Column (molec. cm-2)
-
-!------------------------------------------------------------------------------
-!       ... Local variables
-!------------------------------------------------------------------------------
-      real(rk), parameter :: largest = 1.e+36_rk
-
-      real(rk) :: sum
-      real(rk) :: numer, denom
-      real(rk) :: cz(nlev-1)
-      real(rk) :: vcol(nlev)
-
-      integer :: id
-      integer :: j
-      integer :: k
-      integer :: nlyr
-
-!------------------------------------------------------------------------------
-!     ... compute column increments (logarithmic integrals)
-!------------------------------------------------------------------------------
-      do k = 1,nlev-1
-	if( absden(k) /= 0._rk .and. absden(k+1) /= 0._rk ) then
-           cz(nlev-k) = (absden(k) - absden(k+1))/log( absden(k)/absden(k+1) ) * delz(k)
-	else
-           cz(nlev-k) = .5_rk*(absden(k) + absden(k+1)) * delz(k)
-	end if
-      end do
-
-      nlyr = nlev-1
-!------------------------------------------------------------------------------
-!     ... Include exponential tail integral from infinity to model top
-!         specify scale height near top of model
-!------------------------------------------------------------------------------
-      cz(nlyr) = cz(nlyr) + hscale * absden(1)
-
-      vcol = 0._rk
-      scol = 0._rk
-      call airmas( nlyr, dsdh, nid, cz(:nlyr), vcol(:nlyr), scol(:nlyr))
-
-      scol(nlev) = .95_rk*scol(nlev-1)
-
-      end subroutine slant_col
-
 
 end module jno_mod

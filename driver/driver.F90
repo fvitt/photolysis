@@ -11,7 +11,8 @@ program driver
   use module_rxn, only : xsqy_table => xsqy_tab
   use molec_ox_xsect, only: molec_ox_xsect_init
   use molec_ox_xsect, only: molec_ox_xsect_run
-
+  use jno_mod, only: jno_run, jno_init, jno_timestep_init, jno_nbins, jno_we
+  
   implicit none
 
   character(len=50) :: rxn_string
@@ -25,17 +26,20 @@ program driver
   real(r8), allocatable :: press_mid(:)
   real(r8), allocatable :: press_int(:)
   real(r8), allocatable :: temp(:)
+  real(r8), allocatable :: n2vmrcol(:)
   real(r8), allocatable :: o2vmrcol(:)
   real(r8), allocatable :: o3vmrcol(:)
   real(r8), allocatable :: so2vmrcol(:)
   real(r8), allocatable :: no2vmrcol(:)
+  real(r8), allocatable :: novmrcol(:)
   real(r8), allocatable :: cldfrac(:)
   real(r8), allocatable :: cldwat(:)
   real(r8), allocatable :: srb_o2_xs(:,:)
   real(r8), allocatable :: dto2(:,:)
   real(r8), allocatable :: radfld(:,:)
   real(r8), allocatable :: tuv_prates(:,:)
-
+  real(r8), allocatable :: jno(:)
+  
   character(len=*), parameter :: nml_file = 'test_nml'
   character(len=*), parameter :: env_conds_file = &
        '/terminator-data1/fvitt/micm_inputs/MusicBox_env_cond_1col_c190109.nc'
@@ -43,7 +47,7 @@ program driver
 
   integer :: nlevels,k
 
-  character(len=16), parameter :: my_jnames(141) = &
+  character(len=16), parameter :: my_jnames(143) = &
       (/ 'j_o2            ' &
        , 'jo3_a           ' &
        , 'jo3_b           ' &
@@ -184,9 +188,13 @@ program driver
        , 'jglyald         ' &
        , 'jhyac           ' &
        , 'jmacr_a         ' &
-       , 'jmacr_b         '  &
-       /)
-  
+       , 'jmacr_b         ' &
+       , 'jo2_a           ' &
+       , 'jo2_b           ' &
+      /)
+
+  real(r8) :: fluxes(jno_nbins) = (/ 2.1471364E+11,  2.1680430E+11,  2.8858957E+11,  3.9553672E+11 /)
+
   write(*,*) 'BEGIN TEST'
 
   colEnvConds => environ_conditions_create( env_conds_file, lat=45.0, lon=180. )
@@ -220,35 +228,47 @@ program driver
      call abort()
   end if
 
-  allocate(srb_o2_xs(tuv_n_wavelen,nlevels), dto2(nlevels-1,tuv_n_wavelen))
+  call jno_init()
+  
+  call jno_timestep_init( fluxes )
+
+  allocate(srb_o2_xs(tuv_n_wavelen,nlevels), dto2(nlevels,tuv_n_wavelen))
   allocate(radfld(tuv_n_wavelen,nlevels))
   allocate(tuv_prates(nlevels, tuv_n_phot ) )
  
   allocate(alt(nlevels))
   allocate(press_mid(nlevels))
-  allocate(press_int(nlevels))
+  allocate(press_int(nlevels+1))
   allocate(temp(nlevels))
+  allocate(n2vmrcol(nlevels))
   allocate(o2vmrcol(nlevels))
   allocate(o3vmrcol(nlevels))
   allocate(so2vmrcol(nlevels))
   allocate(no2vmrcol(nlevels))
+  allocate(novmrcol(nlevels))
   allocate(cldfrac(nlevels))
   allocate(cldwat(nlevels))
+  allocate(jno(nlevels))
 
   zenith = colEnvConds%getsrf('SZA')
   albedo = colEnvConds%getsrf('ASDIR')
   press_mid(:nlevels) = colEnvConds%press_mid(nlevels)
+  press_int(:nlevels+1) = colEnvConds%press_int(nlevels+1)
   alt(:nlevels) = colEnvConds%getcol('Z3',nlevels) ! meters
   temp(:nlevels) = colEnvConds%getcol('T',nlevels)
+  n2vmrcol(:nlevels) = colEnvConds%getcol('N2',nlevels)
   o2vmrcol(:nlevels) = colEnvConds%getcol('O2',nlevels)
   o3vmrcol(:nlevels) = colEnvConds%getcol('O3',nlevels)
   so2vmrcol(:nlevels) = colEnvConds%getcol('SO2',nlevels)
   no2vmrcol(:nlevels) = colEnvConds%getcol('NO2',nlevels)
+  novmrcol(:nlevels) = colEnvConds%getcol('NO2',nlevels)
   cldfrac = 0._r8
   cldwat = 0._r8
 
-  call molec_ox_xsect_run( nlevels, zenith, alt, temp, press_mid, o2vmrcol, dto2, srb_o2_xs, errmsg, errflg )
+  call molec_ox_xsect_run( nlevels, zenith, alt, temp, press_mid, press_int(1), o2vmrcol, dto2, srb_o2_xs, errmsg, errflg )
 
+  call jno_run( nlevels, zenith, n2vmrcol, o2vmrcol, o3vmrcol, novmrcol, press_mid, temp, alt, jno )
+  
   call  tuv_radiation_transfer_run( &
        zenith, albedo, press_mid, alt, temp, o3vmrcol, so2vmrcol, no2vmrcol, cldfrac, cldwat, dto2, radfld, errmsg, errflg )
 

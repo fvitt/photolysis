@@ -260,6 +260,17 @@
       integer, intent(inout) :: m
       type(xsqy_subs), intent(inout) :: subr(:)
 
+      xsqy_tab(m)%equation   = 'O2 + hv -> O(1D) + O(3P)'
+      xsqy_tab(m)%rxn_name   = 'jo2_a'
+      xsqy_tab(m+1)%equation = 'O2 + hv -> O(3P) + O(3P)'
+      xsqy_tab(m+1)%rxn_name = 'jo2_b'
+      xsqy_tab(m:m+1)%jndx = (/ m,m+1 /)
+      xsqy_tab(m:m+1)%channel = (/1,2/)
+      xsqy_tab(m:m+1)%tpflag = 0 ! quantum yield is not temperature nor pressure dependent 
+      subr(m  )%xsqy_sub => qy_o2
+      subr(m+1)%xsqy_sub => qy_o2
+      m = m + 2
+
       xsqy_tab(m)%equation   = 'O3 -> O2 + O(1D)'
       xsqy_tab(m)%rxn_name   = 'jo3_a'
       xsqy_tab(m+1)%equation = 'O3 -> O2 + O(3P)'
@@ -7286,7 +7297,78 @@
              nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
       end subroutine readit
 
-      end subroutine XSQY_MMILLS
+    end subroutine XSQY_MMILLS
+    
+    subroutine qy_o2(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
+!---------------------------------------------------------------------------!
+!  PARAMETERS:                                                              !
+!  NW     - INTEGER, number of specified intervals + 1 in working        (I)!
+!           wavelength grid                                                 !
+!  WL     - REAL, vector of lower limits of wavelength intervals in      (I)!
+!           working wavelength grid                                         !
+!  WC     - REAL, vector of center points of wavelength intervals in     (I)!
+!           working wavelength grid                                         !
+!  NZ     - INTEGER, number of altitude levels in working altitude grid  (I)!
+!  TLEV   - REAL, temperature (K) at each specified altitude level       (I)!
+!  AIRDEN - REAL, air density (molec/cc) at each altitude level          (I)!
+!  J      - INTEGER, counter for number of weighting functions defined  (IO)!
+!  SQ     - REAL, cross section x quantum yield (cm^2) for each          (O)!
+!           photolysis reaction defined, at each defined wavelength and     !
+!           at each defined altitude level                                  !
+!  JLABEL - CHARACTER*50, string identifier for each photolysis reaction (O)!
+!           defined                                                         !
+!---------------------------------------------------------------------------!
+
+!-----------------------------------------------------------------------------!
+!     ... args                                                                !
+!-----------------------------------------------------------------------------!
+      integer, intent(in) :: nw
+      integer, intent(in) :: nz
+      integer, intent(inout) :: j
+      real(rk), intent(in)    :: wl(:), wc(:)
+      real(rk), intent(in)    :: tlev(:)
+      real(rk), intent(in)    :: airden(:)
+      character(len=*), intent(out) :: errmsg
+      integer,          intent(out) :: errflg
+      real(rk), optional, intent(out) :: sq(:,:)
+
+      integer, save :: srb_ndx
+      integer :: iw
+      logical, save :: is_initialized = .false.
+      
+      if (present(sq)) then
+         sq = xnan
+      end if
+!-----------------------------------------------------------------------------
+!     ... Shortward of 174.65 the product is O2 + hv => O(3P) + O(1D)
+!     ... Longward  of 174.65 the product is O2 + hv => O(3P) + O(3P)
+!-----------------------------------------------------------------------------
+      if( initialize ) then
+         if( .not. is_initialized ) then
+            find_srb: do iw = 1, nw-1
+               if (wc(iw) > 174.65_rk) then
+                  srb_ndx = iw
+                  exit find_srb
+               end if
+            end do find_srb
+         end if
+      else
+!-----------------------------------------------------------------------------
+!     ... O2 + hv -> O(3P) + O(1D) at lyman alpha has a qy = 0.53
+!         Lacoursiere et al., J. Chem. Phys. 110., 1949-1958, 1999.
+!-----------------------------------------------------------------------------
+         sq(:nw-1,1) = 0._rk
+         
+         if (xsqy_tab(j)%channel==1) then
+            sq(:srb_ndx-1,1) = 1._rk
+            sq(la_ndx,1) = 0.53_rk
+         else
+            sq(srb_ndx:nw-1,1) = 1._rk
+            sq(la_ndx,1) = 0.47_rk
+         end if
+      end if
+      
+    end subroutine qy_o2
 
       SUBROUTINE add_pnts_inter2(xin,yin,yout,kdata,n,nw,wl,jlabel,deltax,yends, errmsg, errflg)
 

@@ -4,5 +4,6 @@
  wavelength_grid_file = 'wavelength_grid_test.nc'
 ! etf_file =  'wavelength_grid.nc'
  is_full_tuv = .true.
+! wavelength_grid_file = 'wrf_tuv_xsqy.nc'
 ! xsqy_file = 'wrf_tuv_xsqy.nc'
 /

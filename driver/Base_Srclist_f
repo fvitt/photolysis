@@ -4,6 +4,7 @@ params_mod.F90
 wavelength_grid.F90
 phot_util_mod.F90
 module_xsections.F90
+jno_mod.F90
 la_srb_mod.F90
 molec_ox_xsect.F90 
 rad_trans.F90
