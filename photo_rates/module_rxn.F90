@@ -5840,22 +5840,22 @@
         integer iz, icnt, iwc, n1, chnl
 
         real(rk), parameter :: ww(16) = (/ &
-             260.0,   270.0,   280.0,    290.0,   300.0, &
-             310.0,   320.0,   330.0,    340.0,   350.0, &
-             360.0,   370.0,   380.0,    390.0,   400.0, &
-             410.0 /)
+             260.0_rk,   270.0_rk,   280.0_rk,    290.0_rk,   300.0_rk, &
+             310.0_rk,   320.0_rk,   330.0_rk,    340.0_rk,   350.0_rk, &
+             360.0_rk,   370.0_rk,   380.0_rk,    390.0_rk,   400.0_rk, &
+             410.0_rk /)
 
         real(rk), parameter :: aa(16) = (/ &
-             -18.27,  -18.42,  -18.59,   -18.72,  -18.84, &
-             -18.90,  -18.93,  -18.87,   -18.77,  -18.71, &
-             -18.31,  -18.14,  -18.01,   -18.42,  -18.59, &
-             -18.13 /)
+             -18.27_rk,  -18.42_rk,  -18.59_rk,   -18.72_rk,  -18.84_rk, &
+             -18.90_rk,  -18.93_rk,  -18.87_rk,   -18.77_rk,  -18.71_rk, &
+             -18.31_rk,  -18.14_rk,  -18.01_rk,   -18.42_rk,  -18.59_rk, &
+             -18.13_rk /)
 
         real(rk), parameter :: bb(16) = (/ &
-             -0.091,  -0.104,  -0.112,   -0.135,  -0.170,  &
-             -0.226,  -0.294,  -0.388,   -0.492,  -0.583,  &
-             -0.770,  -0.885,  -0.992,   -0.949,  -0.966, &
-             -1.160 /)
+             -0.091_rk,  -0.104_rk,  -0.112_rk,   -0.135_rk,  -0.170_rk,  &
+             -0.226_rk,  -0.294_rk,  -0.388_rk,   -0.492_rk,  -0.583_rk,  &
+             -0.770_rk,  -0.885_rk,  -0.992_rk,   -0.949_rk,  -0.966_rk, &
+             -1.160_rk /)
         LOGICAL, save :: is_initialized = .false.
 
         if( initialize ) then
@@ -5876,14 +5876,14 @@
            !----------------------------------------------------
            do iw = 1, 16
               do iz = 1, nz
-                 IF (tin(iz) .LT. 200.0) THEN
-                    XS_harwood(iz,iw) = 10**(aa(iw) + (1000.*bb(iw)/200.0))
+                 IF (tin(iz) .LT. 200.0_rk) THEN
+                    XS_harwood(iz,iw) = 10**(aa(iw) + (1000._rk*bb(iw)/200.0_rk))
                  ENDIF
-                 IF ((tin(iz) .GE. 200.0) .AND. (tin(iz) .LE. 295.)) THEN
-                    XS_harwood(iz,iw) = 10**(aa(iw) + (1000.*bb(iw)/tin(iz)))
+                 IF ((tin(iz) .GE. 200.0_rk) .AND. (tin(iz) .LE. 295._rk)) THEN
+                    XS_harwood(iz,iw) = 10**(aa(iw) + (1000._rk*bb(iw)/tin(iz)))
                  ENDIF
-                 IF (tin(iz) .GT. 295.0) THEN
-                    XS_harwood(iz,iw) = 10**(aa(iw) + (1000.*bb(iw)/295.0))
+                 IF (tin(iz) .GT. 295.0_rk) THEN
+                    XS_harwood(iz,iw) = 10**(aa(iw) + (1000._rk*bb(iw)/295.0_rk))
                  ENDIF
               enddo
            enddo
@@ -5894,7 +5894,7 @@
 
               !     ... < 260 nm
               do i = 1, n
-                 IF (xin(i) .LT. 260.) THEN
+                 IF (xin(i) .LT. 260._rk) THEN
                     ycomb(iz,icnt) = yin(i)
                     wcb  (icnt)    = xin(i)
                     icnt = icnt + 1
@@ -5908,7 +5908,7 @@
               enddo
               !     ... >410 nm
               do i = 1, n
-                 IF (xin(i) .GT. 410.) THEN
+                 IF (xin(i) .GT. 410._rk) THEN
                     ycomb(iz,icnt) = yin(i)
                     wcb  (icnt)    = xin(i)
                     icnt = icnt+1
@@ -5935,11 +5935,11 @@
            chnl = xsqy_tab(j)%channel
            do iw = 1, nw-1
 
-              if (wc(iw) .GE. 300.0) THEN 
-                 qy_O3p = 0.0
+              if (wc(iw) .GE. 300.0_rk) THEN 
+                 qy_O3p = 0.0_rk
                  if (chnl.eq.1) then ! 'N2O5 + hv -> NO3 + NO2'
                     do iz = 1, nz
-                       sq(iz,iw) = 1.0 * ytd(iz,iw)
+                       sq(iz,iw) = 1.0_rk * ytd(iz,iw)
                     enddo
                  else                ! 'N2O5 + hv -> NO3 + NO + O'
                     do iz = 1, nz
@@ -5948,12 +5948,12 @@
                  endif
               endif
 
-              if (wc(iw) .LT. 300.0) THEN
+              if (wc(iw) .LT. 300.0_rk) THEN
                  qy_O3p = min( 1._rk, 3.832441_rk - 0.012809638_rk * wc(iw) )
                  qy_O3p = max( 0._rk, qy_O3p )
                  if (chnl.eq.1) then ! 'N2O5 + hv -> NO3 + NO2'
                     do iz = 1, nz
-                       sq(iz,iw) = (1.0-qy_O3p)*ytd(iz,iw)
+                       sq(iz,iw) = (1.0_rk-qy_O3p)*ytd(iz,iw)
 
                     enddo
                  else                ! 'N2O5 + hv -> NO3 + NO + O'
@@ -6365,24 +6365,24 @@
 
             do iw = 1, n1
 
-               if ((tin(iz) .GE. 235.) .AND. (tin(iz) .LE. 298.)) Then
+               if ((tin(iz) .GE. 235._rk) .AND. (tin(iz) .LE. 298._rk)) Then
                   xs(iz,iw) = y1(iw) *( 1 + (A(iw)*tin(iz)) + &
                        (B(iw)*tin(iz)**2)  + &
                        (C(iw)*tin(iz)**3) )
 
                endif
 
-               if (tin(iz) .LT. 235.) then
-                  xs(iz,iw) = y1(iw) *( 1 + (A(iw)*235.) + &
-                       (B(iw)*(235.)**2)  + &
-                       (C(iw)*(235.)**3) )
+               if (tin(iz) .LT. 235._rk) then
+                  xs(iz,iw) = y1(iw) *( 1 + (A(iw)*235._rk) + &
+                       (B(iw)*(235._rk)**2)  + &
+                       (C(iw)*(235._rk)**3) )
 
                endif
 
-               if (tin(iz) .GT. 298.) then
-                  xs(iz,iw) = y1(iw) *( 1 + (A(iw)*298.) + &
-                       (B(iw)*(298.)**2)  + &
-                       (C(iw)*(298.)**3) )
+               if (tin(iz) .GT. 298._rk) then
+                  xs(iz,iw) = y1(iw) *( 1 + (A(iw)*298._rk) + &
+                       (B(iw)*(298._rk)**2)  + &
+                       (C(iw)*(298._rk)**3) )
 
                endif
 
@@ -6411,49 +6411,48 @@
 
             DO iw = 1, nw-1
 
-               IF ((wc(iw) .GE. 279.).AND.(wc(iw) .LT. 327.) ) THEN
+               qyCO(iw) = 0._rk
+               qyCH3CO(iw) =  0._rk
 
-                  a0 = 0.350* (T/295.)**(-1.28)
-                  b0 = 0.068* (T/295.)**(-2.65)
-                  AA0 = (a0 / (1-a0))* exp(b0*(wc(iw)-248.))
-                  qyCO(iw) = 1. / (1. + AA0)
+               IF ((wc(iw) .GE. 279._rk).AND.(wc(iw) .LT. 327._rk) ) THEN
 
+                  a0 = 0.350_rk* (T/295._rk)**(-1.28_rk)
+                  b0 = 0.068_rk* (T/295._rk)**(-2.65_rk)
+                  AA0 = (a0 / (1._rk-a0))* exp(b0*(wc(iw)-248._rk))
+                  qyCO(iw) = 1._rk / (1._rk + AA0)
                ENDIF
 
-               IF ((wc(iw) .GE. 279.).AND.(wc(iw) .LT. 302.)) THEN
+               IF ((wc(iw) .GE. 279._rk).AND.(wc(iw) .LT. 302._rk)) THEN
 
-                  a1 = 1.6e-19* (T/295.)**(-2.38) 
-                  b1 = 0.55e-3* (T/295.)**(-3.19)
-                  AA1 = a1* exp(-b1*((1e7/wc(iw)) - 33113.))
-                  qyCH3CO(iw) = (1-qyCO(iw)) / (1 + AA1*AD(iz))
+                  a1 = 1.6e-19_rk* (T/295._rk)**(-2.38_rk) 
+                  b1 = 0.55e-3_rk* (T/295._rk)**(-3.19_rk)
+                  AA1 = a1* exp(-b1*((1e7_rk/wc(iw)) - 33113._rk))
+                  qyCH3CO(iw) = (1._rk-qyCO(iw)) / (1._rk + AA1*AD(iz))
 
-               ELSEIF ((wc(iw) .GE. 302.).AND.(wc(iw) .LE. 327.5)) THEN
+               ELSEIF ((wc(iw) .GE. 302._rk).AND.(wc(iw) .LE. 327.5_rk)) THEN
 
-                  a2= 1.62e-17* (T/295.)**(-10.03)
-                  b2= 1.79e-3 * (T/295.)**(-1.364)
-                  AA2= a2* exp(-b2*((1e7/wc(iw))-30488.))
+                  a2= 1.62e-17_rk* (T/295._rk)**(-10.03_rk)
+                  b2= 1.79e-3_rk * (T/295._rk)**(-1.364_rk)
+                  AA2= a2* exp(-b2*((1e7_rk/wc(iw))-30488._rk))
 
-                  a3= 26.29*   (T/295.)**(-6.59)
-                  b3= 5.72e-7* (T/295.)**(-2.93)
-                  c3= 30006.*  (T/295.)**(-0.064)
-                  AA3= a3* exp(-b3*((1e7/wc(iw))-c3)**2)
+                  a3= 26.29_rk*   (T/295._rk)**(-6.59_rk)
+                  b3= 5.72e-7_rk* (T/295._rk)**(-2.93_rk)
+                  c3= 30006._rk*  (T/295._rk)**(-0.064_rk)
+                  AA3= a3* exp(-b3*((1e7_rk/wc(iw))-c3)**2)
 
                   a4= 1.67e-15_rk* (T/295._rk)**(-7.25_rk)
                   b4= 2.08e-3_rk*  (T/295._rk)**(-1.16_rk)
                   AA4= a4* exp(-b4*((1e7_rk/wc(iw)) - 30488._rk))
 
-                  qyCH3CO(iw) = ((1 + AA4*AD(iz) + AA3) / &
-                       ((1 + AA2*AD(iz) + AA3)* &
-                       (1 + AA4*AD(iz))))*(1-qyCO(iw))
+                  qyCH3CO(iw) = ((1._rk + AA4*AD(iz) + AA3) / &
+                       ((1._rk + AA2*AD(iz) + AA3)* &
+                       (1._rk + AA4*AD(iz))))*(1-qyCO(iw))
 
-
-               ELSEIF (wc(iw) .GT. 327.5) THEN
-                  qytot(iw)  = 0._rk
                ENDIF
 
                qytot(iw) = qyCO(iw) + qyCH3CO(iw)
 
-               if (wc(iw) .LT. 279.) then
+               if (wc(iw) .LT. 279._rk) then
                   qytot(iw) = 1.0_rk
                endif
 
@@ -6557,12 +6556,12 @@
          !----------------------------------------------
          !    ... Quantum yield
          !----------------------------------------------
-         qy = 1.0
+         qy = 1.0_rk
 
          DO iw = 1, nw-1
             DO iz = 1, nz
 
-               sig = yg(iw) * EXP(yg2(iw)*(tin(iz)-298.))
+               sig = yg(iw) * EXP(yg2(iw)*(tin(iz)-298._rk))
 
                sq(iz,iw) = qy * sig
 
@@ -6583,8 +6582,8 @@
                skip_cnt=xsqy_tab(j)%filespec%nskip(1), &
                rd_cnt=n, &
                x=x1, y=y1, y1=y2 )
-          y1(:n) = y1(:n) * 1.E-20
-          y2(:n) = y2(:n) * 1E-3
+          y1(:n) = y1(:n) * 1.E-20_rk
+          y2(:n) = y2(:n) * 1E-3_rk
           x2(:n) = x1(:n)
 
           call add_pnts_inter2(x1,y1,yg, kdata, n, &
@@ -6723,12 +6722,12 @@
         !        and Cantrell et al., 1997)
         !--------------------------------------------------------    
         do i = 1, nw-1
-           if (wc(i) .lt. 183.0) then
+           if (wc(i) .lt. 183.0_rk) then
               yg(i) = yg3(i)
-           elseif (wc(i) .le. 194.0) then
+           elseif (wc(i) .le. 194.0_rk) then
               yg(i) = yg2(i)
            else
-              yg(i) = 0.
+              yg(i) = 0._rk
            endif
         enddo
 
@@ -6745,21 +6744,21 @@
         sqx = 0._rk
         do iw = 1, nw-1
 
-           if (wc(iw) .le. 145.0) then
+           if (wc(iw) .le. 145.0_rk) then
 
-              sqx(iw,1) = yg(iw) * 0.890
-              sqx(iw,2) = yg(iw) * 0.110
-              sqx(iw,3) = yg(iw) * 0.0
+              sqx(iw,1) = yg(iw) * 0.890_rk
+              sqx(iw,2) = yg(iw) * 0.110_rk
+              sqx(iw,3) = yg(iw) * 0.0_rk
 
            end if
 
            !     ... > 145nm
            !         JPL97
-           if (wc(iw) .gt. 145.0) then
+           if (wc(iw) .gt. 145.0_rk) then
 
-              sqx(iw,1) = yg(iw) * 1.0
-              sqx(iw,2) = yg(iw) * 0.0
-              sqx(iw,3) = yg(iw) * 0.0
+              sqx(iw,1) = yg(iw) * 1.0_rk
+              sqx(iw,2) = yg(iw) * 0.0_rk
+              sqx(iw,3) = yg(iw) * 0.0_rk
 
            end if
 
@@ -6770,9 +6769,9 @@
         ! channels at 1216A for H2O, NH3 and CH4,
         ! J. Chem. Phys., 77, 2432, 1982.)
 
-        sqx(la_ndx,1) = yg(iw) * 0.780
-        sqx(la_ndx,2) = yg(iw) * 0.100
-        sqx(la_ndx,3) = yg(iw) * 0.120
+        sqx(la_ndx,1) = yg(la_ndx) * 0.780_rk
+        sqx(la_ndx,2) = yg(la_ndx) * 0.100_rk
+        sqx(la_ndx,3) = yg(la_ndx) * 0.120_rk
 
       end subroutine readit
 
@@ -6878,7 +6877,7 @@
             !     ... < 280 nm
             !     ... x1(iw) goes from 190-350nm
             do iw = 1, n
-               IF (x1(iw) .LT. 280.) THEN
+               IF (x1(iw) .LT. 280._rk) THEN
                   ycomb(iz,icnt) = y1(iw)
                   wcb  (icnt)    = x1(iw)
                   icnt = icnt + 1
@@ -6906,17 +6905,17 @@
          enddo
 
          do iw = 1, nw - 1
-            IF (wc(iw) .LT. 200.0) THEN
+            IF (wc(iw) .LT. 200.0_rk) THEN
                if (chnl==1) then
-                  sq(:nz,iw) = 0.30 * ytd(:nz,iw)
+                  sq(:nz,iw) = 0.30_rk * ytd(:nz,iw)
                else if (chnl==2) then
-                  sq(:nz,iw) = 0.70 * ytd(:nz,iw)
+                  sq(:nz,iw) = 0.70_rk * ytd(:nz,iw)
                end if
-            ELSEIF (wc(iw) .GE. 200.0) THEN
+            ELSEIF (wc(iw) .GE. 200.0_rk) THEN
                if (chnl==1) then
-                  sq(:nz,iw) = 0.20 * ytd(:nz,iw)
+                  sq(:nz,iw) = 0.20_rk * ytd(:nz,iw)
                else if (chnl==2) then
-                  sq(:nz,iw) = 0.80 * ytd(:nz,iw)
+                  sq(:nz,iw) = 0.80_rk * ytd(:nz,iw)
                end if
             ENDIF
 
@@ -7154,7 +7153,7 @@
 
             !     ... < 210nm
             do i = 1, n
-               IF (xin(i) .LT. 210.) THEN
+               IF (xin(i) .LT. 210._rk) THEN
                   ycomb(iz,icnt) = yin(i)
                   wcb  (icnt)    = xin(i)
                   icnt = icnt + 1
