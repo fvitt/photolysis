@@ -5852,9 +5852,9 @@
         real(rk) :: x1    (kdata), x2   (kdata), x3(kdata)
         real(rk) :: y1    (kdata), y2   (kdata), y3(kdata)
         real(rk) :: qy(kz,kw)
-        real(rk), save :: so3  (kz,kw)
+        real(rk) :: so3  (kz,kw)
         real(rk) :: QY_O1D(nz,kw)
-        real(rk) :: yg298(kw), yg218(kw), xso3(kw)
+        real(rk), save :: yg298(kw), yg218(kw), xso3(kw)
         real(rk) :: tin(nz), yg(kw)
         real(rk) :: a1, a2, a3, w, t, kt, dum, q1, q2
 
@@ -5881,6 +5881,36 @@
            !     ... tin set to tlev
            !-----------------------------------------------------------
            tin(:nz) = tlev(:nz)
+           !-------------------------------------------------------
+           !     ... for hartley and huggins bands, use 
+           !         temperature-dependent values from
+           !         JPL06
+           !-------------------------------------------------------
+           !-------------------------------------------------------
+           !     ... Cross Sections and Quantum Yields
+           !-------------------------------------------------------
+           do iw = 1, nw-1
+              do iz = 1, nz
+
+                 so3(iz,iw) = xso3(iw)
+
+                 if ((wc(iw) .ge. 196.078) .and. (wc(iw) .le. 342.5)) then
+
+                    if (tin(iz) .lt. 218.) then
+                       so3(iz,iw) = yg218(iw)
+                    endif
+                    if ((tin(iz) .ge. 218.) .and. (tin(iz) .le. 298.)) then
+                       so3(iz,iw) = yg218(iw)+(yg298(iw)-yg218(iw))/(298.-218.)* &
+                            (tin(iz)-218.)
+                    endif
+                    if (tin(iz) .gt. 298.) then
+                       so3(iz,iw) = yg298(iw)
+                    endif
+                 endif
+
+              enddo
+           enddo
+
 
            !------------------------------------------------------ 
            !     ... QY JPL06
@@ -5998,37 +6028,7 @@
              endif
           enddo
 
-          !-------------------------------------------------------
-          !     ... for hartley and huggins bands, use 
-          !         temperature-dependent values from
-          !         JPL06
-          !-------------------------------------------------------
-          !-------------------------------------------------------
-          !     ... Cross Sections and Quantum Yields
-          !-------------------------------------------------------
-          do iw = 1, nw-1
-             do iz = 1, nz
-
-                so3(iz,iw) = xso3(iw)
-
-                if ((wc(iw) .ge. 196.078) .and. (wc(iw) .le. 342.5)) then
-
-                   if (tin(iz) .lt. 218.) then
-                      so3(iz,iw) = yg218(iw)
-                   endif
-                   if ((tin(iz) .ge. 218.) .and. (tin(iz) .le. 298.)) then
-                      so3(iz,iw) = yg218(iw)+(yg298(iw)-yg218(iw))/(298.-218.)* &
-                           (tin(iz)-218.)
-                   endif
-                   if (tin(iz) .gt. 298.) then
-                      so3(iz,iw) = yg298(iw)
-                   endif
-                endif
-
-             enddo
-          enddo
-
-        end subroutine readit
+       end subroutine readit
 
       end subroutine XSQY_O3
 
