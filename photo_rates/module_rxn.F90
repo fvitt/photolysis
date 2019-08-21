@@ -272,14 +272,35 @@
       m = m + 2
 
       xsqy_tab(m)%equation   = 'O3 -> O2 + O(1D)'
+      xsqy_tab(m)%rxn_name   = 'j_o3_a'
+      xsqy_tab(m+1)%equation = 'O3 -> O2 + O(3P)'
+      xsqy_tab(m+1)%rxn_name = 'j_o3_b'
+      xsqy_tab(m:m+1)%jndx = (/ m,m+1 /)
+      xsqy_tab(m+1)%channel = 2
+      xsqy_tab(m:m+1)%tpflag = 1
+      subr(m  )%xsqy_sub => r01
+      subr(m+1)%xsqy_sub => r01
+      m = m + 2
+
+      xsqy_tab(m)%equation   = 'O3 -> O2 + O(1D)'
       xsqy_tab(m)%rxn_name   = 'jo3_a'
       xsqy_tab(m+1)%equation = 'O3 -> O2 + O(3P)'
       xsqy_tab(m+1)%rxn_name = 'jo3_b'
       xsqy_tab(m:m+1)%jndx = (/ m,m+1 /)
       xsqy_tab(m+1)%channel = 2
       xsqy_tab(m:m+1)%tpflag = 1
-      subr(m  )%xsqy_sub => r01
-      subr(m+1)%xsqy_sub => r01
+      xsqy_tab(m:m+1)%filespec%nfiles = 3
+      xsqy_tab(m:m+1)%filespec%filename(1) = trim(input_data_root)//'/XSQY/XS_O3_Ackerman_1971.txt'
+      xsqy_tab(m:m+1)%filespec%nskip(1) = 9
+      xsqy_tab(m:m+1)%filespec%nread(1) = 56
+      xsqy_tab(m:m+1)%filespec%filename(2) = trim(input_data_root)//'/XSQY/XS_O3_218_JPL06.txt'
+      xsqy_tab(m:m+1)%filespec%nskip(2) = 28
+      xsqy_tab(m:m+1)%filespec%nread(2) = 65
+      xsqy_tab(m:m+1)%filespec%filename(3) = trim(input_data_root)//'/XSQY/XS_O3_298_JPL06.txt'
+      xsqy_tab(m:m+1)%filespec%nskip(3) = 39
+      xsqy_tab(m:m+1)%filespec%nread(3) = 168
+      subr(m  )%xsqy_sub => XSQY_O3
+      subr(m+1)%xsqy_sub => XSQY_O3
       m = m + 2
 
       xsqy_tab(m)%equation = 'NO2 -> NO + O(3P)'
@@ -5773,6 +5794,243 @@
 
       END SUBROUTINE r146
 
+      subroutine XSQY_O3(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
+!-----------------------------------------------------------------------------!
+!   purpose:                                                                  !
+!   provide the product of (cross section) x (quantum yield) for the two      !
+!   o3 photolysis reactions:                                                  !
+!              (a) O3 + hv -> O2 + O(1D)                                      !
+!              (b) O3 + hv -> O2 + O(3P)                                      !
+!   cross sections:                                                           !
+!               120nm - 185 nm = Ackerman, 1971                               !
+!               185nm - 827 nm = JPL06 (293-298K)                             !
+!               196nm - 342 nm = JPL06 (218 K)                                !
+!   quantum yield:  JPL 06 recommendation                                     !
+!-----------------------------------------------------------------------------!
+!   parameters:                                                               !
+!   nw     - integer, number of specified intervals + 1 in working        (i) !
+!            wavelength grid                                                  !
+!   wl     - real, vector of lower limits of wavelength intervals in      (i) !
+!            working wavelength grid                                          !
+!   wc     - real, vector of center points of wavelength intervals in     (i) !
+!            working wavelength grid                                          !
+!   nz     - integer, number of altitude levels in working altitude grid  (i) !
+!   tlev   - real, temperature (k) at each specified altitude level       (i) !
+!   airlev - real, air density (molec/cc) at each altitude level          (i) !
+!   j      - integer, counter for number of weighting functions defined  (io) !
+!   sq     - real, cross section x quantum yield (cm^2) for each          (o) !
+!            photolysis reaction defined, at each defined wavelength and      !
+!            at each defined altitude level                                   !
+!   jlabel - character*60, string identifier for each photolysis reaction (o) !
+!            defined                                                          !
+!-----------------------------------------------------------------------------!
+!   edit history:                                                             !
+!   02/06/08  JPL-06 Doug Kinnison                                            !
+!   01/02  Atkinson, 1971, 120-175nm, Doug Kinnison                           !
+!-----------------------------------------------------------------------------!
+
+!-----------------------------------------------------------------------------!
+!     ... args                                                                !
+!-----------------------------------------------------------------------------!
+        INTEGER, intent(in) :: nw
+        INTEGER, intent(in) :: nz
+        INTEGER, intent(inout) :: j
+        REAL(rk), intent(in)    :: wl(:), wc(:)
+        REAL(rk), intent(in)    :: tlev(:)
+        REAL(rk), intent(in)    :: airden(:)
+        character(len=*), intent(out) :: errmsg
+        integer,          intent(out) :: errflg
+        real(rk), optional, intent(out) :: sq(:,:)
+
+!-----------------------------------------------------------------------------!
+!     ... Local arrays                                                        !
+!-----------------------------------------------------------------------------!
+        
+        integer, parameter :: kdata = 250
+        integer n1, n2, n3, iskip, ierr
+        integer i, iw, iz, n, idum, kk
+        real(rk) :: x1    (kdata), x2   (kdata), x3(kdata)
+        real(rk) :: y1    (kdata), y2   (kdata), y3(kdata)
+        real(rk) :: qy(kz,kw)
+        real(rk), save :: so3  (kz,kw)
+        real(rk) :: QY_O1D(nz,kw)
+        real(rk) :: yg298(kw), yg218(kw), xso3(kw)
+        real(rk) :: tin(nz), yg(kw)
+        real(rk) :: a1, a2, a3, w, t, kt, dum, q1, q2
+
+        real(rk), parameter :: A(3) = (/0.8036_rk, 8.9061_rk, 0.1192_rk /)
+        real(rk), parameter :: X(3) = (/ 304.225_rk, 314.957_rk, 310.737_rk/)
+        real(rk), parameter :: om(3) = (/ 5.576_rk, 6.601_rk, 2.187_rk/)
+
+        logical, save :: is_initialized = .false.
+        integer :: chnl
+
+        if (present(sq)) then
+           sq = xnan
+        end if
+
+        if( initialize ) then
+           if( .not. is_initialized ) then
+              CALL readit
+              is_initialized = .true.
+           endif
+        else
+           chnl = xsqy_tab(j)%channel
+
+           !-----------------------------------------------------------
+           !     ... tin set to tlev
+           !-----------------------------------------------------------
+           tin(:nz) = tlev(:nz)
+
+           !------------------------------------------------------ 
+           !     ... QY JPL06
+           !         Valid from 306-328 nm
+           !                    200-320 K
+           !------------------------------------------------------ 
+           do iz = 1, nz
+              T = max(min(320.0_rk, tin(iz)),200._rk)
+
+              do iw = 1, nw-1 
+
+                 kt = 0.695_rk * T
+                 q1 = 1._rk
+                 q2 = exp(-825.518_rk/kT)
+
+                 IF(wc(iw) .LE. 305._rk) THEN
+                    QY_O1D (iz,iw) = 0.90_rk
+                 ELSEIF((wc(iw) .GT. 305) .AND. (wc(iw) .LE. 328._rk)) THEN
+
+                    QY_O1D(iz,iw)  = 0.0765_rk + &
+                         a(1)*                (q1/(q1+q2))*EXP(-((x(1)-wc(iw))/om(1))**4)+ &
+                         a(2)*(T/300._rk)**2 *(q2/(q1+q2))*EXP(-((x(2)-wc(iw))/om(2))**2)+ &
+                         a(3)*(T/300._rk)**1.5_rk         *EXP(-((x(3)-wc(iw))/om(3))**2)
+
+                 ELSEIF(wc(iw) .GT. 328._rk .AND. wc(iw) .LE. 345._rk) THEN
+                    QY_O1D(iz,iw) = 0.08_rk
+                 ELSEIF(wc(iw) .GT. 340._rk) THEN
+                    QY_O1D(iz,iw) = 0._rk
+                 ENDIF
+
+                 QY_O1D(iz,iw) = min(qy_O1D(iz,iw),1.0_rk)
+              enddo
+
+           enddo
+           !------------------------------------------------------
+           !     ... derive the cross section*qy
+           !------------------------------------------------------
+
+           if (chnl == 1) then
+              qy(:nz,:nw-1) = qy_O1D(:nz,:nw-1)
+           else
+              qy(:nz,:nw-1) = 1.0_rk - qy_O1D(:nz,:nw-1)
+           end if
+
+           do iz = 1, nz
+              do iw = 1, nw-1
+                 sq(iz,iw) = qy(iz,iw)*so3(iz,iw)
+              enddo
+           enddo
+        end if
+
+      contains
+
+        subroutine readit
+          !-----------------------------------------------------------
+          !     Ref: Atkinson, ultraviolet solar radiation related to 
+          !          mesopheric procesess, 149-159, in fiocco, g. (ed.), 
+          !          mesospheric models and related exp., d. reidel, 
+          !          dordrecht, 1971. 
+          !
+          !          120 nm through 200 nm
+          !-----------------------------------------------------------
+          x1 = xnan
+          y1 = xnan
+          n = xsqy_tab(j)%filespec%nread(1)
+          call base_read( filespec=xsqy_tab(j)%filespec%filename(1), &
+               errmsg=errmsg, errflg=errflg, &
+               skip_cnt=xsqy_tab(j)%filespec%nskip(1), &
+               rd_cnt=n, &
+               x=x1,y=y1 )
+          call add_pnts_inter2(x1,y1,yg, kdata, n, &
+               nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
+
+          do iw = 1, nw-1
+             xso3(iw) = yg(iw)
+          enddo
+
+          !-------------------------------------------------------
+          !     ... REF: JPL06 218K
+          !         from 196.078 to 342.5 nm
+          !-------------------------------------------------------
+          x1 = xnan
+          y1 = xnan
+          y2 = xnan
+          n = xsqy_tab(j)%filespec%nread(2)
+          call base_read( filespec=xsqy_tab(j)%filespec%filename(2), &
+               errmsg=errmsg, errflg=errflg, &
+               skip_cnt=xsqy_tab(j)%filespec%nskip(2), &
+               rd_cnt=n, &
+               x=x1,y=y1, y1=y2)
+          x2(:n) = 0.5_rk*(x1(:n) + y1(:n))
+          call add_pnts_inter2(x2,y2,yg218, kdata, n, &
+               nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
+
+          !-------------------------------------------------------
+          !     ... REF: JPL06 293-298K
+          !         from 185.185 to 827.500 nm
+          !-------------------------------------------------------
+          x1 = xnan
+          y1 = xnan
+          y3 = xnan
+          n = xsqy_tab(j)%filespec%nread(3)
+          call base_read( filespec=xsqy_tab(j)%filespec%filename(3), &
+               errmsg=errmsg, errflg=errflg, &
+               skip_cnt=xsqy_tab(j)%filespec%nskip(3), &
+               rd_cnt=n, &
+               x=x1,y=y1, y1=y3)
+          x3(:n) = 0.5_rk*(x1(:n) + y1(:n))         
+          call add_pnts_inter2(x3,y3,yg298, kdata, n, &
+               nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
+
+          do iw = 1, nw-1
+             if (wc(iw) .ge. 184.0) then
+                xso3(iw) = yg298(iw)
+             endif
+          enddo
+
+          !-------------------------------------------------------
+          !     ... for hartley and huggins bands, use 
+          !         temperature-dependent values from
+          !         JPL06
+          !-------------------------------------------------------
+          !-------------------------------------------------------
+          !     ... Cross Sections and Quantum Yields
+          !-------------------------------------------------------
+          do iw = 1, nw-1
+             do iz = 1, nz
+
+                so3(iz,iw) = xso3(iw)
+
+                if ((wc(iw) .ge. 196.078) .and. (wc(iw) .le. 342.5)) then
+
+                   if (tin(iz) .lt. 218.) then
+                      so3(iz,iw) = yg218(iw)
+                   endif
+                   if ((tin(iz) .ge. 218.) .and. (tin(iz) .le. 298.)) then
+                      so3(iz,iw) = yg218(iw)+(yg298(iw)-yg218(iw))/(298.-218.)* &
+                           (tin(iz)-218.)
+                   endif
+                   if (tin(iz) .gt. 298.) then
+                      so3(iz,iw) = yg298(iw)
+                   endif
+                endif
+
+             enddo
+          enddo
+
+        end subroutine readit
+
+      end subroutine XSQY_O3
 
       subroutine XSQY_N2O5(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------!
@@ -5857,6 +6115,10 @@
              -0.770_rk,  -0.885_rk,  -0.992_rk,   -0.949_rk,  -0.966_rk, &
              -1.160_rk /)
         LOGICAL, save :: is_initialized = .false.
+
+        if (present(sq)) then
+           sq = xnan
+        end if
 
         if( initialize ) then
            if( .not. is_initialized ) then
@@ -6831,7 +7093,7 @@
       parameter(kdata=100)
       integer i, iw, iz, n, n1, idum, ierr, icnt
       real(rk),save :: x1   (kdata)=-huge(1._rk), x2(kdata)=-huge(1._rk)
-      real(rk) :: wcb(kdata)
+      real(rk) :: wcb(kdata), x(kdata), y(kdata)
       real(rk),save :: y1   (kdata)=-huge(1._rk), aa(kdata)=-huge(1._rk), bb (kdata)=-huge(1._rk)
       real(rk) :: ytmp (nz,kdata), ycomb(nz,kdata)
       real(rk) :: ytd  (nz,kw), yg(kw)
@@ -6896,10 +7158,10 @@
          !     ... Interpolate Combine cross sections
          do iz = 1, nz
             n  = icnt-1
-            y1 = ycomb(iz,:)
-            x1 = wcb
+            y = ycomb(iz,:)
+            x = wcb
 
-            call add_pnts_inter2(x1,y1,yg, kdata, n, &
+            call add_pnts_inter2(x,y,yg, kdata, n, &
                  nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
             ytd(iz,:) = yg(:)

@@ -47,8 +47,10 @@ program driver
 
   integer :: nlevels,k
 
-  character(len=16), parameter :: my_jnames(143) = &
+  character(len=16), parameter :: my_jnames(145) = &
       (/ 'j_o2            ' &
+       , 'j_o3_a          ' &
+       , 'j_o3_b          ' &
        , 'jo3_a           ' &
        , 'jo3_b           ' &
        , 'jno2            ' &
@@ -216,7 +218,7 @@ program driver
      call abort()
   end if
 
-  call tuv_radiation_transfer_init( r8, nlevels, errmsg, errflg )
+  call tuv_radiation_transfer_init( r8, errmsg, errflg )
   if (errflg/=0) then
       write(*,*) 'FAILURE: '//trim(errmsg)
      call abort()
@@ -269,8 +271,8 @@ program driver
 
   call jno_run( nlevels, zenith, n2vmrcol, o2vmrcol, o3vmrcol, novmrcol, press_mid, temp, alt, jno )
   
-  call  tuv_radiation_transfer_run( &
-       zenith, albedo, press_mid, alt, temp, o3vmrcol, so2vmrcol, no2vmrcol, cldfrac, cldwat, dto2, radfld, errmsg, errflg )
+  call  tuv_radiation_transfer_run( nlevels, &
+       zenith, albedo, press_mid, press_int(1), alt, temp, o3vmrcol, so2vmrcol, no2vmrcol, cldfrac, cldwat, dto2, radfld, errmsg, errflg )
 
   call tuv_photolysis_run( nlevels, temp, press_mid, radfld, srb_o2_xs, tuv_prates, errmsg, errflg )
   
