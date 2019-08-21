@@ -5894,16 +5894,16 @@
 
                  so3(iz,iw) = xso3(iw)
 
-                 if ((wc(iw) .ge. 196.078) .and. (wc(iw) .le. 342.5)) then
+                 if ((wc(iw) .ge. 196.078_rk) .and. (wc(iw) .le. 342.5_rk)) then
 
-                    if (tin(iz) .lt. 218.) then
+                    if (tin(iz) .lt. 218._rk) then
                        so3(iz,iw) = yg218(iw)
                     endif
-                    if ((tin(iz) .ge. 218.) .and. (tin(iz) .le. 298.)) then
-                       so3(iz,iw) = yg218(iw)+(yg298(iw)-yg218(iw))/(298.-218.)* &
-                            (tin(iz)-218.)
+                    if ((tin(iz) .ge. 218._rk) .and. (tin(iz) .le. 298._rk)) then
+                       so3(iz,iw) = yg218(iw)+(yg298(iw)-yg218(iw))/(298._rk-218._rk)* &
+                            (tin(iz)-218._rk)
                     endif
-                    if (tin(iz) .gt. 298.) then
+                    if (tin(iz) .gt. 298._rk) then
                        so3(iz,iw) = yg298(iw)
                     endif
                  endif
@@ -6023,7 +6023,7 @@
                nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
 
           do iw = 1, nw-1
-             if (wc(iw) .ge. 184.0) then
+             if (wc(iw) .ge. 184.0_rk) then
                 xso3(iw) = yg298(iw)
              endif
           enddo
