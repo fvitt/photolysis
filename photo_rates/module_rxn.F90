@@ -314,22 +314,42 @@
       m = m + 1
 
       xsqy_tab(m)%equation   = 'NO3 -> NO + O2'
+      xsqy_tab(m)%rxn_name   = 'j_no3_b'
+      xsqy_tab(m+1)%equation = 'NO3 -> NO2 + O(3P)'
+      xsqy_tab(m+1)%rxn_name = 'j_no3_a'
+      xsqy_tab(m)%jndx = m
+      xsqy_tab(m+1)%channel = 2
+      xsqy_tab(m:m+1)%tpflag = 1
+      xsqy_tab(m:m+1)%filespec%nfiles = 2
+      xsqy_tab(m:m+1)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/NO3_jpl11.abs'
+      xsqy_tab(m:m+1)%filespec%nskip(1) = 6
+      xsqy_tab(m:m+1)%filespec%nread(1) = 289
+      xsqy_tab(m:m+1)%filespec%filename(2) = trim(input_data_root)//'/DATAJ1/YLD/NO3_jpl2011.qy'
+      xsqy_tab(m:m+1)%filespec%nskip(2) = 5
+      xsqy_tab(m:m+1)%filespec%nread(2) = 56
+      xsqy_tab(m:m+1)%filespec%xfac(2)  = 1.e-3_rk
+      subr(m)%xsqy_sub   => r03
+      subr(m+1)%xsqy_sub => r03
+      m = m + 2
+
+      
+      xsqy_tab(m)%equation   = 'NO3 -> NO + O2'
       xsqy_tab(m)%rxn_name   = 'jno3_b'
       xsqy_tab(m+1)%equation = 'NO3 -> NO2 + O(3P)'
       xsqy_tab(m+1)%rxn_name = 'jno3_a'
       xsqy_tab(m)%jndx = m
       xsqy_tab(m+1)%channel = 2
       xsqy_tab(m:m+1)%tpflag = 1
-      xsqy_tab(m)%filespec%nfiles = 2
-      xsqy_tab(m)%filespec%filename(1) = trim(input_data_root)//'/DATAJ1/ABS/NO3_jpl11.abs'
-      xsqy_tab(m)%filespec%nskip(1) = 6
-      xsqy_tab(m)%filespec%nread(1) = 289
-      xsqy_tab(m)%filespec%filename(2) = trim(input_data_root)//'/DATAJ1/YLD/NO3_jpl2011.qy'
-      xsqy_tab(m)%filespec%nskip(2) = 5
-      xsqy_tab(m)%filespec%nread(2) = 56
-      xsqy_tab(m)%filespec%xfac(2)  = 1.e-3_rk
-      subr(m)%xsqy_sub   => r03
-      subr(m+1)%xsqy_sub => r03
+      xsqy_tab(m:m+1)%filespec%nfiles = 2
+      xsqy_tab(m:m+1)%filespec%filename(1) = trim(input_data_root)//'/XSQY/XS_NO3_JPL06.txt'
+      xsqy_tab(m:m+1)%filespec%nskip(1) = 26
+      xsqy_tab(m:m+1)%filespec%nread(1) = 289
+      xsqy_tab(m:m+1)%filespec%filename(2) = trim(input_data_root)//'/XSQY/QY_NO3_JPL06.txt'
+      xsqy_tab(m:m+1)%filespec%nskip(2) = 23
+      xsqy_tab(m:m+1)%filespec%nread(2) = 56
+      xsqy_tab(m:m+1)%filespec%xfac(2)  = 1.e-3_rk
+      subr(m)%xsqy_sub   => XSQY_NO3
+      subr(m+1)%xsqy_sub => XSQY_NO3
       m = m + 2
 
       xsqy_tab(m)%equation   = 'N2O5 -> NO3 + NO + O(3P)'
@@ -6032,6 +6052,212 @@
 
       end subroutine XSQY_O3
 
+      subroutine XSQY_NO3(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
+!-----------------------------------------------------------------------------!
+!   purpose:                                                                  !
+!   provide the product (absorptioon cross section) x (quantum yield) for     !
+!   both channels of no3 photolysis:                                          !
+!           (a) NO3 + hv -> NO2 + O(3P)                                       !
+!           (b) NO3 + hv -> NO + O2                                           !
+!   cross section and quantum yield consistent with JPL06                     !
+!-----------------------------------------------------------------------------!
+!   parameters:                                                               !
+!   nw     - integer, number of specified intervals + 1 in working        (i) !
+!            wavelength grid                                                  !
+!   wl     - real, vector of lower limits of wavelength intervals in      (i) !
+!            working wavelength grid                                          !
+!   wc     - real, vector of center points of wavelength intervals in     (i) !
+!            working wavelength grid                                          !
+!   nz     - integer, number of altitude levels in working altitude grid  (i) !
+!   tlev   - real, temperature (k) at each specified altitude level       (i) !
+!   airlev - real, air density (molec/cc) at each altitude level          (i) !
+!   j      - integer, counter for number of weighting functions defined  (io) !
+!   sq     - real, cross section x quantum yield (cm^2) for each          (o) !
+!            photolysis reaction defined, at each defined wavelength and      !
+!            at each defined altitude level                                   !
+!   jlabel - character*60, string identifier for each photolysis reaction (o) !
+!            defined                                                          !
+!-----------------------------------------------------------------------------!
+!   edit history:                                                             !
+!   02/04/08 Doug Kinnison                                                    !
+!-----------------------------------------------------------------------------!
+
+!-----------------------------------------------------------------------------!
+!     ... args                                                                !
+!-----------------------------------------------------------------------------!
+        INTEGER, intent(in) :: nw
+        INTEGER, intent(in) :: nz
+        INTEGER, intent(inout) :: j
+        REAL(rk), intent(in)    :: wl(:), wc(:)
+        REAL(rk), intent(in)    :: tlev(:)
+        REAL(rk), intent(in)    :: airden(:)
+        character(len=*), intent(out) :: errmsg
+        integer,          intent(out) :: errflg
+        real(rk), optional, intent(out) :: sq(:,:)
+
+!-----------------------------------------------------------------------------!
+!     ... local                                                               !
+!-----------------------------------------------------------------------------!
+        integer kdata
+        parameter(kdata=350)
+        integer i, iw, iz, n, n1, idum, iskip, ierr
+
+        real(rk) :: x1(kdata)
+        real(rk) :: y1(kdata), xqy( kdata)
+        real(rk) :: qyNO_298 (kdata), qyNO_230 (kdata), qyNO_190 (kdata)
+        real(rk) :: qyNO2_298(kdata), qyNO2_230(kdata), qyNO2_190(kdata)
+        real(rk), save :: ygNO_298 (kw),    ygNO_230 (kw),    ygNO_190 (kw)
+        real(rk), save :: ygNO2_298(kw),    ygNO2_230(kw),    ygNO2_190(kw)
+        real(rk), save :: yg(kw)
+        real(rk) :: qyNO2(nz,kw),     qyNO(nz,kz)
+        real(rk) :: tin(nz)
+        real(rk) :: qy
+        logical, save :: is_initialized = .false.
+
+        if (present(sq)) then
+           sq = xnan
+        end if
+
+        if( initialize ) then
+           if( .not. is_initialized ) then
+              CALL readit
+              is_initialized = .true.
+           endif
+        else
+
+           !----------------------------------------------
+           !     ... tin set to tlev
+           !---------------------------------------------
+           tin(:) = tlev(:)
+
+
+           do iw = 1, nw-1
+
+              do iz = 1, nz
+
+                 IF (wc(iw) .GE. 585._rk) THEN
+                    !... NO2 + O 
+                    qyNO2(iz,iw) = ygNO2_190(iw)
+                    if ((tin(iz) .GE. 190._rk) .AND. (tin(iz) .le. 230._rk)) then
+                       qyNO2(iz,iw) = ygNO2_190(iw) + &
+                            (ygNO2_230(iw)-ygNO2_190(iw))/(230._rk-190._rk) * &
+                            (tin(iz)-190._rk)
+                    endif
+                    if ((tin(iz) .GT. 230._rk) .AND. (tin(iz) .le. 298._rk)) then
+                       qyNO2(iz,iw) = ygNO2_230(iw) + &
+                            (ygNO2_298(iw)-ygNO2_230(iw))/(298._rk-230._rk) * &
+                            (tin(iz)-230._rk)
+                    endif
+                    if (tin(iz) .GT. 298._rk) then
+                       qyNO2(iz,iw) = ygNO2_298(iw)
+                    endif
+                    !... NO + O2
+                    qyNO(iz,iw) = ygNO_190(iw)
+                    if ((tin(iz) .GE. 190._rk) .AND. (tin(iz) .le. 230._rk)) then
+                       qyNO(iz,iw) = ygNO_190(iw) + &
+                            (ygNO_230(iw)-ygNO_190(iw))/(230._rk-190._rk) * &
+                            (tin(iz)-190._rk)
+                    endif
+                    if ((tin(iz) .GT. 230._rk) .AND. (tin(iz) .le. 298._rk)) then
+                       qyNO(iz,iw) = ygNO_230(iw) + &
+                            (ygNO_298(iw)-ygNO_230(iw))/(298._rk-230._rk) * &
+                            (tin(iz)-230._rk)
+                    endif
+                    if (tin(iz) .GT. 298._rk) then
+                       qyNO(iz,iw) = ygNO_298(iw)
+                    endif
+
+                 ELSE
+                    qyNO(iz,iw) = 0._rk
+                    qyNO2(iz,iw)= 1._rk
+                 ENDIF
+              enddo
+           enddo
+           if (xsqy_tab(j)%channel == 1) then
+              ! 'NO3 + hv -> NO2 + O(3P)'
+              do iw = 1, nw-1
+                 do iz = 1, nz
+                    sq(iz,iw) = qyNO(iz,iw) * yg(iw)
+
+                 enddo
+              enddo
+           else
+              ! 'NO3 + hv  -> NO + O2'
+              do iw = 1, nw-1
+                 do iz = 1, nz
+                    sq(iz,iw) = qyNO2(iz,iw) * yg(iw)
+                 enddo
+              enddo
+           end if
+        end if
+
+      contains
+
+        subroutine readit
+          x1 = xnan
+          y1 = xnan
+          n = xsqy_tab(j)%filespec%nread(1)
+          call base_read( filespec=xsqy_tab(j)%filespec%filename(1), &
+               errmsg=errmsg, errflg=errflg, &
+               skip_cnt=xsqy_tab(j)%filespec%nskip(1), &
+               rd_cnt=n, &
+               x=x1,y=y1 )
+
+          call add_pnts_inter2(x1,y1,yg, kdata, n, &
+               nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
+
+          xqy = xnan
+          qyNO_298 = xnan
+          qyNO_230 = xnan
+          qyNO_190 = xnan
+          qyNO2_298 = xnan
+          qyNO2_230 = xnan
+          qyNO2_190 = xnan
+          n = xsqy_tab(j)%filespec%nread(2)
+          call base_read( filespec=xsqy_tab(j)%filespec%filename(2), &
+               errmsg=errmsg, errflg=errflg, &
+               skip_cnt=xsqy_tab(j)%filespec%nskip(2), &
+               rd_cnt=n, &
+               x=xqy, y=qyNO_298, y1=qyNO_230, y2=qyNO_190, &
+               y3=qyNO2_298, y4=qyNO2_230, y5=qyNO2_190 )
+
+          qyNO_298 = qyNO_298 * xsqy_tab(j)%filespec%xfac(2)
+          qyNO_230 = qyNO_230 * xsqy_tab(j)%filespec%xfac(2)
+          qyNO_190 = qyNO_190 * xsqy_tab(j)%filespec%xfac(2)
+          qyNO2_298 = qyNO2_298 * xsqy_tab(j)%filespec%xfac(2)
+          qyNO2_230 = qyNO2_230 * xsqy_tab(j)%filespec%xfac(2)
+          qyNO2_190 = qyNO2_190 * xsqy_tab(j)%filespec%xfac(2)
+
+          x1(:n) = xqy(:n)
+          y1(:n) = qyNO2_298(:n)
+          call add_pnts_inter2(x1,y1,ygNO2_298, kdata, n, &
+               nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
+
+          y1(:n) = qyNO2_230(:n)
+          call add_pnts_inter2(x1,y1,ygNO2_230, kdata, n, &
+               nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
+
+          y1(:n) = qyNO2_190(:n)
+          call add_pnts_inter2(x1,y1,ygNO2_190, kdata, n, &
+               nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
+
+          y1(:n) = qyNO_298(:n)
+          call add_pnts_inter2(x1,y1,ygNO_298, kdata, n, &
+               nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
+
+          y1(:n) = qyNO_230(:n)
+          call add_pnts_inter2(x1,y1,ygNO_230, kdata, n, &
+               nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
+
+          y1(:n) = qyNO_190(:n)
+          call add_pnts_inter2(x1,y1,ygNO_190, kdata, n, &
+               nw,wl,xsqy_tab(j)%equation,deltax,(/0._rk,0._rk/), errmsg, errflg)
+
+        end subroutine readit
+
+      end subroutine XSQY_NO3
+
+
       subroutine XSQY_N2O5(nw,wl,wc,nz,tlev,airden,j, errmsg, errflg, sq )
 !-----------------------------------------------------------------------------!
 !   purpose:                                                                  !
@@ -6201,7 +6427,7 @@
 
               if (wc(iw) .GE. 300.0_rk) THEN 
                  qy_O3p = 0.0_rk
-                 if (chnl.eq.1) then ! 'N2O5 + hv -> NO3 + NO2'
+                 if (chnl.eq.2) then ! 'N2O5 + hv -> NO3 + NO2'
                     do iz = 1, nz
                        sq(iz,iw) = 1.0_rk * ytd(iz,iw)
                     enddo
@@ -6215,7 +6441,7 @@
               if (wc(iw) .LT. 300.0_rk) THEN
                  qy_O3p = min( 1._rk, 3.832441_rk - 0.012809638_rk * wc(iw) )
                  qy_O3p = max( 0._rk, qy_O3p )
-                 if (chnl.eq.1) then ! 'N2O5 + hv -> NO3 + NO2'
+                 if (chnl.eq.2) then ! 'N2O5 + hv -> NO3 + NO2'
                     do iz = 1, nz
                        sq(iz,iw) = (1.0_rk-qy_O3p)*ytd(iz,iw)
 

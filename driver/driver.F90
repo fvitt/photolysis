@@ -47,13 +47,15 @@ program driver
 
   integer :: nlevels,k
 
-  character(len=16), parameter :: my_jnames(145) = &
+  character(len=16), parameter :: my_jnames(147) = &
       (/ 'j_o2            ' &
        , 'j_o3_a          ' &
        , 'j_o3_b          ' &
        , 'jo3_a           ' &
        , 'jo3_b           ' &
        , 'jno2            ' &
+       , 'j_no3_a         ' &
+       , 'j_no3_b         ' &
        , 'jno3_a          ' &
        , 'jno3_b          ' &
        , 'jn2o5_a         ' &
