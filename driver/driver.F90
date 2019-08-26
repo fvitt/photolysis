@@ -6,7 +6,6 @@ program driver
   use params_mod, only: input_data_root
   use environ_conditions_mod, only: environ_conditions_create, environ_conditions
   use tuv_photolysis,   only: tuv_photolysis_readnl, tuv_photolysis_init, tuv_photolysis_run
-  use tuv_photolysis,   only: tuv_n_phot, tuv_n_wavelen
   use module_prates_tuv,only: rxn_ndx
   use module_rxn, only : xsqy_table => xsqy_tab
   use molec_ox_xsect, only: molec_ox_xsect_init
@@ -46,8 +45,10 @@ program driver
   type(environ_conditions),pointer :: colEnvConds => null()
 
   integer :: nlevels,k
-
-  character(len=16), parameter :: my_jnames(147) = &
+  integer :: n_wavelen
+  
+  integer, parameter :: nphot = 147
+  character(len=16), parameter :: my_jnames(nphot) = &
       (/ 'j_o2            ' &
        , 'j_o3_a          ' &
        , 'j_o3_b          ' &
@@ -226,7 +227,7 @@ program driver
      call abort()
   end if
 
-  call tuv_photolysis_init( r8, nlevels, my_jnames, errmsg, errflg )
+  call tuv_photolysis_init( r8, nlevels, my_jnames, n_wavelen, errmsg, errflg )
   if (errflg/=0) then
       write(*,*) 'FAILURE tuv_photolysis_init: '//trim(errmsg)
      call abort()
@@ -236,9 +237,9 @@ program driver
   
   call jno_timestep_init( fluxes )
 
-  allocate(srb_o2_xs(tuv_n_wavelen,nlevels), dto2(nlevels,tuv_n_wavelen))
-  allocate(radfld(tuv_n_wavelen,nlevels))
-  allocate(tuv_prates(nlevels, tuv_n_phot ) )
+  allocate(srb_o2_xs(n_wavelen,nlevels), dto2(nlevels,n_wavelen))
+  allocate(radfld(n_wavelen,nlevels))
+  allocate(tuv_prates(nlevels, nphot ) )
  
   allocate(alt(nlevels))
   allocate(press_mid(nlevels))
@@ -273,7 +274,7 @@ program driver
 
   call jno_run( nlevels, zenith, n2vmrcol, o2vmrcol, o3vmrcol, novmrcol, press_mid, temp, alt, jno )
   
-  call  tuv_radiation_transfer_run( nlevels, &
+  call  tuv_radiation_transfer_run( nlevels, n_wavelen, &
        zenith, albedo, press_mid, press_int(1), alt, temp, o3vmrcol, so2vmrcol, no2vmrcol, cldfrac, cldwat, dto2, radfld, errmsg, errflg )
 
   call tuv_photolysis_run( nlevels, temp, press_mid, radfld, srb_o2_xs, tuv_prates, errmsg, errflg )
@@ -283,7 +284,7 @@ program driver
      call abort()
   end if
 
-  do i=1,tuv_n_phot
+  do i=1,nphot
 
      jndx = rxn_ndx(i)
      if (jndx>0) then

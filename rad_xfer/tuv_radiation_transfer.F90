@@ -1,21 +1,17 @@
 module tuv_radiation_transfer
   use phot_kind_mod, only: rk => kind_phot
+  use phot_kind_mod, only: kind_phys => kind_phot
 
   implicit none
 
   private
   public :: tuv_radiation_transfer_init
   public :: tuv_radiation_transfer_run
-  public :: tuv_radiation_transfer_finalize
   
 contains
   
 !> \section arg_table_tuv_radiation_transfer_init Argument Table
-!! | local_name | standard_name             | long_name                 | units   | rank | type      | kind      | intent | optional |
-!! |------------|---------------------------|---------------------------|---------|------|-----------|-----------|--------|----------|
-!! | realkind   | phys_real_kind            | physics real kind         | none    |    0 | integer   |           | in     | F        |
-!! | errmsg     | ccpp_error_message        | CCPP error message        | none    |    0 | character | len=*     | out    | F        |
-!! | errflg     | ccpp_error_flag           | CCPP error flag           | flag    |    0 | integer   |           | out    | F        |
+!! \htmlinclude tuv_radiation_transfer_init.html
 !!
 subroutine tuv_radiation_transfer_init( realkind, errmsg, errflg )
     use wavelength_grid,  only: nwave, wl
@@ -28,7 +24,7 @@ subroutine tuv_radiation_transfer_init( realkind, errmsg, errflg )
     errmsg = ''
     errflg = 0
 
-    if ( realkind/=rk ) then
+    if ( realkind/=kind_phys ) then
        errmsg = 'tuv_radiation_transfer_init: realkind does not match kind_phot'
        errflg = 1
        return
@@ -37,31 +33,16 @@ subroutine tuv_radiation_transfer_init( realkind, errmsg, errflg )
     if (errflg.ne.0) return
     
     call rdxs_init( nwave, wl, errmsg, errflg )
-
+    
     if (errflg.ne.0) return
    
   end subroutine tuv_radiation_transfer_init
   
 !> \section arg_table_tuv_radiation_transfer_run Argument Table
-!! | local_name | standard_name                         | long_name                          | units     | rank | type      | kind      | intent | optional |
-!! |------------|---------------------------------------|------------------------------------|-----------|------|-----------|-----------|--------|----------|
-!! | nlev       | num_levels_for_photolysis             | number of model levels             | count     |    0 | integer   |           | in     | F        |
-!! | zenith     | solar_zenith                          | solar zenith angle                 | degrees   |    0 | real      | kind_phys | in     | F        |
-!! | albedo     | surface_albedo                        | surface albedo                     | none      |    0 | real      | kind_phys | in     | F        |
-!! | press_mid  | layer_pressure                        | mid-point layer pressure           | Pa        |    1 | real      | kind_phys | in     | F        |
-!! | alt        | layer_altitude                        | mid-point layer altitude           | m         |    1 | real      | kind_phys | in     | F        |
-!! | temp       | layer_temperature                     | mid-point layer temperature        | K         |    1 | real      | kind_phys | in     | F        |
-!! | o3vmr      | O3_vmr_col                            | O3 volume mixing ratio column      | mole/mole |    1 | real      | kind_phys | in     | F        |
-!! | so2vmr     | SO2_vmr_col                           | SO2 volume mixing ratio column     | mole/mole |    1 | real      | kind_phys | in     | F        |
-!! | no2vmr     | NO2_vmr_col                           | NO2 volume mixing ratio column     | mole/mole |    1 | real      | kind_phys | in     | F        |
-!! | cldfrac    | cloud_fraction                        | cloud fraction                     | none      |    1 | real      | kind_phys | in     | F        |
-!! | cldwat     | cloud_water_dens                      | cloud water mass denstiry          | g/m3      |    1 | real      | kind_phys | in     | F        |
-!! | dto2       | O2_optical_depth                      | optical depth due to O2 absorption | cm        |    2 | real      | kind_phys | in     | F        |
-!! | radfld     | actinic_photon_fluxes                 | actinic photon fluxes              | cm-2 sec-1|    2 | real      | kind_phys | out    | F        |
-!! | errmsg     | ccpp_error_message                    | CCPP error message                 | none      |    0 | character | len=*     | out    | F        |
-!! | errflg     | ccpp_error_flag                       | CCPP error flag                    | flag      |    0 | integer   |           | out    | F        |
+!! \htmlinclude tuv_radiation_transfer_run.html
 !!
-  subroutine tuv_radiation_transfer_run( nlev, zenith, albedo, press_mid, press_top, alt, temp, o3vmr, so2vmr, no2vmr, cldfrac, cldwat, dto2, radfld, errmsg, errflg )
+  subroutine tuv_radiation_transfer_run( nlev, tuv_n_wavelen, zenith, albedo, press_mid, press_top, alt, temp, &
+       o3vmr, so2vmr, no2vmr, cldfrc, cldwat, dto2, radfld, errmsg, errflg )
 
     use tuv_subs,         only: tuv_radfld
     use wavelength_grid,  only: nwave, wl, wc
@@ -69,19 +50,23 @@ subroutine tuv_radiation_transfer_init( realkind, errmsg, errflg )
     use params_mod
  
     integer,          intent(in)  :: nlev
-    real(rk),         intent(in)  :: zenith
-    real(rk),         intent(in)  :: albedo
-    real(rk),         intent(in)  :: press_mid(:)
-    real(rk),         intent(in)  :: press_top
-    real(rk),         intent(in)  :: alt(:)  ! m
-    real(rk),         intent(in)  :: temp(:) ! K
-    real(rk),         intent(in)  :: o3vmr(:)
-    real(rk),         intent(in)  :: so2vmr(:)
-    real(rk),         intent(in)  :: no2vmr(:)
-    real(rk),         intent(in)  :: cldfrac(:)
-    real(rk),         intent(in)  :: cldwat(:) ! cld water content (g/m3)
-    real(rk),         intent(in)  :: dto2(:,:)
-    real(rk),         intent(out) :: radfld(:,:) ! /sec
+
+    !! NOTE THIS VARIABLE WILL GO AWAY - FOR NOW IS REQUIRED WORKAROUND FOR CPF
+    integer,          intent(in)    :: tuv_n_wavelen
+
+    real(kind_phys),  intent(in)  :: zenith
+    real(kind_phys),  intent(in)  :: albedo
+    real(kind_phys),  intent(in)  :: press_mid(:)
+    real(kind_phys),  intent(in)  :: press_top
+    real(kind_phys),  intent(in)  :: alt(:)  ! m
+    real(kind_phys),  intent(in)  :: temp(:) ! K
+    real(kind_phys),  intent(in)  :: o3vmr(:)
+    real(kind_phys),  intent(in)  :: so2vmr(:)
+    real(kind_phys),  intent(in)  :: no2vmr(:)
+    real(kind_phys),  intent(in)  :: cldfrc(:)
+    real(kind_phys),  intent(in)  :: cldwat(:) ! cld water content (g/m3)
+    real(kind_phys),  intent(in)  :: dto2(:,:)
+    real(kind_phys),  intent(out) :: radfld(:,:) ! /sec
     character(len=*), intent(out) :: errmsg
     integer,          intent(out) :: errflg
 
@@ -151,7 +136,7 @@ subroutine tuv_radiation_transfer_init( realkind, errmsg, errflg )
 
     ! inputs need to be bottom up vert coord
     tlev(nlev:1:-1) = temp(1:nlev)
-    cldfrclev(nlev:1:-1) = cldfrac(1:nlev)
+    cldfrclev(nlev:1:-1) = cldfrc(1:nlev)
     cldwatlev(nlev:1:-1) = cldwat(1:nlev)
     zlev(nlev:1:-1) = alt(1:nlev)*1.e-3_rk ! m -> km
 
@@ -202,23 +187,5 @@ subroutine tuv_radiation_transfer_init( realkind, errmsg, errflg )
          dir_fld, dwn_fld, up_fld, dt_cld, errmsg, errflg )
 
   end subroutine tuv_radiation_transfer_run
-  
-!> \section arg_table_tuv_radiation_transfer_finalize Argument Table
-!! | local_name | standard_name                         | long_name                      | units     | rank | type      | kind      | intent | optional |
-!! |------------|---------------------------------------|--------------------------------|-----------|------|-----------|-----------|--------|----------|
-!! | errmsg     | ccpp_error_message                    | CCPP error message             | none      |    0 | character | len=*     | out    | F        |
-!! | errflg     | ccpp_error_flag                       | CCPP error flag                | flag      |    0 | integer   |           | out    | F        |
-!!
-  subroutine tuv_radiation_transfer_finalize( errmsg, errflg )
-
-    !--- arguments
-    character(len=*), intent(out) :: errmsg
-    integer,          intent(out) :: errflg
-
-    !--- initialize CCPP error handling variables
-    errmsg = ''
-    errflg = 0
-
-  end subroutine tuv_radiation_transfer_finalize
 
 end module tuv_radiation_transfer
