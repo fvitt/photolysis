@@ -91,7 +91,7 @@ subroutine tuv_photolysis_init( realkind, nlev, jnames, tuv_n_wavelen, errmsg, e
 !> \section arg_table_tuv_photolysis_run Argument Table
 !! \htmlinclude tuv_photolysis_run.html
 !!
-subroutine tuv_photolysis_run( nlev, temp, press_mid, radfld, srb_o2_xs, tuv_prates, errmsg, errflg )
+subroutine tuv_photolysis_run( nlev, temp, press_mid, radfld, srb_o2_xs, tuv_prates, errmsg, errflg, phot_xs, phot_ndxr  )
 
     integer,          intent(in)  :: nlev
     real(kind_phys),  intent(in)  :: temp(:)
@@ -101,6 +101,9 @@ subroutine tuv_photolysis_run( nlev, temp, press_mid, radfld, srb_o2_xs, tuv_pra
     real(kind_phys),  intent(out) :: tuv_prates(:,:) ! /sec
     character(len=*), intent(out) :: errmsg
     integer,          intent(out) :: errflg
+
+    real(kind_phys), intent(in), optional :: phot_xs(:,:,:)
+    integer,  intent(in), optional :: phot_ndxr(:)
 
     integer :: k, kk, j
     real(kind_phys) :: airdens(nlev) ! # molecules / cm3 in each layer
@@ -115,7 +118,7 @@ subroutine tuv_photolysis_run( nlev, temp, press_mid, radfld, srb_o2_xs, tuv_pra
     end do
     tlev(nlev:1:-1) = temp(1:nlev)
 
-    call calc_tuv_prates(1 ,nlev,nlev, tlev, airdens, radfld, srb_o2_xs, tuv_prates, errmsg, errflg)
+    call calc_tuv_prates(1 ,nlev,nlev, tlev, airdens, radfld, srb_o2_xs, tuv_prates, errmsg, errflg, phot_xs, phot_ndxr )
 
     ! return top down rates
     do j=1,tuv_n_phot

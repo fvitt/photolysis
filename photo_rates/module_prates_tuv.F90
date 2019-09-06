@@ -161,7 +161,7 @@ contains
   !------------------------------------------------------------------------------
   ! compute Js for a column given photon fluxes in each grid box of the column (nlevs)
   !------------------------------------------------------------------------------
-  subroutine calc_tuv_prates(kts,kte,nlevs, tlev, dens_air, rad_fld, srb_o2_xs, tuv_prate, errmsg, errflg)
+  subroutine calc_tuv_prates(kts,kte,nlevs, tlev, dens_air, rad_fld, srb_o2_xs, tuv_prate, errmsg, errflg, phot_xs, phot_ndxr )
 
     ! Args
     integer, intent(in) :: kts,kte,nlevs
@@ -170,6 +170,9 @@ contains
     real(rk), intent(in)    :: rad_fld(nwave,kts:kte)
     real(rk), intent(in)    :: srb_o2_xs(nwave,kts:kte)
     real(rk), intent(out)   :: tuv_prate(nlevs, nj) ! /sec
+
+    real(rk), intent(in), optional :: phot_xs(:,:,:)  !(phtcnt,nwave,kts:kte)
+    integer,  intent(in), optional :: phot_ndxr(:) ! (nj)
 
     character(len=*), intent(out) :: errmsg
     integer,          intent(out) :: errflg
@@ -195,7 +198,10 @@ contains
        rad_fld_tpose = transpose( rad_fld )
     endif
 
+!!$    print*,'FVDBG phot_ndxr : ', phot_ndxr
+    
     rate_loop: do n = 1,nj
+!!$    rate_loop: do n = 1,4
        xsect = xnan
        xsqy = xnan
        !---------------------------------------------------------------------
@@ -209,12 +215,22 @@ contains
           else
              jndx = rxn_ndx(n)
              if( jndx /= -1 ) then
-                if( xsqy_table(jndx)%tpflag /= 0 ) then
-                   call the_subs(jndx)%xsqy_sub(nwave+1,wl,wc,nlevs,tlev,dens_air,jndx, errmsg, errflg, sq=sq2d)
+                if (present(phot_xs)) then
+                   do k = kts,kte
+                      sq2d(k,1:nwave) = phot_xs(phot_ndxr(n),:nwave,k)
+                   end do
+                   sq1d(1:nwave,1) = phot_xs(phot_ndxr(n),:nwave,1)
                 else
-                   call the_subs(jndx)%xsqy_sub(nwave+1,wl,wc,nlevs,tlev,dens_air,jndx, errmsg, errflg, sq=sq1d)
+!!$                   if( xsqy_table(jndx)%tpflag /= 0 ) then
+!!$                      call the_subs(jndx)%xsqy_sub(nwave+1,wl,wc,nlevs,tlev,dens_air,jndx, errmsg, errflg, sq=sq2d)
+!!$                   else
+!!$                      call the_subs(jndx)%xsqy_sub(nwave+1,wl,wc,nlevs,tlev,dens_air,jndx, errmsg, errflg, sq=sq1d)
+!!$                   end if
+                   sq1d = xnan
+                   sq2d = xnan
                 end if
              endif
+!!$             print*,'FVDBG n,phot_ndxr(n),minval(sq2d),maxval(sq2d) : ',n, phot_ndxr(n),minval(sq2d),maxval(sq2d)
           endif
        else
           if( is_full_tuv ) then
