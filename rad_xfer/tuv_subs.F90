@@ -13,11 +13,7 @@
       SUBROUTINE tuv_radfld( nlambda_start, cld_od_opt, cldfrac, nlev, nwave, &
                              zenith, z, albedo, &
                              aircol, o3col, so2col, no2col, &
-                             tauaer300, tauaer400, tauaer600, tauaer999, &
-                             waer300, waer400, waer600, waer999, &
-                             gaer300, gaer400, gaer600, gaer999, &
                              dtaer, omaer, gaer, dtcld, omcld, gcld, &
-                             has_aer_ra_feedback, &
                              qll, dobsi, o3_xs, no2_xs, o2_xs, &
                              so2_xs, wmin, wc, tlev, dto2, radfld, efld, &
                              e_dir, e_dn, e_up, &
@@ -46,18 +42,6 @@
       real(rk), intent(in)  :: o3col(:)
       real(rk), intent(in)  :: so2col(:)
       real(rk), intent(in)  :: no2col(:)
-      real(rk), intent(in)  :: tauaer300(:)
-      real(rk), intent(in)  :: tauaer400(:)
-      real(rk), intent(in)  :: tauaer600(:)
-      real(rk), intent(in)  :: tauaer999(:)
-      real(rk), intent(in)  :: waer300(:)
-      real(rk), intent(in)  :: waer400(:)
-      real(rk), intent(in)  :: waer600(:)
-      real(rk), intent(in)  :: waer999(:)
-      real(rk), intent(in)  :: gaer300(:)
-      real(rk), intent(in)  :: gaer400(:)
-      real(rk), intent(in)  :: gaer600(:)
-      real(rk), intent(in)  :: gaer999(:)
       real(rk), intent(in)  :: qll(:)
       real(rk), intent(in)  :: wc(:)
       real(rk), intent(in)  :: tlev(:)
@@ -72,9 +56,8 @@
       real(rk), intent(inout)  :: dir_fld(:,:), dwn_fld(:,:), up_fld(:,:)
       real(rk), intent(inout)  :: e_dir(:,:), e_dn(:,:), e_up(:,:)
       real(rk), intent(inout)  :: dt_cld(:)
-      real(rk), intent(inout)  :: dtaer(:,:), omaer(:,:), gaer(:,:)
+      real(rk), intent(in)  :: dtaer(:,:), omaer(:,:), gaer(:,:)
       real(rk), intent(inout)  :: dtcld(:,:), omcld(:,:), gcld(:,:)
-      logical, intent(in)  :: has_aer_ra_feedback
 
       character(len=*), intent(out)   :: errmsg
       integer,          intent(out)   :: errflg
@@ -116,13 +99,13 @@
 
       do wn = 1,nwave
         omcld(:,wn) = 0._rk
-        omaer(:,wn) = 0._rk
+!        omaer(:,wn) = 0._rk
         omsnw(:,wn) = 0._rk
         gcld(:,wn)  = 0._rk
-        gaer(:,wn)  = 0._rk
+!        gaer(:,wn)  = 0._rk
         gsnw(:,wn)  = 0._rk
         dtcld(:,wn) = 0._rk
-        dtaer(:,wn) = 0._rk
+!        dtaer(:,wn) = 0._rk
         dtsnw(:,wn) = 0._rk
       end do
 
@@ -133,13 +116,13 @@
 !-------------------------------------------------------------
 ! aerosol optical depths
 !-------------------------------------------------------------
-      if( has_aer_ra_feedback ) then
-        call setaer( nlambda_start, wc, tauaer300, tauaer400, &
-                     tauaer600, tauaer999, waer300, &
-                     waer400, waer600, waer999,     &
-                     gaer300, gaer400, gaer600,     &
-                     gaer999, dtaer, omaer, gaer )
-      endif
+!      if( has_aer_ra_feedback ) then
+!        call setaer( nlambda_start, wc, tauaer300, tauaer400, &
+!                     tauaer600, tauaer999, waer300, &
+!                     waer400, waer600, waer999,     &
+!                     gaer300, gaer400, gaer600,     &
+!                     gaer999, dtaer, omaer, gaer )
+!      endif
 !-------------------------------------------------------------
 ! cloud optical depths (cloud water units = g/m3)
 !-------------------------------------------------------------
@@ -423,6 +406,13 @@ wave_loop: &
           endif
         end do
       end do wave_loop
+      
+! CGB - For debug, set everything to the 400 nm values.
+do k = 1,nlyr-1
+  dtaer(k,:) = tauaer400(k)
+  omaer(k,:) = waer400(k)
+  gaer(k,:) = gaer400(k)
+end do
 
       end subroutine setaer
 

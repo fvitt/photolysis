@@ -19,7 +19,6 @@ module params_mod
   real(rk), parameter :: R=2.8704e6_rk             ! gas constant (erg/g/K)
   real(rk), parameter :: g=980.616_rk              ! grav acceleration (cm/sec2)
 
-
   real(rk), parameter :: pzero = +10._rk/largest
   real(rk), parameter :: nzero = -10._rk/largest
 
@@ -40,6 +39,6 @@ contains
     USE,INTRINSIC :: IEEE_ARITHMETIC
     real(rk) :: x
     x = IEEE_VALUE(x,IEEE_QUIET_NAN)
-  end function qnan
+ end function qnan
  
 end module params_mod
