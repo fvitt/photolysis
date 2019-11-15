@@ -40,7 +40,7 @@ subroutine tuv_radiation_transfer_init( realkind, errmsg, errflg )
 !! \htmlinclude tuv_radiation_transfer_run.html
 !!
   subroutine tuv_radiation_transfer_run( nlev, tuv_n_wavelen, zenith, albedo, press_mid, press_top, alt, temp, &
-       o3vmr, so2vmr, no2vmr, cldfrc, cldwat, dto2, has_aer_ra_feedback, tauaerin, waerin, gaerin, radfld, errmsg, errflg )
+       o3vmr, so2vmr, no2vmr, cldfrc, cldwat, dto2, has_aer_ra_feedback, tauaerin, waerin, gaerin, radfld, efld, errmsg, errflg )
 
     use tuv_subs,         only: tuv_radfld
     use wavelength_grid,  only: nwave, wl, wc
@@ -69,6 +69,7 @@ subroutine tuv_radiation_transfer_init( realkind, errmsg, errflg )
     real(kind_phys),  intent(in)  :: waerin(:,:)
     real(kind_phys),  intent(in)  :: gaerin(:,:)
     real(kind_phys),  intent(out) :: radfld(:,:) ! /sec
+    real(kind_phys),  intent(out) :: efld(:,:)
     character(len=*), intent(out) :: errmsg
     integer,          intent(out) :: errflg
 
@@ -92,7 +93,6 @@ subroutine tuv_radiation_transfer_init( realkind, errmsg, errflg )
     real(rk) :: dtcld(nlev,nwave), omcld(nlev,nwave), gcld(nlev,nwave)
     real(rk) :: dt_cld(nlev)
     
-    real(rk) :: efld(nlev,nwave)
     real(rk) :: e_dir(nlev,nwave)
     real(rk) :: e_dn(nlev,nwave)
     real(rk) :: e_up(nlev,nwave)
