@@ -6,7 +6,7 @@
       IMPLICIT none
 
       private
-      public :: tuv_radfld
+      public :: tuv_radfld, fery, futr, addpnt, inter2
 
       CONTAINS
 
@@ -125,12 +125,12 @@
 !      endif
 !-------------------------------------------------------------
 ! cloud optical depths (cloud water units = g/m3)
-!-------------------------------------------------------------
+!
       call setcld( nlambda_start, cld_od_opt, z, qll, cldfrac, &
                    dtcld, omcld, gcld, errmsg, errflg )
       if (errflg .ne. 0) return
       
- !     dt_cld(:n_radlev) = dtcld(2:n_radlevp1,1)
+!      dt_cld(:n_radlev) = dtcld(2:n_radlevp1,1)
 
       call sphers( nlev, z, zenith, dsdh, nid )
 
@@ -509,6 +509,333 @@ end do
       endif
 
       end subroutine setcld
+      
+      
+!-----------------------------------------------------------------------------*
+!  PURPOSE:                                                                 =*
+!  Calculate the action spectrum value for erythema at a given wavelength   =*
+!  according to: McKinlay, A.F and B.L.Diffey, A reference action spectrum  =*
+!  for ultraviolet induced erythema in human skin, CIE Journal, vol 6,      =*
+!  pp 17-22, 1987.                                                          =*
+!  Value at 300 nm = 0.6486                                                 =*
+!----------------------------------------------------------------------------*
+!  PARAMETERS:                                                              =*
+!  W - REAL, wavelength (nm)                                             (I)=*
+!----------------------------------------------------------------------------*
+
+      function fery(w)
 
 
-      END MODULE tuv_subs
+      implicit none
+
+! input:
+      real(rk) w 
+
+! function value:
+      real(rk) fery
+
+      if (w .lt. 250._rk) then
+          fery = 1._rk
+! outside the ery spectrum range
+      elseif ((w .ge. 250._rk) .and. (w .lt. 298._rk)) then
+          fery = 1._rk
+      elseif ((w .ge. 298._rk) .and. (w .lt. 328._rk)) then
+          fery = 10._rk**( 0.094_rk*(298._rk - w) )
+      elseif ((w .ge. 328._rk) .and. (w .lt. 400._rk)) then
+          fery = 10._rk**( 0.015_rk*(139._rk - w) )
+      else
+         fery = 1.e-36_rk
+! outside the ery spectrum range
+      endif
+
+      return
+      end
+      
+
+!-----------------------------------------------------------------------------*
+!  PURPOSE:                                                                 =*
+!  Calculate the action spectrum value for skin cancer of albino hairless   =*
+!  mice at a given wavelength according to:  deGRuijl, F.R., H.J.C.M.Steren-=*
+!  borg, P.D.Forbes, R.E.Davies, C.Colse, G.Kelfkens, H.vanWeelden,         =*
+!  and J.C.van der Leun, Wavelength dependence of skin cancer induction by  =*
+!  ultraviolet irradiation of albino hairless mice, Cancer Research, vol 53,=*
+!  pp. 53-60, 1993                                                          =*
+!  (Action spectrum for carcinomas)                                         =*
+!-----------------------------------------------------------------------------*
+!  PARAMETERS:                                                              =*
+!  W  - REAL, wavelength (nm)                                            (I)=*
+!-----------------------------------------------------------------------------*
+
+      function futr(w)
+
+      implicit none
+
+! input:
+      real(rk) w
+
+! function value:
+      real(rk) futr
+
+! local:
+      real(rk) :: a1, a2, a3, a4, a5
+      real(rk) :: x1, x2, x3, x4, x5
+      real(rk) :: t1, t2, t3, t4, t5
+      real(rk) :: b1, b2, b3, b4, b5
+      real(rk) :: p
+
+      a1 = -10.91_rk
+      a2 = - 0.86_rk
+      a3 = - 8.60_rk
+      a4 = - 9.36_rk
+      a5 = -13.15_rk
+
+      x1 = 270._rk
+      x2 = 302._rk
+      x3 = 334._rk
+      x4 = 367._rk
+      x5 = 400._rk
+
+      t1 = (w-x2)*(w-x3)*(w-x4)*(w-x5)
+      t2 = (w-x1)*(w-x3)*(w-x4)*(w-x5)
+      t3 = (w-x1)*(w-x2)*(w-x4)*(w-x5)
+      t4 = (w-x1)*(w-x2)*(w-x3)*(w-x5)
+      t5 = (w-x1)*(w-x2)*(w-x3)*(w-x4)
+
+      b1 = (x1-x2)*(x1-x3)*(x1-x4)*(x1-x5)
+      b2 = (x2-x1)*(x2-x3)*(x2-x4)*(x2-x5)
+      b3 = (x3-x1)*(x3-x2)*(x3-x4)*(x3-x5)
+      b4 = (x4-x1)*(x4-x2)*(x4-x3)*(x4-x5)
+      b5 = (x5-x1)*(x5-x2)*(x5-x3)*(x5-x4)
+
+      p = a1*t1/b1 + a2*t2/b2 + a3*t3/b3 + a4*t4/b4 + a5*t5/b5
+
+      futr  = exp(p)
+
+      return
+      end
+      
+      
+
+!-----------------------------------------------------------------------------*
+!  PURPOSE:                                                                 =*
+!  Map input data given on single, discrete points onto a set of target     =*
+!  bins.                                                                    =*
+!  The original input data are given on single, discrete points of an       =*
+!  arbitrary grid and are being linearly interpolated onto a specified set  =*
+!  of target bins.  In general, this is the case for most of the weighting  =*
+!  functions (action spectra, molecular cross section, and quantum yield    =*
+!  data), which have to be matched onto the specified wavelength intervals. =*
+!  The average value in each target bin is found by averaging the trapezoi- =*
+!  dal area underneath the input data curve (constructed by linearly connec-=*
+!  ting the discrete input values).                                         =*
+!  Some caution should be used near the endpoints of the grids.  If the     =*
+!  input data set does not span the range of the target grid, an error      =*
+!  message is printed and the execution is stopped, as extrapolation of the =*
+!  data is not permitted.                                                   =*
+!  If the input data does not encompass the target grid, use ADDPNT to      =*
+!  expand the input array.                                                  =*
+!-----------------------------------------------------------------------------*
+!  PARAMETERS:                                                              =*
+!  NG  - INTEGER, number of bins + 1 in the target grid                  (I)=*
+!  XG  - REAL, target grid (e.g., wavelength grid);  bin i is defined    (I)=*
+!        as [XG(i),XG(i+1)] (i = 1..NG-1)                                   =*
+!  YG  - REAL, y-data re-gridded onto XG, YG(i) specifies the value for  (O)=*
+!        bin i (i = 1..NG-1)                                                =*
+!  N   - INTEGER, number of points in input grid                         (I)=*
+!  X   - REAL, grid on which input data are defined                      (I)=*
+!  Y   - REAL, input y-data                                              (I)=*
+!-----------------------------------------------------------------------------*
+
+      subroutine inter2(ng,xg,yg,n,x,y,ierr)
+
+      implicit none
+
+      ! input:
+      integer ng, n
+      real(rk) x(n), y(n), xg(ng)
+
+      ! output:
+      real(rk) yg(ng)
+
+      ! local:
+      real(rk) area, xgl, xgu
+      real(rk) darea, slope
+      real(rk) a1, a2, b1, b2
+      integer ngintv
+      integer i, k, jstart
+      integer ierr
+
+      ierr = 0
+
+      ! test for correct ordering of data, by increasing value of x
+      do 10, i = 2, n
+         if (x(i) .le. x(i-1)) then
+            ierr = 1
+            write(*,*) 'TUV::inter2 - ERROR data not sorted'
+            return
+         end if
+   10 continue     
+
+      do i = 2, ng
+        if (xg(i) .le. xg(i-1)) then
+           ierr = 2
+           write(*,*) 'TUV::inter2 - ERROR  xg-grid not sorted!'
+           return
+        end if
+      end do
+
+      ! check for xg-values outside the x-range
+      if ( (x(1) .gt. xg(1)) .or. (x(n) .lt. xg(ng)) ) then
+          ierr = 3
+          write(*,*) ('TUV::inter2 - ERROR data do not span grid. Use addpnt to expand data and re-run.')
+          return
+      end if
+
+      ! find the integral of each grid interval and use this to 
+      ! calculate the average y value for the interval      
+      ! xgl and xgu are the lower and upper limits of the grid interval
+      jstart = 1
+      ngintv = ng - 1
+      do 50, i = 1,ngintv
+
+         ! initalize:
+         area = 0.0_rk
+         xgl = xg(i)
+         xgu = xg(i+1)
+
+         ! discard data before the first grid interval and after the 
+         ! last grid interval
+         ! for internal grid intervals, start calculating area by interpolating
+         ! between the last point which lies in the previous interval and the
+         ! first point inside the current interval
+         k = jstart
+         if (k .le. n-1) then
+
+         ! if both points are before the first grid, go to the next point
+   30       continue
+            if (x(k+1) .le. xgl) then
+               jstart = k - 1
+               k = k+1
+               if (k .le. n-1) go to 30
+            end if
+
+
+            ! if the last point is beyond the end of the grid, complete and go to the next
+            ! grid
+   40       continue
+            if ((k .le. n-1) .and. (x(k) .lt. xgu)) then          
+
+               jstart = k-1
+
+               ! compute x-coordinates of increment
+               a1 = max(x(k),xgl)
+               a2 = min(x(k+1),xgu)
+
+               ! if points coincide, contribution is zero
+               if (x(k+1).eq.x(k)) then
+                  darea = 0.e0_rk
+               else
+                  slope = (y(k+1) - y(k))/(x(k+1) - x(k))
+                  b1 = y(k) + slope*(a1 - x(k))
+                  b2 = y(k) + slope*(a2 - x(k))
+                  darea = (a2 - a1)*(b2 + b1)/2._rk
+               end if
+
+               ! find the area under the trapezoid from a1 to a2
+               area = area + darea
+
+               ! go to next point
+               k = k+1
+               go to 40
+
+             end if
+          end if
+
+          ! Calculate the average y after summing the areas in the interval
+          yg(i) = area/(xgu - xgl)
+   50 continue
+
+      return
+      end
+
+
+!-----------------------------------------------------------------------------*
+!  PURPOSE:                                                                 =*
+!  Add a point <xnew,ynew> to a set of data pairs <x,y>.  x must be in      =*
+!  ascending order                                                          =*
+!-----------------------------------------------------------------------------*
+!  PARAMETERS:                                                              =*
+!  X    - REAL vector of length LD, x-coordinates                       (IO)=*
+!  Y    - REAL vector of length LD, y-values                            (IO)=*
+!  LD   - INTEGER, dimension of X, Y exactly as declared in the calling  (I)=*
+!         program                                                           =*
+!  N    - INTEGER, number of elements in X, Y.  On entry, it must be:   (IO)=*
+!         N < LD.  On exit, N is incremented by 1.                          =*
+!  XNEW - REAL, x-coordinate at which point is to be added               (I)=*
+!  YNEW - REAL, y-value of point to be added                             (I)=*
+!-----------------------------------------------------------------------------*
+
+    subroutine addpnt( x, y, ld, n, xnew, ynew, ierr)
+      implicit none
+
+      ! calling parameters
+      integer ld, n, ierr
+      real(rk) x(ld), y(ld)
+      real(rk) xnew, ynew
+
+      ! local variables
+      integer insert
+      integer i
+      
+      ierr = 0
+
+      ! check n<ld to make sure x will hold another point
+
+      if (n .ge. ld) then
+         ierr = 1
+         write(*,*) 'TUV::addpnt - ERROR Cannot expand array all elements used.'
+      endif
+
+      insert = 1
+      i = 2
+
+      ! check, whether x is already sorted.
+      ! also, use this loop to find the point at which xnew needs to be inserted
+      ! into vector x, if x is sorted.
+
+ 10   continue
+      if (i .lt. n) then
+        if (x(i) .lt. x(i-1)) then
+           ierr = 2
+           write(*,*) 'TUV_addpnt - ERROR x-data must be in ascending order!'
+        else
+           if (xnew .gt. x(i)) insert = i + 1
+        endif
+        i = i+1
+        goto 10
+      endif
+
+      ! if <xnew,ynew> needs to be appended at the end, just do so,
+      !otherwise, insert <xnew,ynew> at position insert
+      if ( xnew .gt. x(n) ) then
+         x(n+1) = xnew
+         y(n+1) = ynew
+      else
+
+         ! shift all existing points one index up
+         do i = n, insert, -1
+           x(i+1) = x(i)
+           y(i+1) = y(i)
+         enddo
+
+         ! insert new point
+         x(insert) = xnew
+         y(insert) = ynew
+      endif
+
+      ! increase total number of elements in x, y
+      n = n+1
+    end
+
+
+  END MODULE tuv_subs
